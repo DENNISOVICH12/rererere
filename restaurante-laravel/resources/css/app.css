@@ -1,0 +1,65 @@
+/* ===== FONDO GENERAL ===== */
+body {
+  background-image: url("https://i.imgur.com/EQe3BgQ.jpeg"), linear-gradient(135deg, #4b1e25 0%, #2c0f13 100%);
+  background-size: cover;
+  background-attachment: fixed;
+  background-blend-mode: multiply;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ===== TARJETAS DE PEDIDO (COCINA) ===== */
+.cocina-card {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cocina-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+}
+
+/* ===== ETIQUETAS DE ESTADO ===== */
+.estado {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.estado-pendiente { background-color: #c82a2a; }
+.estado-preparacion { background-color: #c47f1a; }
+.estado-listo { background-color: #2a9d4c; }
+
+/* ===== BOTÓN DE ACCIÓN ===== */
+.btn-cocina {
+  display: inline-block;
+  padding: 8px 18px;
+  background: #b02a37;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.2s ease;
+}
+
+.btn-cocina:hover {
+  background: #d13a49;
+}
+.input-error {
+  border: 2px solid #ff4d4d !important;
+}
+
+.error-text {
+  font-size: 13px;
+  color: #ff4d4d;
+  margin-top: 4px;
+}
