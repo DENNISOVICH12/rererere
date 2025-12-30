@@ -36,7 +36,7 @@
         Aún no tienes pedidos activos.
       </div>
       <div v-else class="order-card compact-card">
-        <ol class="timeline horizontal compact">
+        <ol class="timeline horizontal professional">
           <li
             v-for="(step, index) in timelineSteps"
             :key="step"
@@ -52,6 +52,12 @@
             </div>
           </li>
         </ol>
+        <div class="timeline-current">
+          <span class="timeline-label">Estado actual:</span>
+          <span class="timeline-value">
+            {{ currentStepIndex >= 0 ? stepLabels[timelineSteps[currentStepIndex]] : 'Sin estado' }}
+          </span>
+        </div>
       </div>
 
       <p v-if="errorPedidos" class="order-error">{{ errorPedidos }}</p>
@@ -174,10 +180,16 @@ let pedidosInterval = null
 
 const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
 const stepLabels = {
-  pendiente: 'Pedido recibido',
+  pendiente: 'Pendiente',
   preparando: 'En cocina',
-  listo: 'Listo para entregar',
+  listo: 'Listo',
   entregado: 'Entregado'
+}
+const stepDescriptions = {
+  pendiente: 'Cocina recibió tu pedido',
+  preparando: 'Se está preparando',
+  listo: 'Listo para entregar',
+  entregado: 'Pedido entregado'
 }
 
 // Cargar menú
@@ -351,22 +363,28 @@ const currentStepIndex = computed(() => {
 .refresh-btn:hover { background:#9c2030; }
 .refresh-btn:disabled { opacity:.5; cursor:not-allowed; }
 .order-loading, .order-empty { opacity:.75; font-size:13px; }
-.order-card { background:rgba(0,0,0,0.35); border-radius:14px; padding:10px 12px; border:1px solid rgba(255,255,255,0.12); }
-.order-card.compact-card { padding:10px 8px; }
+.order-card { background:rgba(0,0,0,0.35); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.12); }
+.order-card.compact-card { padding:16px 14px; }
 
 .timeline { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:14px; }
 .timeline.horizontal { flex-direction:row; gap:0; justify-content:space-between; align-items:flex-start; }
-.timeline.horizontal.compact { gap:0; }
-.timeline.horizontal li { flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; padding:0 4px; }
-.timeline.horizontal li::before { content:""; position:absolute; top:7px; left:50%; width:100%; height:2px; background:rgba(255,255,255,0.22); z-index:0; }
+.timeline.horizontal.professional { background:rgba(255,255,255,0.04); border-radius:14px; padding:16px 10px 12px; border:1px solid rgba(255,255,255,0.08); }
+.timeline.horizontal li { flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; padding:0 6px; }
+.timeline.horizontal li::before { content:""; position:absolute; top:14px; left:50%; width:100%; height:2px; background:rgba(255,255,255,0.16); z-index:0; }
 .timeline.horizontal li:first-child::before { left:50%; width:50%; }
 .timeline.horizontal li:last-child::before { width:50%; }
-.dot { width:12px; height:12px; border-radius:50%; background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.4); margin-top:2px; flex-shrink:0; z-index:1; }
-.timeline li.completed .dot { background:#2ecc71; border-color:#2ecc71; box-shadow:0 0 8px rgba(46,204,113,.5); }
-.timeline li.active .dot { background:#ffd7aa; border-color:#ffd7aa; box-shadow:0 0 10px rgba(255,215,170,.6); }
-.step-title { margin:6px 0 0; font-weight:700; font-size:12px; }
-.step-desc { margin:4px 0 0; font-size:11px; opacity:.7; }
-.timeline.horizontal .step-desc { max-width:110px; }
+.dot { width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.12); border:2px solid rgba(255,255,255,0.35); margin-top:6px; flex-shrink:0; z-index:1; position:relative; }
+.dot::after { content:""; position:absolute; inset:3px; border-radius:50%; background:rgba(255,255,255,0.35); opacity:.3; }
+.timeline li.completed .dot { background:#2ecc71; border-color:#2ecc71; box-shadow:0 0 10px rgba(46,204,113,.5); }
+.timeline li.completed .dot::after { background:#1e7f44; opacity:.45; }
+.timeline li.active .dot { background:#ffd7aa; border-color:#ffd7aa; box-shadow:0 0 12px rgba(255,215,170,.7); }
+.timeline li.active .dot::after { background:#9c6b34; opacity:.5; }
+.step-title { margin:8px 0 0; font-weight:700; font-size:12.5px; letter-spacing:.2px; }
+.step-desc { margin:4px 0 0; font-size:11px; opacity:.75; }
+.timeline.horizontal .step-desc { max-width:120px; }
+.timeline-current { display:flex; justify-content:center; gap:8px; margin-top:10px; font-size:12px; }
+.timeline-label { opacity:.65; }
+.timeline-value { font-weight:700; color:#ffd7aa; }
 .order-error { color:#ff9c9c; font-weight:600; font-size:12px; }
 
 /* GRID */
