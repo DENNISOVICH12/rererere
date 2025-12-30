@@ -54,6 +54,20 @@ class OrderController extends Controller
             ->get();
     }
 
+    /**
+     * Ver pedidos de un cliente (carta digital)
+     */
+    public function clientePedidos(int $clienteId)
+    {
+        $pedidos = Pedido::with(['detalle.menuItem'])
+            ->where('cliente_id', $clienteId)
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return response()->json(['data' => $pedidos]);
+    }
+
 
     /**
      * Cambiar estado (cocinero o mesero)
