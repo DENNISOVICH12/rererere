@@ -28,6 +28,7 @@ Route::get('/menu-items', [MenuItemController::class, 'index']);
 Route::post('/orders', [OrderController::class, 'store']);
 Route::get('/orders', [OrderController::class, 'index']);
 Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+Route::get('/clientes/{cliente}/pedidos', [OrderController::class, 'clientePedidos']);
 
 Route::get('/menu/today', [MenuController::class, 'showToday']);
 Route::get('/platos-fisicos', [PlatoTableController::class, 'index']);
