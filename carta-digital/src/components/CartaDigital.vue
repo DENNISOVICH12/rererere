@@ -36,6 +36,19 @@
         Aún no tienes pedidos activos.
       </div>
       <div v-else class="order-card compact-card">
+        <div class="kitchen-statuses">
+          <span
+            v-for="(step, index) in timelineSteps"
+            :key="`estado-${step}`"
+            class="kitchen-status"
+            :class="{
+              active: index === currentStepIndex,
+              completed: index < currentStepIndex
+            }"
+          >
+            {{ stepLabels[step] }}
+          </span>
+        </div>
         <ol class="timeline horizontal compact">
           <li
             v-for="(step, index) in timelineSteps"
@@ -174,10 +187,16 @@ let pedidosInterval = null
 
 const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
 const stepLabels = {
-  pendiente: 'Pedido recibido',
+  pendiente: 'Pendiente',
   preparando: 'En cocina',
-  listo: 'Listo para entregar',
+  listo: 'Listo',
   entregado: 'Entregado'
+}
+const stepDescriptions = {
+  pendiente: 'Cocina recibió tu pedido',
+  preparando: 'Se está preparando',
+  listo: 'Listo para entregar',
+  entregado: 'Pedido entregado'
 }
 
 // Cargar menú
@@ -353,6 +372,10 @@ const currentStepIndex = computed(() => {
 .order-loading, .order-empty { opacity:.75; font-size:13px; }
 .order-card { background:rgba(0,0,0,0.35); border-radius:14px; padding:10px 12px; border:1px solid rgba(255,255,255,0.12); }
 .order-card.compact-card { padding:10px 8px; }
+.kitchen-statuses { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:10px; }
+.kitchen-status { padding:6px 14px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid rgba(255,255,255,0.3); color:#F8ECE4; background:rgba(255,255,255,0.08); transition:.3s; }
+.kitchen-status.completed { background:#2ecc71; border-color:#2ecc71; color:#1c1c1c; }
+.kitchen-status.active { background:#ffd7aa; border-color:#ffd7aa; color:#3a2a1a; box-shadow:0 0 10px rgba(255,215,170,.4); }
 
 .timeline { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:14px; }
 .timeline.horizontal { flex-direction:row; gap:0; justify-content:space-between; align-items:flex-start; }
