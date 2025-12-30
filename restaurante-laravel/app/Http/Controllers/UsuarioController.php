@@ -6,7 +6,8 @@ use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
-    use Illuminate\Support\Facades\Hash; // ✅ ESTA LÍNEA
+use Illuminate\Support\Facades\Hash; // ✅ ESTA LÍNEA
+
 
 
 class UsuarioController extends Controller
@@ -28,11 +29,22 @@ class UsuarioController extends Controller
      *   )
      * )
      */
-    public function index() 
-{
-    $usuarios = Usuario::paginate(20);
-    return view('usuarios', compact('usuarios'));
-}
+     public function index()
+    {
+        $usuarios = Usuario::orderByDesc('id')->paginate(20);
+
+        $roles = [
+            'admin'    => 'Administrador',
+            'mesero'   => 'Mesero',
+            'cocinero' => 'Cocinero',
+            'cliente'  => 'Cliente',
+        ];
+
+        return view('usuarios', [
+            'usuarios' => $usuarios,
+            'roles'    => $roles,
+        ]);
+    }
 
 
     /**
@@ -76,30 +88,38 @@ class UsuarioController extends Controller
     
     public function store(Request $request)
 {
-    $request->validate([
-        'usuario' => 'required|string|unique:usuarios,usuario',
-        'correo' => 'required|email|unique:usuarios,correo',
-        'password' => 'required|min:6',
-        'rol' => 'required|in:admin,mesero,cocinero,cliente',
-    ]);
+        $data = $request->validate([
+            'usuario'  => 'required|string|max:50|unique:usuarios,usuario',
+            'correo'   => 'required|email|max:180|unique:usuarios,correo',
+            'password' => 'required|min:6',
+            'rol'      => 'required|in:admin,mesero,cocinero,cliente',
+            'nombre'   => 'nullable|string|max:120',
+            'apellido' => 'nullable|string|max:120',
+            'activo'   => 'nullable|boolean',
+        ]);
 
-    $usuario = Usuario::create([
-        'usuario' => $request->usuario,
-        'correo' => $request->correo,
-        'password' => Hash::make($request->password),
-        'rol' => $request->rol,
+        $usuario = Usuario::create([
+            'usuario'  => $data['usuario'],
+            'correo'   => $data['correo'],
+            'password' => Hash::make($data['password']),
+            'rol'      => $data['rol'],
+            'nombre'   => $data['nombre'] ?? ucfirst($data['usuario']),
+            'apellido' => $data['apellido'] ?? '',
+            'activo'   => $request->boolean('activo', true),
+        ]);
 
-        // ✅ Valores por defecto para evitar el error
-        'nombre' => $request->nombre ?? ucfirst($request->usuario),
-        'apellido' => $request->apellido ?? '',
-        'activo' => $request->activo ?? true,
-    ]);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Usuario creado correctamente',
+                'usuario' => $usuario,
+            ], 201);
+        }
 
-    return response()->json([
-        'message' => 'Usuario creado correctamente',
-        'usuario' => $usuario
-    ], 201);
-}
+        return redirect()
+            ->route('usuarios.panel')
+            ->with('status', 'Usuario creado correctamente.');
+    }
+
 
 
 
@@ -132,18 +152,31 @@ class UsuarioController extends Controller
         $u = Usuario::findOrFail($id);
 
         $data = $request->validate([
-            'usuario'       => ['sometimes','string','max:50', Rule::unique('usuarios','usuario')->ignore($u->id)],
-            'password'      => ['sometimes','string','min:6'],
-            'nombre'        => ['sometimes','string','max:120'],
-            'apellido'      => ['sometimes','nullable','string','max:120'],
-            'correo'        => ['sometimes','email','max:180', Rule::unique('usuarios','correo')->ignore($u->id)],
-            'rol'           => ['sometimes','string'],
-            'activo'        => ['sometimes','boolean'],
-            'restaurant_id' => ['sometimes','integer'],
+            'usuario'       => ['sometimes', 'string', 'max:50', Rule::unique('usuarios', 'usuario')->ignore($u->id)],
+            'password'      => ['sometimes', 'nullable', 'string', 'min:6'],
+            'nombre'        => ['sometimes', 'nullable', 'string', 'max:120'],
+            'apellido'      => ['sometimes', 'nullable', 'string', 'max:120'],
+            'correo'        => ['sometimes', 'email', 'max:180', Rule::unique('usuarios', 'correo')->ignore($u->id)],
+            'rol'           => ['sometimes', 'string', 'in:admin,mesero,cocinero,cliente'],
+            'activo'        => ['sometimes', 'boolean'],
+            'restaurant_id' => ['sometimes', 'integer'],
         ]);
+        
+        if (isset($data['password'])) {
+            $data['password'] = $data['password'] ? Hash::make($data['password']) : $u->password;
+        }
 
+        if ($request->has('activo')) {
+            $data['activo'] = $request->boolean('activo');
+        }
         $u->update($data);
-        return response()->json($u);
+        if ($request->wantsJson()) {
+            return response()->json($u);
+        }
+
+        return redirect()
+            ->route('usuarios.panel')
+            ->with('status', 'Usuario actualizado correctamente.');
     }
 
     /**
@@ -156,9 +189,15 @@ class UsuarioController extends Controller
      *   @OA\Response(response=404, description="Usuario no encontrado")
      * )
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         Usuario::findOrFail($id)->delete();
-        return response()->json(['deleted' => true]);
+        if ($request->wantsJson()) {
+            return response()->json(['deleted' => true]);
+        }
+
+        return redirect()
+            ->route('usuarios.panel')
+            ->with('status', 'Usuario eliminado.');
     }
 }

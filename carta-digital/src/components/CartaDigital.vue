@@ -112,7 +112,7 @@ import axios from 'axios'
 import { addToCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
 
-const API = "http://192.168.1.115:8000/api"
+const API = "http://172.18.112.238:8000/api"
 
 const items = ref([])
 const selectedCategory = ref('todos')

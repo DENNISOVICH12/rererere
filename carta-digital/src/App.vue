@@ -46,7 +46,7 @@ const registerForm = ref({
 
 async function handleRegister() {
   try {
-    await axios.post("http://192.168.1.115:8000/api/register-cliente", registerForm.value)
+    await axios.post("http://172.18.112.238:8000/api/register-cliente", registerForm.value)
     alert("✅ Registro exitoso, ahora inicia sesión ✅")
     showRegister.value = false
     showLogin.value = true
@@ -63,7 +63,7 @@ async function sendOrder() {
   try {
     const cliente = getCliente(); // ✅ obtiene { id, usuario, nombre }
 
-    await axios.post('http://192.168.1.115:8000/api/orders', {
+    await axios.post('http://172.18.112.238:8000/api/orders', {
       mesa: null,
       cliente_id: cliente ? cliente.id : null, // ✅ ahora SIEMPRE manda el ID correcto
       restaurant_id: 1,

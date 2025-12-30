@@ -40,6 +40,9 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
 
     Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.panel');
+    Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
+    Route::put('/usuarios/{id}', [UsuarioController::class, 'update'])->name('usuarios.update');
+    Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy'])->name('usuarios.delete');
     Route::get('/admin/menu', [MenuItemController::class, 'adminIndex'])->name('admin.menu');
     Route::post('/admin/menu', [MenuItemController::class, 'adminStore'])->name('admin.menu.store');
     Route::put('/admin/menu/{id}', [MenuItemController::class, 'adminUpdate'])->name('admin.menu.update');
@@ -100,5 +103,5 @@ Route::middleware(['auth:web'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::get('/carta-digital', function () {
-    return redirect()->away('http://192.168.1.115:5174/');
+    return redirect()->away('http://172.18.112.238:5174/');
 })->name('carta.digital');
