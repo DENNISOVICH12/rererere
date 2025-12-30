@@ -78,6 +78,8 @@ async function sendOrder() {
       ? "✅ Pedido enviado (Cliente identificado)."
       : "✅ Pedido enviado como invitado.");
 
+    window.dispatchEvent(new CustomEvent("pedido-creado"));
+
     clearCart(); // mejor que hacer cart.value = []
 
   } catch (error) {

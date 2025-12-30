@@ -20,6 +20,43 @@
       </div>
     </header>
 
+    <!-- ESTADO DE PEDIDO (SOLO CON SESIÓN) -->
+    <section v-if="cliente" class="order-status compact">
+      <div class="order-header">
+        <div>
+          <h2>📦 Estado de tu pedido</h2>
+        </div>
+        <button class="refresh-btn" @click="loadPedidosCliente" :disabled="loadingPedidos">
+          {{ loadingPedidos ? 'Actualizando...' : 'Actualizar' }}
+        </button>
+      </div>
+
+      <div v-if="loadingPedidos" class="order-loading">Cargando estado...</div>
+      <div v-else-if="!pedidoActual" class="order-empty">
+        Aún no tienes pedidos activos.
+      </div>
+      <div v-else class="order-card compact-card">
+        <ol class="timeline horizontal compact">
+          <li
+            v-for="(step, index) in timelineSteps"
+            :key="step"
+            :class="{
+              completed: index < currentStepIndex,
+              active: index === currentStepIndex
+            }"
+          >
+            <div class="dot"></div>
+            <div class="step-content">
+              <p class="step-title">{{ stepLabels[step] }}</p>
+              <p class="step-desc">{{ stepDescriptions[step] }}</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <p v-if="errorPedidos" class="order-error">{{ errorPedidos }}</p>
+    </section>
+
     <!-- FILTROS -->
     <div class="filters">
       <button 
@@ -107,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import { addToCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
@@ -130,12 +167,47 @@ const loadingLogin = ref(false)
 const showErrors = ref(false)
 const loginMessage = ref("")
 const registerMessage = ref("")
+const pedidosCliente = ref([])
+const loadingPedidos = ref(false)
+const errorPedidos = ref("")
+let pedidosInterval = null
+
+const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
+const stepLabels = {
+  pendiente: 'Pedido recibido',
+  preparando: 'En cocina',
+  listo: 'Listo para entregar',
+  entregado: 'Entregado'
+}
 
 // Cargar menú
 onMounted(async () => {
   const res = await fetch(`${API}/menu-items`)
   items.value = (await res.json()).data
 })
+
+async function loadPedidosCliente() {
+  if (!cliente.value) return
+  loadingPedidos.value = true
+  errorPedidos.value = ""
+
+  try {
+    const res = await axios.get(`${API}/clientes/${cliente.value.id}/pedidos`)
+    pedidosCliente.value = res.data.data ?? res.data
+  } catch (error) {
+    console.error(error)
+    errorPedidos.value = "No pudimos cargar el estado del pedido."
+  } finally {
+    loadingPedidos.value = false
+  }
+}
+
+function clearPedidosPolling() {
+  if (pedidosInterval) {
+    clearInterval(pedidosInterval)
+    pedidosInterval = null
+  }
+}
 
 // Abrir modal desde carrito
 onMounted(() => {
@@ -145,6 +217,27 @@ onMounted(() => {
   }
   window.addEventListener("open-login", openLogin)
   onUnmounted(() => window.removeEventListener("open-login", openLogin))
+})
+
+watch(
+  cliente,
+  (nuevo) => {
+    clearPedidosPolling()
+    pedidosCliente.value = []
+    errorPedidos.value = ""
+
+    if (nuevo) {
+      loadPedidosCliente()
+      pedidosInterval = setInterval(loadPedidosCliente, 6000)
+    }
+  },
+  { immediate: true }
+)
+
+window.addEventListener("pedido-creado", loadPedidosCliente)
+onUnmounted(() => {
+  window.removeEventListener("pedido-creado", loadPedidosCliente)
+  clearPedidosPolling()
 })
 
 // ✅ LOGIN
@@ -202,6 +295,15 @@ const filteredItems = computed(() =>
     ? items.value
     : items.value.filter(i => i.categoria === selectedCategory.value)
 )
+
+const pedidoActual = computed(() => pedidosCliente.value[0] ?? null)
+const currentStepIndex = computed(() => {
+  if (!pedidoActual.value) return -1
+  const estado = (pedidoActual.value.estado || '').toLowerCase()
+  const index = timelineSteps.indexOf(estado)
+  return index >= 0 ? index : 0
+})
+
 </script>
 
 <style scoped>
@@ -239,6 +341,33 @@ const filteredItems = computed(() =>
 .filters { display:flex; gap:12px; justify-content:center; margin-bottom:30px; }
 .filter-btn { padding:8px 18px; border-radius:20px; background:rgba(255,255,255,0.08); color:#F8ECE4; border:1.5px solid rgba(255,255,255,0.35); transition:.3s; }
 .filter-btn.active, .filter-btn:hover { background:#8a1c2b; border-color:#F8ECE4; }
+
+/* ESTADO PEDIDO */
+.order-status { background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.18); border-radius:16px; padding:14px 18px; margin-bottom:20px; display:flex; flex-direction:column; gap:12px; }
+.order-status.compact { max-width: 100%; }
+.order-header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.order-header h2 { margin:0; font-size:18px; }
+.refresh-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; transition:.3s; font-size:12px; }
+.refresh-btn:hover { background:#9c2030; }
+.refresh-btn:disabled { opacity:.5; cursor:not-allowed; }
+.order-loading, .order-empty { opacity:.75; font-size:13px; }
+.order-card { background:rgba(0,0,0,0.35); border-radius:14px; padding:10px 12px; border:1px solid rgba(255,255,255,0.12); }
+.order-card.compact-card { padding:10px 8px; }
+
+.timeline { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:14px; }
+.timeline.horizontal { flex-direction:row; gap:0; justify-content:space-between; align-items:flex-start; }
+.timeline.horizontal.compact { gap:0; }
+.timeline.horizontal li { flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; padding:0 4px; }
+.timeline.horizontal li::before { content:""; position:absolute; top:7px; left:50%; width:100%; height:2px; background:rgba(255,255,255,0.22); z-index:0; }
+.timeline.horizontal li:first-child::before { left:50%; width:50%; }
+.timeline.horizontal li:last-child::before { width:50%; }
+.dot { width:12px; height:12px; border-radius:50%; background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.4); margin-top:2px; flex-shrink:0; z-index:1; }
+.timeline li.completed .dot { background:#2ecc71; border-color:#2ecc71; box-shadow:0 0 8px rgba(46,204,113,.5); }
+.timeline li.active .dot { background:#ffd7aa; border-color:#ffd7aa; box-shadow:0 0 10px rgba(255,215,170,.6); }
+.step-title { margin:6px 0 0; font-weight:700; font-size:12px; }
+.step-desc { margin:4px 0 0; font-size:11px; opacity:.7; }
+.timeline.horizontal .step-desc { max-width:110px; }
+.order-error { color:#ff9c9c; font-weight:600; font-size:12px; }
 
 /* GRID */
 .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:28px; }
