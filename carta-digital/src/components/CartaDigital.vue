@@ -25,7 +25,7 @@
       <div class="order-header">
         <div>
           <h2>📦 Estado de tu pedido</h2>
-        </div>
+        </div>S
         <button class="refresh-btn" @click="loadPedidosCliente" :disabled="loadingPedidos">
           {{ loadingPedidos ? 'Actualizando...' : 'Actualizar' }}
         </button>
@@ -150,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { addToCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
@@ -198,29 +198,6 @@ onMounted(async () => {
   items.value = (await res.json()).data
 })
 
-async function loadPedidosCliente() {
-  if (!cliente.value) return
-  loadingPedidos.value = true
-  errorPedidos.value = ""
-
-  try {
-    const res = await axios.get(`${API}/clientes/${cliente.value.id}/pedidos`)
-    pedidosCliente.value = res.data.data ?? res.data
-  } catch (error) {
-    console.error(error)
-    errorPedidos.value = "No pudimos cargar el estado del pedido."
-  } finally {
-    loadingPedidos.value = false
-  }
-}
-
-function clearPedidosPolling() {
-  if (pedidosInterval) {
-    clearInterval(pedidosInterval)
-    pedidosInterval = null
-  }
-}
-
 // Abrir modal desde carrito
 onMounted(() => {
   const openLogin = () => {
@@ -229,27 +206,6 @@ onMounted(() => {
   }
   window.addEventListener("open-login", openLogin)
   onUnmounted(() => window.removeEventListener("open-login", openLogin))
-})
-
-watch(
-  cliente,
-  (nuevo) => {
-    clearPedidosPolling()
-    pedidosCliente.value = []
-    errorPedidos.value = ""
-
-    if (nuevo) {
-      loadPedidosCliente()
-      pedidosInterval = setInterval(loadPedidosCliente, 6000)
-    }
-  },
-  { immediate: true }
-)
-
-window.addEventListener("pedido-creado", loadPedidosCliente)
-onUnmounted(() => {
-  window.removeEventListener("pedido-creado", loadPedidosCliente)
-  clearPedidosPolling()
 })
 
 // ✅ LOGIN
@@ -307,14 +263,6 @@ const filteredItems = computed(() =>
     ? items.value
     : items.value.filter(i => i.categoria === selectedCategory.value)
 )
-
-const pedidoActual = computed(() => pedidosCliente.value[0] ?? null)
-const currentStepIndex = computed(() => {
-  if (!pedidoActual.value) return -1
-  const estado = (pedidoActual.value.estado || '').toLowerCase()
-  const index = timelineSteps.indexOf(estado)
-  return index >= 0 ? index : 0
-})
 
 </script>
 

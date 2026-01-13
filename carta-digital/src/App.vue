@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted  } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CartaDigital from './components/CartaDigital.vue'
 import { cart, removeFromCart, clearCart, openLoginModal } from './cart.js'
 import axios from 'axios'
@@ -16,6 +16,24 @@ const showRegister = ref(false)
 const email = ref("")
 const password = ref("")
 const cartButton = ref(null)
+const pedidosCliente = ref([])
+const loadingPedidos = ref(false)
+const errorPedidos = ref("")
+let pedidosInterval = null
+
+const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
+const stepLabels = {
+  pendiente: 'Pendiente',
+  preparando: 'En cocina',
+  listo: 'Listo',
+  entregado: 'Entregado'
+}
+const stepDescriptions = {
+  pendiente: 'Cocina recibió tu pedido',
+  preparando: 'Se está preparando',
+  listo: 'Listo para entregar',
+  entregado: 'Pedido entregado'
+}
 
 function openLogin() {
 window.dispatchEvent(new CustomEvent("open-login"))
@@ -88,6 +106,29 @@ async function sendOrder() {
   }
 }
 
+async function loadPedidosCliente() {
+  if (!cliente.value) return
+  loadingPedidos.value = true
+  errorPedidos.value = ""
+
+  try {
+    const res = await axios.get(`http://172.18.112.238:8000/api/clientes/${cliente.value.id}/pedidos`)
+    pedidosCliente.value = res.data.data ?? res.data
+  } catch (error) {
+    console.error(error)
+    errorPedidos.value = "No pudimos cargar el estado del pedido."
+  } finally {
+    loadingPedidos.value = false
+  }
+}
+
+function clearPedidosPolling() {
+  if (pedidosInterval) {
+    clearInterval(pedidosInterval)
+    pedidosInterval = null
+  }
+}
+
 
 /* 🔥 Rebote cuando se añade producto */
 onMounted(() => {
@@ -120,6 +161,35 @@ onMounted(() => {
   })
 })
 
+watch(
+  cliente,
+  (nuevo) => {
+    clearPedidosPolling()
+    pedidosCliente.value = []
+    errorPedidos.value = ""
+
+    if (nuevo) {
+      loadPedidosCliente()
+      pedidosInterval = setInterval(loadPedidosCliente, 6000)
+    }
+  },
+  { immediate: true }
+)
+
+window.addEventListener("pedido-creado", loadPedidosCliente)
+onUnmounted(() => {
+  window.removeEventListener("pedido-creado", loadPedidosCliente)
+  clearPedidosPolling()
+})
+
+const pedidoActual = computed(() => pedidosCliente.value[0] ?? null)
+const currentStepIndex = computed(() => {
+  if (!pedidoActual.value) return -1
+  const estado = (pedidoActual.value.estado || '').toLowerCase()
+  const index = timelineSteps.indexOf(estado)
+  return index >= 0 ? index : 0
+})
+
 </script>
 
 <template>
@@ -136,6 +206,49 @@ onMounted(() => {
       <button class="close-cart" @click="showCart = false">✦</button>
 
       <h2 class="cart-title">Tu Pedido</h2>
+
+      <section v-if="cliente" class="order-status-cart">
+        <div class="order-header">
+          <div>
+            <h3>📦 Estado de tu pedido</h3>
+            <p class="order-subtitle">Seguimiento en tiempo real</p>
+          </div>
+          <button class="refresh-btn" @click="loadPedidosCliente" :disabled="loadingPedidos">
+            {{ loadingPedidos ? 'Actualizando...' : 'Actualizar' }}
+          </button>
+        </div>
+
+        <div v-if="!pedidoActual && !loadingPedidos" class="order-empty">
+          Aún no tienes pedidos activos.
+        </div>
+
+        <div v-else class="order-card compact-card" :class="{ 'is-loading': loadingPedidos }">
+          <ol class="timeline horizontal professional">
+            <li
+              v-for="(step, index) in timelineSteps"
+              :key="step"
+              :class="{
+                completed: index < currentStepIndex,
+                active: index === currentStepIndex
+              }"
+            >
+              <div class="dot"></div>
+              <div class="step-content">
+                <p class="step-title">{{ stepLabels[step] }}</p>
+                <p class="step-desc">{{ stepDescriptions[step] }}</p>
+              </div>
+            </li>
+          </ol>
+          <div class="timeline-current">
+            <span class="timeline-label">Estado actual:</span>
+            <span class="timeline-value">
+              {{ currentStepIndex >= 0 ? stepLabels[timelineSteps[currentStepIndex]] : 'Sin estado' }}
+            </span>
+          </div>
+        </div>
+
+        <p v-if="errorPedidos" class="order-error">{{ errorPedidos }}</p>
+      </section>
 
       <div v-if="!cliente" class="login-hint">
         ¿Quieres guardar historial y obtener puntos?<br>
@@ -218,6 +331,107 @@ onMounted(() => {
   flex-direction: column;
   gap: 22px;
 }
+
+/* === ESTADO PEDIDO EN CARRITO === */
+.order-status-cart {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.order-header h3 { margin: 0; font-size: 16px; }
+.order-subtitle { margin: 4px 0 0; font-size: 12px; opacity: .65; }
+.refresh-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: .3s;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.refresh-btn:hover { background: #9c2030; }
+.refresh-btn:disabled { opacity: .55; cursor: not-allowed; }
+.order-empty { opacity: .75; font-size: 13px; }
+.order-card {
+  background: rgba(0,0,0,0.35);
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: opacity .25s ease;
+}
+.order-card.is-loading { opacity: .55; }
+
+.timeline { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.timeline.horizontal { flex-direction: row; gap: 0; justify-content: space-between; align-items: flex-start; }
+.timeline.horizontal.professional {
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 14px 8px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.timeline.horizontal li {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  padding: 0 4px;
+}
+.timeline.horizontal li::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: rgba(255,255,255,0.16);
+  z-index: 0;
+}
+.timeline.horizontal li:first-child::before { left: 50%; width: 50%; }
+.timeline.horizontal li:last-child::before { width: 50%; }
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.35);
+  margin-top: 4px;
+  flex-shrink: 0;
+  z-index: 1;
+  position: relative;
+}
+.dot::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+  opacity: .3;
+}
+.timeline li.completed .dot { background: #2ecc71; border-color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,.45); }
+.timeline li.completed .dot::after { background: #1e7f44; opacity: .45; }
+.timeline li.active .dot { background: #ffd7aa; border-color: #ffd7aa; box-shadow: 0 0 10px rgba(255,215,170,.6); }
+.timeline li.active .dot::after { background: #9c6b34; opacity: .5; }
+.step-title { margin: 6px 0 0; font-weight: 700; font-size: 11.5px; letter-spacing: .2px; }
+.step-desc { margin: 4px 0 0; font-size: 10px; opacity: .75; }
+.timeline.horizontal .step-desc { max-width: 92px; }
+.timeline-current { display: flex; justify-content: center; gap: 8px; margin-top: 8px; font-size: 11px; }
+.timeline-label { opacity: .65; }
+.timeline-value { font-weight: 700; color: #ffd7aa; }
+.order-error { color: #ff9c9c; font-weight: 600; font-size: 12px; }
 
 /* Cerrar */
 .close-cart {
