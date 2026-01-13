@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CartaDigital from './components/CartaDigital.vue'
 import { cart, removeFromCart, clearCart, openLoginModal } from './cart.js'
 import axios from 'axios'
+import { API_BASE } from './api.js'
 import { loadCliente, getCliente, cliente, logoutCliente } from "./cliente.js"
 loadCliente()
 
@@ -64,6 +65,7 @@ async function handleRegister() {
   try {
     ("http://192.168.1.2:8000/api/register-cliente", registerForm.value)
     alert("✅ Registro exitoso, ahora inicia sesión ✅")
+
     showRegister.value = false
     showLogin.value = true
   } catch {
