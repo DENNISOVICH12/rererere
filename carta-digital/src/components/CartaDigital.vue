@@ -20,49 +20,6 @@
       </div>
     </header>
 
-    <!-- ESTADO DE PEDIDO (SOLO CON SESIÓN) -->
-    <section v-if="cliente" class="order-status compact">
-      <div class="order-header">
-        <div>
-          <h2>📦 Estado de tu pedido</h2>
-        </div>S
-        <button class="refresh-btn" @click="loadPedidosCliente" :disabled="loadingPedidos">
-          {{ loadingPedidos ? 'Actualizando...' : 'Actualizar' }}
-        </button>
-      </div>
-
-      <div v-if="loadingPedidos" class="order-loading">Cargando estado...</div>
-      <div v-else-if="!pedidoActual" class="order-empty">
-        Aún no tienes pedidos activos.
-      </div>
-      <div v-else class="order-card compact-card">
-        <ol class="timeline horizontal professional">
-          <li
-            v-for="(step, index) in timelineSteps"
-            :key="step"
-            :class="{
-              completed: index < currentStepIndex,
-              active: index === currentStepIndex
-            }"
-          >
-            <div class="dot"></div>
-            <div class="step-content">
-              <p class="step-title">{{ stepLabels[step] }}</p>
-              <p class="step-desc">{{ stepDescriptions[step] }}</p>
-            </div>
-          </li>
-        </ol>
-        <div class="timeline-current">
-          <span class="timeline-label">Estado actual:</span>
-          <span class="timeline-value">
-            {{ currentStepIndex >= 0 ? stepLabels[timelineSteps[currentStepIndex]] : 'Sin estado' }}
-          </span>
-        </div>
-      </div>
-
-      <p v-if="errorPedidos" class="order-error">{{ errorPedidos }}</p>
-    </section>
-
     <!-- FILTROS -->
     <div class="filters">
       <button 
@@ -173,25 +130,6 @@ const loadingLogin = ref(false)
 const showErrors = ref(false)
 const loginMessage = ref("")
 const registerMessage = ref("")
-const pedidosCliente = ref([])
-const loadingPedidos = ref(false)
-const errorPedidos = ref("")
-let pedidosInterval = null
-
-const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
-const stepLabels = {
-  pendiente: 'Pendiente',
-  preparando: 'En cocina',
-  listo: 'Listo',
-  entregado: 'Entregado'
-}
-const stepDescriptions = {
-  pendiente: 'Cocina recibió tu pedido',
-  preparando: 'Se está preparando',
-  listo: 'Listo para entregar',
-  entregado: 'Pedido entregado'
-}
-
 // Cargar menú
 onMounted(async () => {
   const res = await fetch(`${API}/menu-items`)
@@ -301,39 +239,6 @@ const filteredItems = computed(() =>
 .filters { display:flex; gap:12px; justify-content:center; margin-bottom:30px; }
 .filter-btn { padding:8px 18px; border-radius:20px; background:rgba(255,255,255,0.08); color:#F8ECE4; border:1.5px solid rgba(255,255,255,0.35); transition:.3s; }
 .filter-btn.active, .filter-btn:hover { background:#8a1c2b; border-color:#F8ECE4; }
-
-/* ESTADO PEDIDO */
-.order-status { background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.18); border-radius:16px; padding:14px 18px; margin-bottom:20px; display:flex; flex-direction:column; gap:12px; }
-.order-status.compact { max-width: 100%; }
-.order-header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-.order-header h2 { margin:0; font-size:18px; }
-.refresh-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:#fff; padding:6px 12px; border-radius:10px; cursor:pointer; transition:.3s; font-size:12px; }
-.refresh-btn:hover { background:#9c2030; }
-.refresh-btn:disabled { opacity:.5; cursor:not-allowed; }
-.order-loading, .order-empty { opacity:.75; font-size:13px; }
-.order-card { background:rgba(0,0,0,0.35); border-radius:16px; padding:16px; border:1px solid rgba(255,255,255,0.12); }
-.order-card.compact-card { padding:16px 14px; }
-
-.timeline { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:14px; }
-.timeline.horizontal { flex-direction:row; gap:0; justify-content:space-between; align-items:flex-start; }
-.timeline.horizontal.professional { background:rgba(255,255,255,0.04); border-radius:14px; padding:16px 10px 12px; border:1px solid rgba(255,255,255,0.08); }
-.timeline.horizontal li { flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; padding:0 6px; }
-.timeline.horizontal li::before { content:""; position:absolute; top:14px; left:50%; width:100%; height:2px; background:rgba(255,255,255,0.16); z-index:0; }
-.timeline.horizontal li:first-child::before { left:50%; width:50%; }
-.timeline.horizontal li:last-child::before { width:50%; }
-.dot { width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.12); border:2px solid rgba(255,255,255,0.35); margin-top:6px; flex-shrink:0; z-index:1; position:relative; }
-.dot::after { content:""; position:absolute; inset:3px; border-radius:50%; background:rgba(255,255,255,0.35); opacity:.3; }
-.timeline li.completed .dot { background:#2ecc71; border-color:#2ecc71; box-shadow:0 0 10px rgba(46,204,113,.5); }
-.timeline li.completed .dot::after { background:#1e7f44; opacity:.45; }
-.timeline li.active .dot { background:#ffd7aa; border-color:#ffd7aa; box-shadow:0 0 12px rgba(255,215,170,.7); }
-.timeline li.active .dot::after { background:#9c6b34; opacity:.5; }
-.step-title { margin:8px 0 0; font-weight:700; font-size:12.5px; letter-spacing:.2px; }
-.step-desc { margin:4px 0 0; font-size:11px; opacity:.75; }
-.timeline.horizontal .step-desc { max-width:120px; }
-.timeline-current { display:flex; justify-content:center; gap:8px; margin-top:10px; font-size:12px; }
-.timeline-label { opacity:.65; }
-.timeline-value { font-weight:700; color:#ffd7aa; }
-.order-error { color:#ff9c9c; font-weight:600; font-size:12px; }
 
 /* GRID */
 .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:28px; }
