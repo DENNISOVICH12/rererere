@@ -5,7 +5,7 @@ import axios from 'axios'
 const orders = ref([])
 
 async function loadOrders() {
-  const res = await axios.get('http://192.168.1.160:8000/api/orders')
+  const res = await axios.get('http://192.168.1.2:8000/api/orders')
   orders.value = res.data
 }
 

@@ -18,6 +18,7 @@ const pedidosCliente = ref([])
 const loadingPedidos = ref(false)
 const errorPedidos = ref("")
 let pedidosInterval = null
+const API = "http://192.168.1.160:8000/api"
 
 const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
 const stepLabels = {
@@ -63,7 +64,7 @@ const registerForm = ref({
 async function handleRegister() {
   try {
     await axios.post(`${API_BASE}/register-cliente`, registerForm.value)
-    alert("✅ Registro exitoso, ahora inicia sesión ✅")
+alert("✅ Registro exitoso, ahora inicia sesión ✅")
     showRegister.value = false
     showLogin.value = true
   } catch {
@@ -79,7 +80,9 @@ async function sendOrder() {
   try {
     const cliente = getCliente(); // ✅ obtiene { id, usuario, nombre }
 
-    await axios.post(`${API_BASE}/orders`, {
+
+    await axios.post('http://192.168.1.2:8000/api/orders', {
+
       mesa: null,
       cliente_id: cliente ? cliente.id : null, // ✅ ahora SIEMPRE manda el ID correcto
       restaurant_id: 1,
@@ -111,7 +114,7 @@ async function loadPedidosCliente() {
   errorPedidos.value = ""
 
   try {
-    const res = await axios.get(`${API_BASE}/clientes/${clienteActual.id}/pedidos`)
+    const res = await axios.get(`${API}/clientes/${clienteActual.id}/pedidos`)
     pedidosCliente.value = res.data.data ?? res.data
   } catch (error) {
     console.error(error)
