@@ -3,10 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CartaDigital from './components/CartaDigital.vue'
 import { cart, removeFromCart, clearCart, openLoginModal } from './cart.js'
 import axios from 'axios'
-import { setCliente,logoutCliente  } from './cliente.js'
-import { loadCliente } from "./cliente.js"
-import { getCliente } from "./cliente.js"
-import { cliente } from "./cliente.js"
+import { loadCliente, getCliente, cliente, logoutCliente } from "./cliente.js"
 loadCliente()
 
 const showCart = ref(false)
@@ -20,6 +17,7 @@ const pedidosCliente = ref([])
 const loadingPedidos = ref(false)
 const errorPedidos = ref("")
 let pedidosInterval = null
+const API = "http://192.168.1.160:8000/api"
 
 const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
 const stepLabels = {
@@ -81,7 +79,11 @@ async function sendOrder() {
   try {
     const cliente = getCliente(); // ✅ obtiene { id, usuario, nombre }
 
+<<<<<<< HEAD
     await axios.post('http://192.168.1.2:8000/api/orders', {
+=======
+    await axios.post(`${API}/orders`, {
+>>>>>>> d53099b2b488e1b1aec0b5b5bff7623c5c0c03c4
       mesa: null,
       cliente_id: cliente ? cliente.id : null, // ✅ ahora SIEMPRE manda el ID correcto
       restaurant_id: 1,
@@ -107,12 +109,13 @@ async function sendOrder() {
 }
 
 async function loadPedidosCliente() {
-  if (!cliente.value) return
+  const clienteActual = cliente.value
+  if (!clienteActual) return
   loadingPedidos.value = true
   errorPedidos.value = ""
 
   try {
-    const res = await axios.get(`http://172.18.112.238:8000/api/clientes/${cliente.value.id}/pedidos`)
+    const res = await axios.get(`${API}/clientes/${clienteActual.id}/pedidos`)
     pedidosCliente.value = res.data.data ?? res.data
   } catch (error) {
     console.error(error)
