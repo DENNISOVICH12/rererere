@@ -109,10 +109,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
+import { API_BASE } from '../api.js'
 import { addToCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
 
-const API = "http://192.168.1.2:8000/api"
 
 const items = ref([])
 const selectedCategory = ref('todos')
@@ -132,7 +132,7 @@ const loginMessage = ref("")
 const registerMessage = ref("")
 // Cargar menú
 onMounted(async () => {
-  const res = await fetch(`${API}/menu-items`)
+  const res = await fetch(`${API_BASE}/menu-items`)
   items.value = (await res.json()).data
 })
 
@@ -159,7 +159,7 @@ async function login() {
   loadingLogin.value = true
 
   try {
-    const res = await axios.post(`${API}/login-cliente`, form.value)
+    const res = await axios.post(`${API_BASE}/login-cliente`, form.value)
     setCliente(res.data.cliente)
     loginMessage.value = "✅ Sesión iniciada"
     setTimeout(() => showLogin.value = false, 800)
@@ -176,9 +176,9 @@ async function registerUser() {
   registerMessage.value = ""
 
   try {
-    await axios.post(`${API}/register-cliente`, register.value)
+    await axios.post(`${API_BASE}/register-cliente`, register.value)
 
-    const loginRes = await axios.post(`${API}/login-cliente`, {
+    const loginRes = await axios.post(`${API_BASE}/login-cliente`, {
       usuario: register.value.usuario,
       password: register.value.password
     })

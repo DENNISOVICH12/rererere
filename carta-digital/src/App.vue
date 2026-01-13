@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CartaDigital from './components/CartaDigital.vue'
 import { cart, removeFromCart, clearCart, openLoginModal } from './cart.js'
 import axios from 'axios'
+import { API_BASE } from './api.js'
 import { loadCliente, getCliente, cliente, logoutCliente } from "./cliente.js"
 loadCliente()
 
@@ -62,8 +63,8 @@ const registerForm = ref({
 
 async function handleRegister() {
   try {
-    await axios.post("http://192.168.1.2:8000/api/register-cliente", registerForm.value)
-    alert("✅ Registro exitoso, ahora inicia sesión ✅")
+    await axios.post(`${API_BASE}/register-cliente`, registerForm.value)
+alert("✅ Registro exitoso, ahora inicia sesión ✅")
     showRegister.value = false
     showLogin.value = true
   } catch {
@@ -79,11 +80,9 @@ async function sendOrder() {
   try {
     const cliente = getCliente(); // ✅ obtiene { id, usuario, nombre }
 
-<<<<<<< HEAD
+
     await axios.post('http://192.168.1.2:8000/api/orders', {
-=======
-    await axios.post(`${API}/orders`, {
->>>>>>> d53099b2b488e1b1aec0b5b5bff7623c5c0c03c4
+
       mesa: null,
       cliente_id: cliente ? cliente.id : null, // ✅ ahora SIEMPRE manda el ID correcto
       restaurant_id: 1,
