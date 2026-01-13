@@ -103,6 +103,6 @@ Route::middleware(['auth:web'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::get('/carta-digital', function () {
-    return redirect()->away('http://192.168.1.160:5174/');
+    return redirect()->away('http://192.168.1.2:5174/');
 })->name('carta.digital');
     
