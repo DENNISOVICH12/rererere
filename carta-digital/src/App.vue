@@ -63,9 +63,9 @@ const registerForm = ref({
 
 async function handleRegister() {
   try {
-
+ codex/remove-order-status-from-main-menu-pimvpj
     await axios.post(`${API_BASE}/register-cliente`, registerForm.value)
-alert("✅ Registro exitoso, ahora inicia sesión ✅")
+    alert("✅ Registro exitoso, ahora inicia sesión ✅")
 
     showRegister.value = false
     showLogin.value = true
@@ -82,8 +82,7 @@ async function sendOrder() {
   try {
     const cliente = getCliente(); // ✅ obtiene { id, usuario, nombre }
 
-
-    await axios.post('http://192.168.80.14:8000/api/orders', {
+    await axios.post(`${API_BASE}/orders`, {
 
       mesa: null,
       cliente_id: cliente ? cliente.id : null, // ✅ ahora SIEMPRE manda el ID correcto
@@ -116,7 +115,8 @@ async function loadPedidosCliente() {
   errorPedidos.value = ""
 
   try {
-    const res = await axios.get(`${API}/clientes/${clienteActual.id}/pedidos`)
+    const res = await axios.get(`${API_BASE}/clientes/${clienteActual.id}/pedidos`)
+
     pedidosCliente.value = res.data.data ?? res.data
   } catch (error) {
     console.error(error)
