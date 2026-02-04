@@ -16,7 +16,7 @@ const email = ref('')
 const password = ref('')
 
 async function login() {
-  const res = await axios.post('http://192.168.1.160:8000/api/login', {
+  const res = await axios.post('http://192.168.80.14:8000/api/login', {
     email: email.value,
     password: password.value
   })

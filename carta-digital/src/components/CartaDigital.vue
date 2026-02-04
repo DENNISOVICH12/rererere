@@ -113,6 +113,7 @@ import { API_BASE } from '../api.js'
 import { addToCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
 
+
 const items = ref([])
 const selectedCategory = ref('todos')
 const categories = ['todos', 'plato', 'bebida']

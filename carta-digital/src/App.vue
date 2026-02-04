@@ -18,6 +18,7 @@ const pedidosCliente = ref([])
 const loadingPedidos = ref(false)
 const errorPedidos = ref("")
 let pedidosInterval = null
+const API = "http://192.168.80.14:8000/api"
 
 const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
 const stepLabels = {
@@ -62,8 +63,10 @@ const registerForm = ref({
 
 async function handleRegister() {
   try {
+ codex/remove-order-status-from-main-menu-pimvpj
     await axios.post(`${API_BASE}/register-cliente`, registerForm.value)
     alert("✅ Registro exitoso, ahora inicia sesión ✅")
+
     showRegister.value = false
     showLogin.value = true
   } catch {
@@ -80,6 +83,7 @@ async function sendOrder() {
     const cliente = getCliente(); // ✅ obtiene { id, usuario, nombre }
 
     await axios.post(`${API_BASE}/orders`, {
+
       mesa: null,
       cliente_id: cliente ? cliente.id : null, // ✅ ahora SIEMPRE manda el ID correcto
       restaurant_id: 1,
@@ -112,6 +116,7 @@ async function loadPedidosCliente() {
 
   try {
     const res = await axios.get(`${API_BASE}/clientes/${clienteActual.id}/pedidos`)
+
     pedidosCliente.value = res.data.data ?? res.data
   } catch (error) {
     console.error(error)
