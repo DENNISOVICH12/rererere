@@ -246,7 +246,6 @@ body {
     </section>
   </div>
 
-
   <order-details-drawer
     :open="drawerOpen"
     :order="selectedOrder"
@@ -256,6 +255,7 @@ body {
     @priority-toggle="togglePriority"
     @toast="showToast"
   />
+
 
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
 </div>
@@ -294,7 +294,8 @@ const OrderDetailsDrawer = {
       return this.isOverdue || !!this.priorityOverrides[this.order.id];
     },
     normalizedItems() {
-      const source = this.order?.items || this.order?.detalles || [];
+      const source = this.order?.items || this.order?.detalles || this.order?.detalle || this.order?.pedido_detalles || [];
+
       if (!Array.isArray(source)) return [];
 
       return source.map((item, idx) => {
@@ -354,11 +355,16 @@ const OrderDetailsDrawer = {
     },
     fmtTime(dateRaw) {
       if (!dateRaw) return '-';
-      return new Date(dateRaw).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      const ts = Date.parse(dateRaw);
+      if (!Number.isFinite(ts)) return '-';
+      return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
     },
     fmtDate(dateRaw) {
       if (!dateRaw) return '-';
-      return new Date(dateRaw).toLocaleString('es-CO', {
+      const ts = Date.parse(dateRaw);
+      if (!Number.isFinite(ts)) return '-';
+      return new Date(ts).toLocaleString('es-CO', {
+
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
       });
     },
@@ -419,7 +425,6 @@ const OrderDetailsDrawer = {
     copySummary() {
       if (!this.order) return;
       const lines = this.normalizedItems.map((item) => `- ${item.qty}x ${item.name}`);
-
       const summary = `Pedido #${this.order.id}\nEstado: ${this.statusLabel(this.order.estado)}\n${lines.join('\n')}\nNotas: ${this.order.notas || 'Sin notas'}`;
       navigator.clipboard?.writeText(summary);
       this.$emit('toast', '📋 Resumen copiado');
@@ -462,6 +467,7 @@ const OrderDetailsDrawer = {
 
             <span v-if="isPriority" class="priority-pill">⚠ Prioridad alta · {{ delayLabel || "Pedido priorizado" }}</span>
           </section>
+
 
           <section v-if="hasOrder" class="ticket">
             <h3 style="margin:0 0 8px 0;">Items</h3>
@@ -537,14 +543,17 @@ Vue.createApp({
   computed: {
     normalized() {
       return this.orders.map((order) => {
-        const ts = new Date(order.created_at).getTime();
+        const parsedTs = Date.parse(order.created_at);
+        const ts = Number.isFinite(parsedTs) ? parsedTs : this.nowTs;
+
         const elapsedMs = Math.max(this.nowTs - ts, 0);
         const status = String(order.estado || '').toLowerCase();
         return {
           ...order,
           estado: status,
           notas: order.notas || order.note || '',
-          items: order.items || order.detalles || [],
+          items: order.items || order.detalles || order.detalle || order.pedido_detalles || [],
+
           _createdTs: ts,
           _elapsedMs: elapsedMs,
           _elapsedMin: elapsedMs / 60000,
