@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -18,6 +19,7 @@
   --ok: #4d7f67;
   --warn: #8f7448;
   --danger: #8f4f5d;
+
 }
 * { box-sizing: border-box; }
 body {
@@ -27,6 +29,7 @@ body {
   color: var(--text);
   background-image:
     linear-gradient(140deg, rgba(8,11,17,.82), rgba(11,15,23,.78)),
+
     url("https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1800&q=80");
   background-size: cover;
   background-position: center;
@@ -37,6 +40,7 @@ body {
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 12px;
+
   align-items: center;
   background: var(--glass);
   backdrop-filter: blur(8px);
@@ -44,12 +48,14 @@ body {
   border-radius: 16px;
   padding: 10px 14px;
   box-shadow: 0 6px 18px rgba(2,6,13,.26);
+
 }
 .topbar h1 { margin: 0; font-size: 1.42rem; letter-spacing: .01em; }
 .muted { margin: 2px 0 0; color: var(--muted); }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(86px, 1fr)); gap: 8px; }
 .stats article {
   background: rgba(148, 163, 184, .06);
+
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 5px 10px;
@@ -63,6 +69,7 @@ body {
 .count-chip { padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.07); font-size: .82rem; color: #f3e9ed; }
 .btn-icon { opacity: .85; margin-right: 4px; }
 
+
 .ghost {
   border: 1px solid rgba(255,255,255,.25);
   background: rgba(255,255,255,.06);
@@ -73,6 +80,7 @@ body {
   transition: all .2s ease;
 }
 .ghost:hover { border-color: rgba(110, 54, 66, .42); box-shadow: 0 0 0 1px rgba(110, 54, 66, .20); }
+
 .error {
   margin: 0;
   padding: 10px;
@@ -81,6 +89,7 @@ body {
   border: 1px solid rgba(240,142,160,.5);
   background: rgba(91,42,53,.30);
 }
+
 .toast {
   position: fixed;
   right: 16px;
@@ -88,11 +97,13 @@ body {
   background: rgba(17, 11, 18, .94);
   border: 1px solid rgba(165,58,74,.6);
   color: #f9e9ee;
+
   padding: 10px 12px;
   border-radius: 10px;
   z-index: 80;
 }
 .board { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(260px, 1fr)); gap: 8px; }
+
 .col {
   background: var(--glass);
   border: 1px solid var(--line);
@@ -108,6 +119,7 @@ body {
 .card {
   background: linear-gradient(180deg, rgba(16,22,34,.76), rgba(13,19,30,.82));
   border: 1px solid rgba(167, 179, 201, .20);
+
   border-radius: 14px;
   padding: 12px;
   display: flex;
@@ -126,6 +138,7 @@ body {
 .t-ok { color: #b8d5c8; background: rgba(77,127,103,.22); }
 .t-warn { color: #d7c39b; background: rgba(143,116,72,.24); }
 .t-critical { color: #d9a9b3; background: rgba(143,79,93,.22); animation: pulseRed 2.4s ease-in-out infinite; }
+
 .items { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .items li { display: flex; gap: 8px; align-items: baseline; }
 .qty { min-width: 42px; color: #f3d6a2; font-weight: 900; font-size: 1.15rem; }
@@ -138,6 +151,7 @@ body {
 .action-start { background: linear-gradient(180deg, #7f5037, #6d442f); color: #f3ebe7; }
 .action-ready { background: linear-gradient(180deg, #456b58, #3c5d4d); color: #e5efe9; }
 .action-deliver { background: linear-gradient(180deg, #4c6279, #41566c); color: #e4edf6; }
+
 .fade-enter-active, .fade-leave-active, .fade-move { transition: all .28s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(8px); }
 
@@ -148,12 +162,14 @@ body {
   background: rgba(12, 17, 27, .88);
   border-left: 1px solid var(--line);
   backdrop-filter: blur(10px);
+
   padding: 14px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
   box-shadow: -6px 0 18px rgba(2,6,13,.30);
+
 }
 .drawer-head { display: flex; justify-content: space-between; align-items: center; }
 .drawer-title { margin: 0; font-size: 1.5rem; }
@@ -165,6 +181,7 @@ body {
 .ticket { background: rgba(15, 20, 31, .64); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
 .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ticket-grid p { margin: 0; color: #eadddf; }
+
 .priority-pill {
   margin-top: 6px;
   display: inline-block;
@@ -175,11 +192,13 @@ body {
   font-size: .8rem;
   padding: 4px 9px;
   animation: pulseRed 2.8s ease-in-out infinite;
+
 }
 .item-row { border-bottom: 1px dashed rgba(255,255,255,.18); padding: 8px 0; }
 .item-row:last-child { border-bottom: 0; }
 .item-main { display: flex; gap: 8px; align-items: baseline; }
 .item-extra, .item-note { margin: 4px 0 0 0; color: #b8c0cf; font-size: .88rem; }
+
 .drawer-items { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
 .items-summary { margin: 0 0 8px 0; color: #d3c3cb; font-size: .87rem; }
 .category-title { margin: 10px 0 4px 0; color: #f4d6de; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
@@ -190,6 +209,7 @@ body {
   border: 1px dashed rgba(143,79,93,.42);
   background: rgba(91,42,53,.22);
   color: #d7b9c1;
+
 }
 .drawer-actions { display: grid; gap: 8px; }
 .secondary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -203,6 +223,7 @@ body {
   transition: all .2s ease;
 }
 .sec-btn:hover { border-color: rgba(110,54,66,.38); }
+
 .drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .25s ease; }
 .drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
 .drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(28px); }
@@ -210,11 +231,13 @@ body {
 @keyframes glowPremium {
   0% { box-shadow: 0 0 0 rgba(165,58,74,0); }
   45% { box-shadow: 0 0 12px rgba(110,54,66,.18); }
+
   100% { box-shadow: 0 0 0 rgba(165,58,74,0); }
 }
 @keyframes pulseRed {
   0%,100% { box-shadow: 0 0 0 rgba(240,142,160,0); }
   50% { box-shadow: 0 0 8px rgba(143,79,93,.18); }
+
 }
 @media (max-width: 1280px) {
   .topbar { grid-template-columns: 1fr; }
@@ -228,6 +251,7 @@ body {
 .col-list::-webkit-scrollbar,.drawer-items::-webkit-scrollbar{width:8px;height:8px;}
 .col-list::-webkit-scrollbar-thumb,.drawer-items::-webkit-scrollbar-thumb{background:rgba(111,123,145,.45);border-radius:999px;}
 .col-list::-webkit-scrollbar-track,.drawer-items::-webkit-scrollbar-track{background:transparent;}
+
 </style>
 </head>
 <body>
@@ -247,6 +271,7 @@ body {
     <div class="controls">
       <button class="ghost" @click="soundEnabled = !soundEnabled"><span class="btn-icon">🔉</span> @{{ soundEnabled ? 'Sonido ON' : 'Sonido OFF' }}</button>
       <button class="ghost" @click="toggleFullscreen"><span class="btn-icon">⤢</span> Pantalla completa</button>
+
     </div>
   </header>
 
@@ -310,6 +335,7 @@ body {
     @toast="showToast"
   />
 
+
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
 </div>
 
@@ -348,6 +374,7 @@ const OrderDetailsDrawer = {
     },
     normalizedItems() {
       const source = this.order?.items || this.order?.detalles || this.order?.detalle || this.order?.pedido_detalles || [];
+
       if (!Array.isArray(source)) return [];
 
       return source.map((item, idx) => {
@@ -392,6 +419,7 @@ const OrderDetailsDrawer = {
       if (this.order.estado === 'pendiente') return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
       if (this.order.estado === 'preparando') return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
       if (this.order.estado === 'listo') return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
+
       return null;
     },
   },
@@ -415,6 +443,7 @@ const OrderDetailsDrawer = {
       const ts = Date.parse(dateRaw);
       if (!Number.isFinite(ts)) return '-';
       return new Date(ts).toLocaleString('es-CO', {
+
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
       });
     },
@@ -516,6 +545,7 @@ const OrderDetailsDrawer = {
             </div>
 
             <span v-if="isPriority" class="priority-pill" v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
+
           </section>
 
           <section v-if="hasOrder" class="ticket">
@@ -563,6 +593,7 @@ const OrderDetailsDrawer = {
   `,
 };
 
+
 Vue.createApp({
   components: { OrderDetailsDrawer },
   data() {
@@ -582,6 +613,7 @@ Vue.createApp({
         { key: 'preparando', title: 'En preparación' },
         { key: 'listo', title: 'Listos' },
         { key: 'entregado', title: 'Entregados' },
+
       ],
       pollHandle: null,
       tickHandle: null,
@@ -593,6 +625,7 @@ Vue.createApp({
       return this.orders.map((order) => {
         const parsedTs = Date.parse(order.created_at);
         const ts = Number.isFinite(parsedTs) ? parsedTs : this.nowTs;
+
         const elapsedMs = Math.max(this.nowTs - ts, 0);
         const status = String(order.estado || '').toLowerCase();
         return {
@@ -600,6 +633,7 @@ Vue.createApp({
           estado: status,
           notas: order.notas || order.note || '',
           items: order.items || order.detalles || order.detalle || order.pedido_detalles || [],
+
           _createdTs: ts,
           _elapsedMs: elapsedMs,
           _elapsedMin: elapsedMs / 60000,
@@ -663,6 +697,7 @@ Vue.createApp({
       if (order.estado === 'pendiente') return { label: 'Comenzar', className: 'action-start', run: () => this.quickAction(order.id, 'preparando') };
       if (order.estado === 'preparando') return { label: 'Marcar listo', className: 'action-ready', run: () => this.quickAction(order.id, 'listo') };
       if (order.estado === 'listo') return { label: 'Entregar', className: 'action-deliver', run: () => this.quickAction(order.id, 'entregado') };
+
       return null;
     },
     async quickAction(orderId, nextStatus) {
@@ -742,10 +777,12 @@ Vue.createApp({
 
         if (!response.ok) throw new Error('status ' + response.status);
 
+
         const payload = await response.json();
         const incoming = payload?.data ?? payload ?? [];
         this.orders = Array.isArray(incoming) ? incoming : [];
         this.error = '';
+
 
         if (!isInitial) {
           const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
@@ -801,6 +838,7 @@ Vue.createApp({
     clearInterval(this.tickHandle);
     clearTimeout(this.toastHandle);
   },
+
 }).mount('#app');
 </script>
 </body>
