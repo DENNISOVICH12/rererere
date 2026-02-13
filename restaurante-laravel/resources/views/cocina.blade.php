@@ -1,4 +1,5 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -130,6 +131,24 @@ body {
 .item-row:last-child { border-bottom: 0; }
 .item-main { display: flex; gap: 8px; align-items: baseline; }
 .item-extra, .item-note { margin: 4px 0 0 0; color: var(--muted); font-size: .9rem; }
+.drawer-items {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.items-summary {
+  margin: 0 0 8px 0;
+  color: var(--muted);
+  font-size: .87rem;
+}
+.category-title {
+  margin: 10px 0 4px 0;
+  color: #bfdbfe;
+  font-size: .82rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
 .drawer-actions { display: grid; gap: 8px; }
 .secondary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sec-btn { border: 1px solid rgba(255,255,255,.2); background: transparent; color: var(--text); border-radius: 10px; padding: 9px 10px; cursor: pointer; }
@@ -227,6 +246,7 @@ body {
     </section>
   </div>
 
+
   <order-details-drawer
     :open="drawerOpen"
     :order="selectedOrder"
@@ -238,7 +258,6 @@ body {
   />
 
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
-
 </div>
 
 <script src="https://unpkg.com/vue@3"></script>
@@ -274,6 +293,48 @@ const OrderDetailsDrawer = {
       if (!this.order) return false;
       return this.isOverdue || !!this.priorityOverrides[this.order.id];
     },
+    normalizedItems() {
+      const source = this.order?.items || this.order?.detalles || [];
+      if (!Array.isArray(source)) return [];
+
+      return source.map((item, idx) => {
+        const qty = Number(item.cantidad ?? item.quantity ?? 1) || 1;
+        const name = item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? item.producto?.nombre ?? 'Item';
+        const extrasRaw = item.extras ?? item.opciones ?? item.options ?? item.adiciones ?? null;
+        const notesRaw = item.notas ?? item.nota ?? item.note ?? null;
+        const categoryRaw = item.categoria ?? item.category ?? item.tipo ?? item.menu_item?.categoria ?? item.menuItem?.categoria ?? null;
+
+        const extras = Array.isArray(extrasRaw) ? extrasRaw.join(', ') : extrasRaw;
+        const note = Array.isArray(notesRaw) ? notesRaw.join(' · ') : notesRaw;
+        const category = String(categoryRaw || '').trim();
+
+        return {
+          id: item.id || `${this.order?.id || 'o'}-${idx}`,
+          qty,
+          name,
+          extras: extras || '',
+          note: note || '',
+          category: category || 'General',
+        };
+      });
+    },
+    groupedItems() {
+      const groups = {};
+      this.normalizedItems.forEach((item) => {
+        if (!groups[item.category]) groups[item.category] = [];
+        groups[item.category].push(item);
+      });
+      return groups;
+    },
+    totalItemsCount() {
+      return this.normalizedItems.reduce((acc, item) => acc + item.qty, 0);
+    },
+    delayLabel() {
+      if (!this.order) return '';
+      if (this.order._elapsedMin <= 6) return '';
+      return `Atrasado +${Math.floor(this.order._elapsedMin - 6)} min`;
+    },
+
     primaryAction() {
       if (!this.order) return null;
       if (this.order.estado === 'pendiente') return { label: '🔥 COMENZAR', next: 'preparando', className: 'action action-start' };
@@ -357,7 +418,8 @@ const OrderDetailsDrawer = {
     },
     copySummary() {
       if (!this.order) return;
-      const lines = (this.order.items || []).map((item) => `- ${(item.cantidad ?? item.quantity ?? 1)}x ${item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? 'Item'}`);
+      const lines = this.normalizedItems.map((item) => `- ${item.qty}x ${item.name}`);
+
       const summary = `Pedido #${this.order.id}\nEstado: ${this.statusLabel(this.order.estado)}\n${lines.join('\n')}\nNotas: ${this.order.notas || 'Sin notas'}`;
       navigator.clipboard?.writeText(summary);
       this.$emit('toast', '📋 Resumen copiado');
@@ -381,46 +443,56 @@ const OrderDetailsDrawer = {
       <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
         <aside class="drawer">
           <header class="drawer-head">
-            <h2 class="drawer-title">Pedido #@{{ order?.id || '-' }}</h2>
+            <h2 class="drawer-title">Pedido #{{ order?.id || '-' }}</h2>
             <button class="ghost" @click="$emit('close')">✕</button>
           </header>
 
           <section v-if="hasOrder" class="ticket">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-              <span class="badge" :class="statusClass">@{{ statusLabel(order.estado) }}</span>
-              <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')">@{{ formatElapsed(order._elapsedMs) }}</span>
+              <span class="badge" :class="statusClass">{{ statusLabel(order.estado) }}</span>
+              <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')">{{ formatElapsed(order._elapsedMs) }}</span>
             </div>
 
             <div class="ticket-grid" style="margin-top:10px;">
-              <p><strong>Creado:</strong> @{{ fmtDate(order.created_at) }}</p>
-              <p><strong>Hora:</strong> @{{ fmtTime(order.created_at) }}</p>
-              <p><strong>Mesa:</strong> @{{ order.mesa || '-' }}</p>
-              <p><strong>Cliente:</strong> @{{ order.cliente?.nombre || order.cliente_nombre || '-' }}</p>
+              <p><strong>Creado:</strong> {{ fmtDate(order.created_at) }}</p>
+              <p><strong>Hora:</strong> {{ fmtTime(order.created_at) }}</p>
+              <p><strong>Mesa:</strong> {{ order.mesa || '-' }}</p>
+              <p><strong>Cliente:</strong> {{ order.cliente?.nombre || order.cliente_nombre || '-' }}</p>
             </div>
 
-            <span v-if="isPriority" class="priority-pill">⚠ Prioridad alta</span>
+            <span v-if="isPriority" class="priority-pill">⚠ Prioridad alta · {{ delayLabel || "Pedido priorizado" }}</span>
           </section>
 
           <section v-if="hasOrder" class="ticket">
             <h3 style="margin:0 0 8px 0;">Items</h3>
-            <article class="item-row" v-for="(item, idx) in order.items || []" :key="item.id || idx">
-              <div class="item-main">
-                <span class="qty">x@{{ item.cantidad ?? item.quantity ?? 1 }}</span>
-                <strong>@{{ item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? 'Item' }}</strong>
-              </div>
-              <p v-if="item.extras || item.opciones" class="item-extra">➕ @{{ item.extras || item.opciones }}</p>
-              <p v-if="item.notas || item.nota" class="item-note">📝 @{{ item.notas || item.nota }}</p>
-            </article>
+            <p class="items-summary">{{ normalizedItems.length }} líneas · {{ totalItemsCount }} unidades</p>
+
+            <div class="drawer-items">
+              <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
+                <h4 class="category-title" v-if="categoryName && categoryName !== 'General'">{{ categoryName }}</h4>
+                <article class="item-row" v-for="item in categoryItems" :key="item.id">
+                  <div class="item-main">
+                    <span class="qty">{{ item.qty }}x</span>
+                    <strong>{{ item.name }}</strong>
+                  </div>
+                  <p v-if="item.extras" class="item-extra">➕ {{ item.extras }}</p>
+                  <p v-if="item.note" class="item-note">📝 {{ item.note }}</p>
+                </article>
+              </template>
+            </div>
+
           </section>
 
           <section v-if="hasOrder && order.notas" class="ticket">
             <h3 style="margin:0 0 8px 0;">Notas</h3>
-            <p class="note">@{{ order.notas }}</p>
+            <p class="note">{{ order.notas }}</p>
+
           </section>
 
           <section class="ticket drawer-actions" v-if="hasOrder">
             <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction">
-              @{{ loadingAction ? 'Procesando...' : primaryAction.label }}
+              {{ loadingAction ? 'Procesando...' : primaryAction.label }}
+
             </button>
             <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
 
@@ -619,6 +691,7 @@ Vue.createApp({
         const incoming = payload?.data ?? payload ?? [];
         this.orders = Array.isArray(incoming) ? incoming : [];
         this.error = '';
+
 
         if (!isInitial) {
           const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
