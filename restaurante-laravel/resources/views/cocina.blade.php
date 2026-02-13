@@ -60,6 +60,7 @@ body {
 .card-head { display: flex; justify-content: space-between; align-items: center; }
 .num { font-weight: 800; font-size: 1.15rem; }
 .timer { border-radius: 999px; padding: 4px 10px; font-weight: 800; }
+
 .t-ok { color: #4ade80; background: rgba(34,197,94,.18); }
 .t-warn { color: #fde047; background: rgba(250,204,21,.18); }
 .t-critical { color: var(--red); background: rgba(251,113,133,.17); animation: pulseRed 1.2s infinite; }
@@ -69,6 +70,7 @@ body {
 .name { font-weight: 600; }
 .note { margin: 0; padding: 8px; border-radius: 8px; background: rgba(250,204,21,.14); color: #fde68a; font-size: .9rem; }
 .action { width: 100%; border: none; border-radius: 12px; padding: 16px 12px; font-size: 1.05rem; font-weight: 900; cursor: pointer; }
+
 .action[disabled] { opacity: .55; cursor: not-allowed; }
 .action-start { background: var(--orange); color: #fff; }
 .action-ready { background: var(--green); color: #082610; }
@@ -151,6 +153,7 @@ body {
 @media (max-width: 840px) {
   .board { grid-template-columns: 1fr; }
   .drawer { width: 100vw; }
+
 }
 </style>
 </head>
@@ -235,6 +238,7 @@ body {
   />
 
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
+
 </div>
 
 <script src="https://unpkg.com/vue@3"></script>
@@ -670,6 +674,7 @@ Vue.createApp({
     clearInterval(this.tickHandle);
     clearTimeout(this.toastHandle);
   },
+
 }).mount('#app');
 </script>
 </body>
