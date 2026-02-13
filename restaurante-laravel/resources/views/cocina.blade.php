@@ -274,6 +274,7 @@ Vue.createApp({
                     _elapsedMs: elapsedMs,
                     _elapsedMin: elapsedMs / 60000,
                     _urgency: (elapsedMs / 60000) + (String(order.estado || '').toLowerCase() === 'pendiente' ? 2 : 0),
+
                 };
             }).filter((order) => {
                 if (order.estado !== 'entregado') return true;
@@ -330,11 +331,13 @@ Vue.createApp({
         },
         endpointFor(nextStatus, orderId) {
             return `/pedidos/${orderId}/estado`;
+
         },
         async fetchOrders(isInitial = false) {
             try {
                 const beforeIds = new Set(this.orders.map((o) => o.id));
                 const response = await fetch('/pedidos', {
+
                     credentials: 'include',
                     headers: { 'Accept': 'application/json' },
                 });
@@ -352,6 +355,7 @@ Vue.createApp({
                 }
             } catch (e) {
                 this.error = 'No se pudo sincronizar la cocina con /pedidos';
+
             }
         },
         handleNewOrders(newOrders) {
@@ -402,6 +406,7 @@ Vue.createApp({
             try {
                 const res = await fetch(endpoint, {
                     method: 'PUT',
+
                     credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
@@ -409,6 +414,7 @@ Vue.createApp({
                         'X-CSRF-TOKEN': token,
                     },
                     body: JSON.stringify({ estado: nextStatus }),
+
                 });
 
                 if (!res.ok) throw new Error('status ' + res.status);
