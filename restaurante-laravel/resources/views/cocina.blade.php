@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -381,21 +381,21 @@ const OrderDetailsDrawer = {
       <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
         <aside class="drawer">
           <header class="drawer-head">
-            <h2 class="drawer-title">Pedido #{{ order?.id || '-' }}</h2>
+            <h2 class="drawer-title">Pedido #@{{ order?.id || '-' }}</h2>
             <button class="ghost" @click="$emit('close')">✕</button>
           </header>
 
           <section v-if="hasOrder" class="ticket">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-              <span class="badge" :class="statusClass">{{ statusLabel(order.estado) }}</span>
-              <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')">{{ formatElapsed(order._elapsedMs) }}</span>
+              <span class="badge" :class="statusClass">@{{ statusLabel(order.estado) }}</span>
+              <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')">@{{ formatElapsed(order._elapsedMs) }}</span>
             </div>
 
             <div class="ticket-grid" style="margin-top:10px;">
-              <p><strong>Creado:</strong> {{ fmtDate(order.created_at) }}</p>
-              <p><strong>Hora:</strong> {{ fmtTime(order.created_at) }}</p>
-              <p><strong>Mesa:</strong> {{ order.mesa || '-' }}</p>
-              <p><strong>Cliente:</strong> {{ order.cliente?.nombre || order.cliente_nombre || '-' }}</p>
+              <p><strong>Creado:</strong> @{{ fmtDate(order.created_at) }}</p>
+              <p><strong>Hora:</strong> @{{ fmtTime(order.created_at) }}</p>
+              <p><strong>Mesa:</strong> @{{ order.mesa || '-' }}</p>
+              <p><strong>Cliente:</strong> @{{ order.cliente?.nombre || order.cliente_nombre || '-' }}</p>
             </div>
 
             <span v-if="isPriority" class="priority-pill">⚠ Prioridad alta</span>
@@ -405,22 +405,22 @@ const OrderDetailsDrawer = {
             <h3 style="margin:0 0 8px 0;">Items</h3>
             <article class="item-row" v-for="(item, idx) in order.items || []" :key="item.id || idx">
               <div class="item-main">
-                <span class="qty">x{{ item.cantidad ?? item.quantity ?? 1 }}</span>
-                <strong>{{ item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? 'Item' }}</strong>
+                <span class="qty">x@{{ item.cantidad ?? item.quantity ?? 1 }}</span>
+                <strong>@{{ item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? 'Item' }}</strong>
               </div>
-              <p v-if="item.extras || item.opciones" class="item-extra">➕ {{ item.extras || item.opciones }}</p>
-              <p v-if="item.notas || item.nota" class="item-note">📝 {{ item.notas || item.nota }}</p>
+              <p v-if="item.extras || item.opciones" class="item-extra">➕ @{{ item.extras || item.opciones }}</p>
+              <p v-if="item.notas || item.nota" class="item-note">📝 @{{ item.notas || item.nota }}</p>
             </article>
           </section>
 
           <section v-if="hasOrder && order.notas" class="ticket">
             <h3 style="margin:0 0 8px 0;">Notas</h3>
-            <p class="note">{{ order.notas }}</p>
+            <p class="note">@{{ order.notas }}</p>
           </section>
 
           <section class="ticket drawer-actions" v-if="hasOrder">
             <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction">
-              {{ loadingAction ? 'Procesando...' : primaryAction.label }}
+              @{{ loadingAction ? 'Procesando...' : primaryAction.label }}
             </button>
             <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
 
