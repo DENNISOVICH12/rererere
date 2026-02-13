@@ -439,74 +439,75 @@ const OrderDetailsDrawer = {
     window.removeEventListener('keydown', this.onEsc);
   },
   template: `
-    <transition name="drawer-slide">
-      <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
-        <aside class="drawer">
-          <header class="drawer-head">
-            <h2 class="drawer-title">Pedido #{{ order?.id || '-' }}</h2>
-            <button class="ghost" @click="$emit('close')">✕</button>
-          </header>
+  <transition name="drawer-slide">
+    <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
+      <aside class="drawer">
+        <header class="drawer-head">
+          <h2 class="drawer-title">Pedido #@{{ order?.id || '-' }}</h2>
+          <button class="ghost" @click="$emit('close')">✕</button>
+        </header>
 
-          <section v-if="hasOrder" class="ticket">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-              <span class="badge" :class="statusClass">{{ statusLabel(order.estado) }}</span>
-              <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')">{{ formatElapsed(order._elapsedMs) }}</span>
-            </div>
+        <section v-if="hasOrder" class="ticket">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span class="badge" :class="statusClass">@{{ statusLabel(order.estado) }}</span>
+            <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')">
+              @{{ formatElapsed(order._elapsedMs) }}
+            </span>
+          </div>
 
-            <div class="ticket-grid" style="margin-top:10px;">
-              <p><strong>Creado:</strong> {{ fmtDate(order.created_at) }}</p>
-              <p><strong>Hora:</strong> {{ fmtTime(order.created_at) }}</p>
-              <p><strong>Mesa:</strong> {{ order.mesa || '-' }}</p>
-              <p><strong>Cliente:</strong> {{ order.cliente?.nombre || order.cliente_nombre || '-' }}</p>
-            </div>
+          <div class="ticket-grid" style="margin-top:10px;">
+            <p><strong>Creado:</strong> @{{ fmtDate(order.created_at) }}</p>
+            <p><strong>Hora:</strong> @{{ fmtTime(order.created_at) }}</p>
+            <p><strong>Mesa:</strong> @{{ order.mesa || '-' }}</p>
+            <p><strong>Cliente:</strong> @{{ order.cliente?.nombre || order.cliente_nombre || '-' }}</p>
+          </div>
 
-            <span v-if="isPriority" class="priority-pill">⚠ Prioridad alta · {{ delayLabel || "Pedido priorizado" }}</span>
-          </section>
+          <span v-if="isPriority" class="priority-pill">⚠ Prioridad alta · @{{ delayLabel || 'Pedido priorizado' }}</span>
+        </section>
 
-          <section v-if="hasOrder" class="ticket">
-            <h3 style="margin:0 0 8px 0;">Items</h3>
-            <p class="items-summary">{{ normalizedItems.length }} líneas · {{ totalItemsCount }} unidades</p>
+        <section v-if="hasOrder" class="ticket">
+          <h3 style="margin:0 0 8px 0;">Items</h3>
+          <p class="items-summary">@{{ normalizedItems.length }} líneas · @{{ totalItemsCount }} unidades</p>
 
-            <div class="drawer-items">
-              <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
-                <h4 class="category-title" v-if="categoryName && categoryName !== 'General'">{{ categoryName }}</h4>
-                <article class="item-row" v-for="item in categoryItems" :key="item.id">
-                  <div class="item-main">
-                    <span class="qty">{{ item.qty }}x</span>
-                    <strong>{{ item.name }}</strong>
-                  </div>
-                  <p v-if="item.extras" class="item-extra">➕ {{ item.extras }}</p>
-                  <p v-if="item.note" class="item-note">📝 {{ item.note }}</p>
-                </article>
-              </template>
-            </div>
+          <div class="drawer-items">
+            <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
+              <h4 class="category-title" v-if="categoryName && categoryName !== 'General'">@{{ categoryName }}</h4>
 
-          </section>
+              <article class="item-row" v-for="item in categoryItems" :key="item.id">
+                <div class="item-main">
+                  <span class="qty">@{{ item.qty }}x</span>
+                  <strong>@{{ item.name }}</strong>
+                </div>
+                <p v-if="item.extras" class="item-extra">➕ @{{ item.extras }}</p>
+                <p v-if="item.note" class="item-note">📝 @{{ item.note }}</p>
+              </article>
+            </template>
+          </div>
+        </section>
 
-          <section v-if="hasOrder && order.notas" class="ticket">
-            <h3 style="margin:0 0 8px 0;">Notas</h3>
-            <p class="note">{{ order.notas }}</p>
+        <section v-if="hasOrder && order.notas" class="ticket">
+          <h3 style="margin:0 0 8px 0;">Notas</h3>
+          <p class="note">@{{ order.notas }}</p>
+        </section>
 
-          </section>
+        <section class="ticket drawer-actions" v-if="hasOrder">
+          <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction">
+            @{{ loadingAction ? 'Procesando...' : primaryAction.label }}
+          </button>
 
-          <section class="ticket drawer-actions" v-if="hasOrder">
-            <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction">
-              {{ loadingAction ? 'Procesando...' : primaryAction.label }}
+          <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
 
-            </button>
-            <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
-
-            <div class="secondary-actions">
-              <button class="sec-btn" @click="printTicket">Imprimir</button>
-              <button class="sec-btn" @click="copySummary">Copiar resumen</button>
-              <button class="sec-btn" @click="$emit('priorityToggle', order.id)">Marcar prioridad</button>
-              <button class="sec-btn" @click="$emit('close')">Volver al tablero</button>
-            </div>
-          </section>
-        </aside>
-      </div>
-    </transition>
-  `,
+          <div class="secondary-actions">
+            <button class="sec-btn" @click="printTicket">Imprimir</button>
+            <button class="sec-btn" @click="copySummary">Copiar resumen</button>
+            <button class="sec-btn" @click="$emit('priorityToggle', order.id)">Marcar prioridad</button>
+            <button class="sec-btn" @click="$emit('close')">Volver al tablero</button>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </transition>
+`,
 };
 
 Vue.createApp({
