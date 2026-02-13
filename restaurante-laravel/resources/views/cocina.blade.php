@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -18,6 +19,7 @@
   --ok: #68b98f;
   --warn: #dfc36f;
   --danger: #f08ea0;
+
 }
 * { box-sizing: border-box; }
 body {
@@ -37,6 +39,7 @@ body {
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 12px;
+
   align-items: center;
   background: var(--glass);
   backdrop-filter: blur(8px);
@@ -63,6 +66,7 @@ body {
 .count-chip { padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.07); font-size: .82rem; color: #f3e9ed; }
 .btn-icon { opacity: .85; margin-right: 4px; }
 
+
 .ghost {
   border: 1px solid rgba(255,255,255,.25);
   background: rgba(255,255,255,.06);
@@ -81,6 +85,7 @@ body {
   border: 1px solid rgba(240,142,160,.5);
   background: rgba(138,28,43,.35);
 }
+
 .toast {
   position: fixed;
   right: 16px;
@@ -88,11 +93,13 @@ body {
   background: rgba(17, 11, 18, .94);
   border: 1px solid rgba(165,58,74,.6);
   color: #f9e9ee;
+
   padding: 10px 12px;
   border-radius: 10px;
   z-index: 80;
 }
 .board { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(260px, 1fr)); gap: 8px; }
+
 .col {
   background: var(--glass);
   border: 1px solid var(--line);
@@ -108,6 +115,7 @@ body {
 .card {
   background: linear-gradient(180deg, rgba(12,8,14,.74), rgba(9,7,13,.78));
   border: 1px solid rgba(255,255,255,.10);
+
   border-radius: 14px;
   padding: 12px;
   display: flex;
@@ -117,12 +125,14 @@ body {
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 .card:hover { transform: translateY(-2px); border-color: rgba(165,58,74,.55); box-shadow: 0 10px 20px rgba(0,0,0,.24), 0 0 0 1px rgba(165,58,74,.25); }
+
 .card-selected { border-color: rgba(165,58,74,.8); box-shadow: 0 0 0 1px rgba(165,58,74,.4); }
 .card-new { animation: glowPremium 2s ease; }
 .card-critical { border-color: rgba(240,142,160,.7); }
 .card-head { display: flex; justify-content: space-between; align-items: center; }
 .num { font-weight: 800; font-size: 1.12rem; }
 .timer { border-radius: 999px; padding: 4px 10px; font-weight: 800; letter-spacing: .02em; }
+
 .t-ok { color: #8de7b8; background: rgba(104,185,143,.2); }
 .t-warn { color: #f6dea0; background: rgba(223,195,111,.2); }
 .t-critical { color: #ffc2cf; background: rgba(240,142,160,.19); animation: pulseRed 1.25s infinite; }
@@ -135,6 +145,7 @@ body {
 .action:hover { filter: brightness(1.05); transform: translateY(-1px); }
 .action:active { transform: translateY(0); }
 .action[disabled] { opacity: .55; cursor: not-allowed; transform: none; }
+
 .action-start { background: linear-gradient(180deg, #bc4d2d, #a73f22); color: #fff8f5; }
 .action-ready { background: linear-gradient(180deg, #3f8a66, #346f53); color: #e8fff2; }
 .action-deliver { background: linear-gradient(180deg, #4f7295, #3e5f80); color: #ebf5ff; }
@@ -144,10 +155,12 @@ body {
 .drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .52); display: flex; justify-content: flex-end; z-index: 90; }
 .drawer {
   width: min(560px, 100vw);
+
   height: 100%;
   background: rgba(12, 8, 13, .88);
   border-left: 1px solid var(--line);
   backdrop-filter: blur(10px);
+
   padding: 14px;
   overflow-y: auto;
   display: flex;
@@ -165,6 +178,7 @@ body {
 .ticket { background: rgba(18, 11, 18, .62); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
 .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ticket-grid p { margin: 0; color: #eadddf; }
+
 .priority-pill {
   margin-top: 6px;
   display: inline-block;
@@ -172,6 +186,7 @@ body {
   background: rgba(138,28,43,.35);
   color: #ffc2cf;
   border: 1px solid rgba(240,142,160,.6);
+
   font-size: .8rem;
   padding: 4px 9px;
   animation: pulseRed 1.2s infinite;
@@ -203,6 +218,7 @@ body {
   transition: all .2s ease;
 }
 .sec-btn:hover { border-color: rgba(165,58,74,.5); }
+
 .drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .25s ease; }
 .drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
 .drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(28px); }
@@ -215,6 +231,7 @@ body {
 @keyframes pulseRed {
   0%,100% { box-shadow: 0 0 0 rgba(240,142,160,0); }
   50% { box-shadow: 0 0 16px rgba(240,142,160,.35); }
+
 }
 @media (max-width: 1280px) {
   .topbar { grid-template-columns: 1fr; }
@@ -228,6 +245,7 @@ body {
 .col-list::-webkit-scrollbar,.drawer-items::-webkit-scrollbar{width:8px;height:8px;}
 .col-list::-webkit-scrollbar-thumb,.drawer-items::-webkit-scrollbar-thumb{background:rgba(165,58,74,.45);border-radius:999px;}
 .col-list::-webkit-scrollbar-track,.drawer-items::-webkit-scrollbar-track{background:transparent;}
+
 </style>
 </head>
 <body>
@@ -247,6 +265,7 @@ body {
     <div class="controls">
       <button class="ghost" @click="soundEnabled = !soundEnabled"><span class="btn-icon">🔉</span> @{{ soundEnabled ? 'Sonido ON' : 'Sonido OFF' }}</button>
       <button class="ghost" @click="toggleFullscreen"><span class="btn-icon">⤢</span> Pantalla completa</button>
+
     </div>
   </header>
 
@@ -310,6 +329,7 @@ body {
     @toast="showToast"
   />
 
+
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
 </div>
 
@@ -348,6 +368,7 @@ const OrderDetailsDrawer = {
     },
     normalizedItems() {
       const source = this.order?.items || this.order?.detalles || this.order?.detalle || this.order?.pedido_detalles || [];
+
       if (!Array.isArray(source)) return [];
 
       return source.map((item, idx) => {
@@ -392,6 +413,7 @@ const OrderDetailsDrawer = {
       if (this.order.estado === 'pendiente') return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
       if (this.order.estado === 'preparando') return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
       if (this.order.estado === 'listo') return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
+
       return null;
     },
   },
@@ -415,6 +437,7 @@ const OrderDetailsDrawer = {
       const ts = Date.parse(dateRaw);
       if (!Number.isFinite(ts)) return '-';
       return new Date(ts).toLocaleString('es-CO', {
+
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
       });
     },
@@ -516,6 +539,7 @@ const OrderDetailsDrawer = {
             </div>
 
             <span v-if="isPriority" class="priority-pill" v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
+
           </section>
 
           <section v-if="hasOrder" class="ticket">
@@ -536,6 +560,7 @@ const OrderDetailsDrawer = {
                   </div>
                   <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
                   <p v-if="item.note" class="item-note" v-text="'Nota: ' + item.note"></p>
+
                 </article>
               </template>
             </div>
@@ -563,6 +588,7 @@ const OrderDetailsDrawer = {
   `,
 };
 
+
 Vue.createApp({
   components: { OrderDetailsDrawer },
   data() {
@@ -582,6 +608,7 @@ Vue.createApp({
         { key: 'preparando', title: 'En preparación' },
         { key: 'listo', title: 'Listos' },
         { key: 'entregado', title: 'Entregados' },
+
       ],
       pollHandle: null,
       tickHandle: null,
@@ -593,6 +620,7 @@ Vue.createApp({
       return this.orders.map((order) => {
         const parsedTs = Date.parse(order.created_at);
         const ts = Number.isFinite(parsedTs) ? parsedTs : this.nowTs;
+
         const elapsedMs = Math.max(this.nowTs - ts, 0);
         const status = String(order.estado || '').toLowerCase();
         return {
@@ -600,6 +628,7 @@ Vue.createApp({
           estado: status,
           notas: order.notas || order.note || '',
           items: order.items || order.detalles || order.detalle || order.pedido_detalles || [],
+
           _createdTs: ts,
           _elapsedMs: elapsedMs,
           _elapsedMin: elapsedMs / 60000,
@@ -663,6 +692,7 @@ Vue.createApp({
       if (order.estado === 'pendiente') return { label: 'Comenzar', className: 'action-start', run: () => this.quickAction(order.id, 'preparando') };
       if (order.estado === 'preparando') return { label: 'Marcar listo', className: 'action-ready', run: () => this.quickAction(order.id, 'listo') };
       if (order.estado === 'listo') return { label: 'Entregar', className: 'action-deliver', run: () => this.quickAction(order.id, 'entregado') };
+
       return null;
     },
     async quickAction(orderId, nextStatus) {
@@ -747,6 +777,7 @@ Vue.createApp({
         this.orders = Array.isArray(incoming) ? incoming : [];
         this.error = '';
 
+
         if (!isInitial) {
           const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
           this.handleNewOrders(newOrders);
@@ -801,6 +832,7 @@ Vue.createApp({
     clearInterval(this.tickHandle);
     clearTimeout(this.toastHandle);
   },
+
 }).mount('#app');
 </script>
 </body>
