@@ -34,32 +34,39 @@ body {
   background-position: center;
   background-attachment: fixed;
 }
-.kds { min-height: 100vh; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.kds { min-height: 100vh; padding: 18px 20px; max-width: 1640px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .topbar {
   display: grid;
-  grid-template-columns: 1.3fr auto auto;
-  gap: 10px;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+
   align-items: center;
   background: var(--glass);
   backdrop-filter: blur(8px);
   border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 12px 14px;
+  border-radius: 16px;
+  padding: 10px 14px;
   box-shadow: 0 10px 28px rgba(0,0,0,.25);
 }
-.topbar h1 { margin: 0; font-size: 1.55rem; letter-spacing: .01em; }
+.topbar h1 { margin: 0; font-size: 1.42rem; letter-spacing: .01em; }
 .muted { margin: 2px 0 0; color: var(--muted); }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(86px, 1fr)); gap: 8px; }
 .stats article {
-  background: rgba(255,255,255,.06);
+  background: rgba(255,255,255,.05);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   text-align: center;
+  min-width: 86px;
 }
 .stats span { color: var(--muted); font-size: .75rem; display: block; }
 .stats strong { font-size: 1rem; }
-.controls { display: flex; gap: 8px; }
+.controls { display: flex; gap: 8px; justify-content: flex-end; }
+.col-title { font-weight: 700; letter-spacing: .01em; }
+.count-chip { padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.07); font-size: .82rem; color: #f3e9ed; }
+.btn-icon { opacity: .85; margin-right: 4px; }
+
+
 .ghost {
   border: 1px solid rgba(255,255,255,.25);
   background: rgba(255,255,255,.06);
@@ -91,7 +98,8 @@ body {
   border-radius: 10px;
   z-index: 80;
 }
-.board { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(250px, 1fr)); gap: 10px; }
+.board { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(260px, 1fr)); gap: 8px; }
+
 .col {
   background: var(--glass);
   border: 1px solid var(--line);
@@ -102,26 +110,29 @@ body {
   min-height: 0;
   box-shadow: 0 8px 20px rgba(0,0,0,.22);
 }
-.col-head { padding: 12px; border-bottom: 1px solid rgba(255,255,255,.14); display: flex; justify-content: space-between; align-items: center; }
-.col-list { overflow-y: auto; min-height: 0; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.col-head { position: sticky; top: 0; z-index: 3; padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.14); background: rgba(11,8,14,.72); backdrop-filter: blur(6px); display: flex; justify-content: space-between; align-items: center; }
+.col-list { overflow-y: auto; min-height: 0; padding: 10px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; scrollbar-color: rgba(165,58,74,.55) transparent; }
 .card {
-  background: var(--glass-strong);
-  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(12,8,14,.74), rgba(9,7,13,.78));
+  border: 1px solid rgba(255,255,255,.10);
+
   border-radius: 14px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   cursor: pointer;
-  transition: border-color .2s ease, box-shadow .2s ease;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
-.card:hover { border-color: rgba(165,58,74,.55); box-shadow: 0 8px 18px rgba(0,0,0,.22), 0 0 0 1px rgba(165,58,74,.25); }
+.card:hover { transform: translateY(-2px); border-color: rgba(165,58,74,.55); box-shadow: 0 10px 20px rgba(0,0,0,.24), 0 0 0 1px rgba(165,58,74,.25); }
+
 .card-selected { border-color: rgba(165,58,74,.8); box-shadow: 0 0 0 1px rgba(165,58,74,.4); }
 .card-new { animation: glowPremium 2s ease; }
 .card-critical { border-color: rgba(240,142,160,.7); }
 .card-head { display: flex; justify-content: space-between; align-items: center; }
 .num { font-weight: 800; font-size: 1.12rem; }
-.timer { border-radius: 999px; padding: 4px 10px; font-weight: 800; }
+.timer { border-radius: 999px; padding: 4px 10px; font-weight: 800; letter-spacing: .02em; }
+
 .t-ok { color: #8de7b8; background: rgba(104,185,143,.2); }
 .t-warn { color: #f6dea0; background: rgba(223,195,111,.2); }
 .t-critical { color: #ffc2cf; background: rgba(240,142,160,.19); animation: pulseRed 1.25s infinite; }
@@ -130,8 +141,11 @@ body {
 .qty { min-width: 42px; color: #f3d6a2; font-weight: 900; font-size: 1.15rem; }
 .name { font-weight: 620; }
 .note { margin: 0; padding: 8px; border-radius: 8px; background: rgba(138,28,43,.28); color: #ffd6dd; font-size: .9rem; }
-.action { width: 100%; border: none; border-radius: 12px; padding: 14px 12px; font-size: 1.02rem; font-weight: 900; cursor: pointer; }
-.action[disabled] { opacity: .55; cursor: not-allowed; }
+.action { width: 100%; border: none; border-radius: 12px; padding: 13px 12px; font-size: 0.98rem; font-weight: 800; letter-spacing: .01em; cursor: pointer; transition: transform .15s ease, filter .15s ease; }
+.action:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.action:active { transform: translateY(0); }
+.action[disabled] { opacity: .55; cursor: not-allowed; transform: none; }
+
 .action-start { background: linear-gradient(180deg, #bc4d2d, #a73f22); color: #fff8f5; }
 .action-ready { background: linear-gradient(180deg, #3f8a66, #346f53); color: #e8fff2; }
 .action-deliver { background: linear-gradient(180deg, #4f7295, #3e5f80); color: #ebf5ff; }
@@ -140,7 +154,8 @@ body {
 
 .drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .52); display: flex; justify-content: flex-end; z-index: 90; }
 .drawer {
-  width: min(540px, 100vw);
+  width: min(560px, 100vw);
+
   height: 100%;
   background: rgba(12, 8, 13, .88);
   border-left: 1px solid var(--line);
@@ -225,8 +240,12 @@ body {
 @media (max-width: 840px) {
   .board { grid-template-columns: 1fr; }
   .drawer { width: 100vw; }
-
 }
+
+.col-list::-webkit-scrollbar,.drawer-items::-webkit-scrollbar{width:8px;height:8px;}
+.col-list::-webkit-scrollbar-thumb,.drawer-items::-webkit-scrollbar-thumb{background:rgba(165,58,74,.45);border-radius:999px;}
+.col-list::-webkit-scrollbar-track,.drawer-items::-webkit-scrollbar-track{background:transparent;}
+
 </style>
 </head>
 <body>
@@ -244,8 +263,9 @@ body {
     </div>
 
     <div class="controls">
-      <button class="ghost" @click="soundEnabled = !soundEnabled">@{{ soundEnabled ? '🔊 Sonido ON' : '🔈 Sonido OFF' }}</button>
-      <button class="ghost" @click="toggleFullscreen">⛶ Pantalla completa</button>
+      <button class="ghost" @click="soundEnabled = !soundEnabled"><span class="btn-icon">🔉</span> @{{ soundEnabled ? 'Sonido ON' : 'Sonido OFF' }}</button>
+      <button class="ghost" @click="toggleFullscreen"><span class="btn-icon">⤢</span> Pantalla completa</button>
+
     </div>
   </header>
 
@@ -254,8 +274,8 @@ body {
   <div class="board">
     <section v-for="column in columns" :key="column.key" class="col">
       <header class="col-head">
-        <strong>@{{ column.title }}</strong>
-        <span>@{{ grouped[column.key].length }}</span>
+        <strong class="col-title">@{{ column.title }}</strong>
+        <span class="count-chip">@{{ grouped[column.key].length }}</span>
       </header>
 
       <transition-group name="fade" tag="div" class="col-list">
@@ -283,7 +303,7 @@ body {
             </li>
           </ul>
 
-          <p v-if="order.notas" class="note">📝 @{{ order.notas }}</p>
+          <p v-if="order.notas" class="note">Nota: @{{ order.notas }}</p>
 
           <button
             v-if="actionFor(order)"
@@ -388,12 +408,12 @@ const OrderDetailsDrawer = {
       if (this.order._elapsedMin <= 6) return '';
       return `Atrasado +${Math.floor(this.order._elapsedMin - 6)} min`;
     },
-
     primaryAction() {
       if (!this.order) return null;
-      if (this.order.estado === 'pendiente') return { label: '🔥 COMENZAR', next: 'preparando', className: 'action action-start' };
-      if (this.order.estado === 'preparando') return { label: '✅ MARCAR LISTO', next: 'listo', className: 'action action-ready' };
-      if (this.order.estado === 'listo') return { label: '📦 ENTREGAR', next: 'entregado', className: 'action action-deliver' };
+      if (this.order.estado === 'pendiente') return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
+      if (this.order.estado === 'preparando') return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
+      if (this.order.estado === 'listo') return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
+
       return null;
     },
   },
@@ -518,7 +538,8 @@ const OrderDetailsDrawer = {
               <p><strong>Cliente:</strong> <span v-text="order.cliente?.nombre || order.cliente_nombre || '-'"></span></p>
             </div>
 
-            <span v-if="isPriority" class="priority-pill" v-text="'⚠ Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
+            <span v-if="isPriority" class="priority-pill" v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
+
           </section>
 
           <section v-if="hasOrder" class="ticket">
@@ -537,8 +558,9 @@ const OrderDetailsDrawer = {
                     <span class="qty" v-text="item.qty + 'x'"></span>
                     <strong v-text="item.name"></strong>
                   </div>
-                  <p v-if="item.extras" class="item-extra" v-text="'➕ ' + item.extras"></p>
-                  <p v-if="item.note" class="item-note" v-text="'📝 ' + item.note"></p>
+                  <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
+                  <p v-if="item.note" class="item-note" v-text="'Nota: ' + item.note"></p>
+
                 </article>
               </template>
             </div>
@@ -564,8 +586,8 @@ const OrderDetailsDrawer = {
       </div>
     </transition>
   `,
-
 };
+
 
 Vue.createApp({
   components: { OrderDetailsDrawer },
@@ -582,10 +604,11 @@ Vue.createApp({
       priorityOverrides: {},
       toastMessage: '',
       columns: [
-        { key: 'pendiente', title: '🟡 Pendientes' },
-        { key: 'preparando', title: '🔥 En preparación' },
-        { key: 'listo', title: '✅ Listos' },
-        { key: 'entregado', title: '📦 Entregados' },
+        { key: 'pendiente', title: 'Pendientes' },
+        { key: 'preparando', title: 'En preparación' },
+        { key: 'listo', title: 'Listos' },
+        { key: 'entregado', title: 'Entregados' },
+
       ],
       pollHandle: null,
       tickHandle: null,
@@ -666,9 +689,10 @@ Vue.createApp({
       return 't-ok';
     },
     actionFor(order) {
-      if (order.estado === 'pendiente') return { label: '🔥 COMENZAR', className: 'action-start', run: () => this.quickAction(order.id, 'preparando') };
-      if (order.estado === 'preparando') return { label: '✅ MARCAR LISTO', className: 'action-ready', run: () => this.quickAction(order.id, 'listo') };
-      if (order.estado === 'listo') return { label: '📦 ENTREGAR', className: 'action-deliver', run: () => this.quickAction(order.id, 'entregado') };
+      if (order.estado === 'pendiente') return { label: 'Comenzar', className: 'action-start', run: () => this.quickAction(order.id, 'preparando') };
+      if (order.estado === 'preparando') return { label: 'Marcar listo', className: 'action-ready', run: () => this.quickAction(order.id, 'listo') };
+      if (order.estado === 'listo') return { label: 'Entregar', className: 'action-deliver', run: () => this.quickAction(order.id, 'entregado') };
+
       return null;
     },
     async quickAction(orderId, nextStatus) {
