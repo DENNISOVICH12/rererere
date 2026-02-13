@@ -132,9 +132,19 @@ const loginMessage = ref("")
 const registerMessage = ref("")
 // Cargar menú
 onMounted(async () => {
-  const res = await fetch(`${API_BASE}/menu-items`)
-  items.value = (await res.json()).data
+  try {
+    const res = await fetch(`${API_BASE}/menu-items`)
+
+    if (!res.ok) throw new Error('Error cargando menú')
+
+    const data = await res.json()
+    items.value = data.data || data
+
+  } catch (err) {
+    console.error(err)
+  }
 })
+
 
 // Abrir modal desde carrito
 onMounted(() => {
@@ -178,7 +188,7 @@ async function registerUser() {
   try {
     await axios.post(`${API_BASE}/register-cliente`, register.value)
 
-    const loginRes = await axios.post(`${API_BASE}/login-cliente`, {
+   const loginRes = await axios.post(`${API_BASE}/login-cliente`, {
       usuario: register.value.usuario,
       password: register.value.password
     })

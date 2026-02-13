@@ -5,127 +5,167 @@ import { cart, removeFromCart, clearCart, openLoginModal } from './cart.js'
 import axios from 'axios'
 import { API_BASE } from './api.js'
 import { loadCliente, getCliente, cliente, logoutCliente } from "./cliente.js"
+
+
 loadCliente()
 
 const showCart = ref(false)
-const showLogin = ref(false)
-const showRegister = ref(false)
-
-const email = ref("")
-const password = ref("")
 const cartButton = ref(null)
+const sendingOrder = ref(false)
 const pedidosCliente = ref([])
 const loadingPedidos = ref(false)
 const errorPedidos = ref("")
 let pedidosInterval = null
-const API = "http://192.168.80.14:8000/api"
 
+// =========================
+// 🔙 VOLVER AL ADMIN (SOLO SI VIENE DESDE ADMIN)
+// =========================
+const showBackToAdmin = ref(false)
+const backToAdminUrl = ref("")
+
+function detectAdminEntry() {
+  const params = new URLSearchParams(window.location.search)
+  const adminLinkEncoded = params.get("admin_link")
+  if (!adminLinkEncoded) return // cliente normal
+
+  try {
+    // 1) admin_link viene URL-encoded
+    const adminLink = decodeURIComponent(adminLinkEncoded)
+
+    // 2) extraemos el return dentro de esa URL firmada
+    const inside = new URL(adminLink)
+    const retEncoded = inside.searchParams.get("return")
+    if (!retEncoded) return
+
+    // 3) return viene doble-encoded en tu ejemplo
+    const ret = decodeURIComponent(retEncoded)
+
+    showBackToAdmin.value = true
+    backToAdminUrl.value = ret
+  } catch (e) {
+    // si algo falla, no mostramos botón
+    showBackToAdmin.value = false
+    backToAdminUrl.value = ""
+  }
+}
+
+
+/* =========================
+   🔥 TOAST NOTIFICACIÓN PRO
+========================= */
+const toast = ref({
+  show: false,
+  message: "",
+  type: "success"
+})
+
+function showToast(message, type = "success") {
+  toast.value.message = message
+  toast.value.type = type
+  toast.value.show = true
+
+  setTimeout(() => {
+    toast.value.show = false
+  }, 2500)
+}
+
+/* =====================================================
+   🔥 TIMELINE
+===================================================== */
 const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
+
 const stepLabels = {
   pendiente: 'Pendiente',
   preparando: 'En cocina',
   listo: 'Listo',
   entregado: 'Entregado'
 }
-const stepDescriptions = {
-  pendiente: 'Cocina recibió tu pedido',
-  preparando: 'Se está preparando',
-  listo: 'Listo para entregar',
-  entregado: 'Pedido entregado'
-}
 
-function openLogin() {
-window.dispatchEvent(new CustomEvent("open-login"))
-}
+
+/* =====================================================
+   🔥 LOGOUT
+===================================================== */
 function handleLogout() {
   logoutCliente()
   alert("👋 Sesión cerrada correctamente")
 }
-async function handleLogin() {
-  try {
-    await login(email.value, password.value)
-    showLogin.value = false
-    alert("✅ Sesión iniciada, tus pedidos ahora estarán asociados.")
-  } catch {
-    alert("❌ Usuario o contraseña incorrectos")
-  }
-}
 
-const registerForm = ref({
-  usuario: "",
-  correo: "",
-  password: "",
-  nombres: "",
-  apellidos: "",
-  dni: "",
-  edad: ""
-})
 
-async function handleRegister() {
-  try {
- codex/remove-order-status-from-main-menu-pimvpj
-    await axios.post(`${API_BASE}/register-cliente`, registerForm.value)
-    alert("✅ Registro exitoso, ahora inicia sesión ✅")
-
-    showRegister.value = false
-    showLogin.value = true
-  } catch {
-    alert("❌ Error al registrarse")
-  }
-}
-
+/* =====================================================
+   🔥 TOTAL
+===================================================== */
 const totalPrice = computed(() =>
   cart.value.reduce((sum, item) => sum + item.precio * item.quantity, 0)
 )
 
+
+/* =====================================================
+   🔥 ENVIAR PEDIDO
+===================================================== */
 async function sendOrder() {
+
+  if (sendingOrder.value) return // 🔥 evita doble click
+
+  sendingOrder.value = true
+
   try {
-    const cliente = getCliente(); // ✅ obtiene { id, usuario, nombre }
+    const clienteActual = getCliente()
 
     await axios.post(`${API_BASE}/orders`, {
-
       mesa: null,
-      cliente_id: cliente ? cliente.id : null, // ✅ ahora SIEMPRE manda el ID correcto
+      cliente_id: clienteActual ? clienteActual.id : null,
       restaurant_id: 1,
       items: cart.value.map(i => ({
         menu_item_id: i.id,
         cantidad: i.quantity,
         precio_unitario: i.precio
       }))
-    });
+    })
 
-    alert(cliente
-      ? "✅ Pedido enviado (Cliente identificado)."
-      : "✅ Pedido enviado como invitado.");
+    clearCart()
 
-    window.dispatchEvent(new CustomEvent("pedido-creado"));
+    showToast("Pedido enviado correctamente ✅", "success")
 
-    clearCart(); // mejor que hacer cart.value = []
+    loadPedidosCliente(true)
 
   } catch (error) {
-    console.log(error.response?.data);
-    alert("❌ Error enviando pedido");
+
+    showToast("Error enviando pedido ❌", "error")
+
+  } finally {
+
+    sendingOrder.value = false // 🔥 vuelve a habilitar
+
   }
 }
 
-async function loadPedidosCliente() {
+
+
+/* =====================================================
+   🔥 CARGAR PEDIDOS
+===================================================== */
+async function loadPedidosCliente(silent = false) {
+
   const clienteActual = cliente.value
   if (!clienteActual) return
-  loadingPedidos.value = true
+
+  if (!silent) loadingPedidos.value = true
   errorPedidos.value = ""
 
   try {
     const res = await axios.get(`${API_BASE}/clientes/${clienteActual.id}/pedidos`)
-
     pedidosCliente.value = res.data.data ?? res.data
   } catch (error) {
-    console.error(error)
     errorPedidos.value = "No pudimos cargar el estado del pedido."
   } finally {
-    loadingPedidos.value = false
+    if (!silent) loadingPedidos.value = false
   }
 }
 
+
+/* =====================================================
+   🔥 POLLING SILENCIOSO
+===================================================== */
 function clearPedidosPolling() {
   if (pedidosInterval) {
     clearInterval(pedidosInterval)
@@ -133,153 +173,234 @@ function clearPedidosPolling() {
   }
 }
 
-
-/* 🔥 Rebote cuando se añade producto */
-onMounted(() => {
-
-  // 🔔 Animación cuando se agrega al carrito
-  const cartBounceHandler = () => {
-    if (!cartButton.value) return
-
-    cartButton.value.classList.remove("cart-bounce")
-    void cartButton.value.offsetWidth // fuerza reflow para reiniciar animación
-    cartButton.value.classList.add("cart-bounce")
-  }
-
-  // 📌 Escuchar evento global del carrito
-  window.addEventListener("cart-updated", cartBounceHandler)
-
-
-  // 🔓 Escuchar la solicitud global para abrir login
-  const openLoginHandler = () => {
-    showLogin.value = true
-  }
-
-  window.addEventListener("open-login", openLoginHandler)
-
-
-  // 🧹 Quitar eventos al destruir el componente (buena práctica)
-  onUnmounted(() => {
-    window.removeEventListener("cart-updated", cartBounceHandler)
-    window.removeEventListener("open-login", openLoginHandler)
-  })
-})
-
 watch(
   cliente,
   (nuevo) => {
     clearPedidosPolling()
     pedidosCliente.value = []
-    errorPedidos.value = ""
 
     if (nuevo) {
-      loadPedidosCliente()
-      pedidosInterval = setInterval(loadPedidosCliente, 6000)
+      loadPedidosCliente(true)
+
+      pedidosInterval = setInterval(() => {
+        loadPedidosCliente(true) // 🔥 silencioso
+      }, 6000)
     }
   },
   { immediate: true }
 )
 
-window.addEventListener("pedido-creado", loadPedidosCliente)
-onUnmounted(() => {
-  window.removeEventListener("pedido-creado", loadPedidosCliente)
-  clearPedidosPolling()
+
+/* =====================================================
+   🔥 CART BOUNCE
+===================================================== */
+onMounted(() => {
+  detectAdminEntry()
+
+  const handler = () => {
+    cartButton.value?.classList.remove("cart-bounce")
+    void cartButton.value?.offsetWidth
+    cartButton.value?.classList.add("cart-bounce")
+  }
+
+  window.addEventListener("cart-updated", handler)
+
+  onUnmounted(() => {
+    window.removeEventListener("cart-updated", handler)
+  })
 })
 
+/* =====================================================
+   🔥 COMPUTEDS
+===================================================== */
 const pedidoActual = computed(() => pedidosCliente.value[0] ?? null)
+
 const currentStepIndex = computed(() => {
   if (!pedidoActual.value) return -1
   const estado = (pedidoActual.value.estado || '').toLowerCase()
-  const index = timelineSteps.indexOf(estado)
-  return index >= 0 ? index : 0
+  return timelineSteps.indexOf(estado)
 })
-
 </script>
 
+
+
 <template>
-  <div>
+<div>
+<!-- ✅ TOPBAR SOLO ADMIN -->
+<div v-if="showBackToAdmin" class="admin-topbar">
+  <a :href="backToAdminUrl" class="admin-back-btn">
+    ← Volver al Admin
+  </a>
 
-    <button ref="cartButton" class="cart-floating" @click="showCart = !showCart">
-      🛒 <span>{{ cart.length }}</span>
-    </button>
+  <div class="admin-brand">
+    <span class="admin-pill">Modo Admin</span>
+  </div>
 
-    <CartaDigital />
+  <div class="admin-right"></div>
+</div>
 
-    <div v-if="showCart" class="cart-panel">
+<!-- ✅ espacio para que NO se monte con el resto -->
+<div v-if="showBackToAdmin" class="admin-topbar-spacer"></div>
 
-      <button class="close-cart" @click="showCart = false">✦</button>
 
-      <h2 class="cart-title">Tu Pedido</h2>
 
-      <section v-if="cliente" class="order-status-cart">
-        <div class="order-header">
-          <div>
-            <h3>📦 Estado de tu pedido</h3>
-            <p class="order-subtitle">Seguimiento en tiempo real</p>
-          </div>
-          <button class="refresh-btn" @click="loadPedidosCliente" :disabled="loadingPedidos">
-            {{ loadingPedidos ? 'Actualizando...' : 'Actualizar' }}
-          </button>
-        </div>
+  <!-- BOTÓN CARRITO -->
+  <button
+    ref="cartButton"
+    class="cart-floating"
+    @click="showCart = !showCart"
+  >
+    🛒 <span>{{ cart.length }}</span>
+  </button>
 
-        <div v-if="!pedidoActual && !loadingPedidos" class="order-empty">
-          Aún no tienes pedidos activos.
-        </div>
+  <CartaDigital />
 
-        <div v-else class="order-card compact-card" :class="{ 'is-loading': loadingPedidos }">
-          <ol class="timeline horizontal professional">
-            <li
-              v-for="(step, index) in timelineSteps"
-              :key="step"
-              :class="{
-                completed: index < currentStepIndex,
-                active: index === currentStepIndex
-              }"
-            >
-              <div class="dot"></div>
-              <div class="step-content">
-                <p class="step-title">{{ stepLabels[step] }}</p>
-                <p class="step-desc">{{ stepDescriptions[step] }}</p>
-              </div>
-            </li>
-          </ol>
-          <div class="timeline-current">
-            <span class="timeline-label">Estado actual:</span>
-            <span class="timeline-value">
-              {{ currentStepIndex >= 0 ? stepLabels[timelineSteps[currentStepIndex]] : 'Sin estado' }}
-            </span>
-          </div>
-        </div>
 
-        <p v-if="errorPedidos" class="order-error">{{ errorPedidos }}</p>
-      </section>
+  <!-- PANEL CARRITO -->
+  <div v-if="showCart" class="cart-panel">
 
-      <div v-if="!cliente" class="login-hint">
-        ¿Quieres guardar historial y obtener puntos?<br>
-        <button class="login-link" @click="openLoginModal">Iniciar sesión</button>
+    <button class="close-cart" @click="showCart = false">✦</button>
 
-        </div>
-      <div v-if="cart.length === 0" class="empty-cart">🛍 Carrito vacío</div>
+    <h2>Tu Pedido</h2>
 
-      <div v-for="item in cart" :key="item.id" class="cart-item">
-        <div>
-          <strong>{{ item.nombre }}</strong>
-          <p class="qty">Cantidad: {{ item.quantity }}</p>
-        </div>
-        <button class="remove-item" @click="removeFromCart(item.id)">🗑</button>
-      </div>
 
-      <div v-if="cart.length > 0" class="cart-footer">
-        <p class="total">Total: <strong>${{ totalPrice.toLocaleString() }}</strong></p>
-        <button @click="clearCart" class="clear-btn">Vaciar Carrito</button>
-        <button @click="sendOrder" class="send-btn">Enviar a cocina</button>
-      </div>
+    <!-- ================= ESTADO PEDIDO ================= -->
+    
+    <section v-if="cliente" class="order-status-card-pro">
 
+  <div class="order-header-pro">
+
+    <div>
+      <h3 class="title">📦 Estado de tu pedido</h3>
+      <p class="subtitle">Seguimiento en tiempo real</p>
     </div>
 
-    <!-- modals se quedan IGUAL -->
+    <button
+      class="refresh-pro"
+      @click="loadPedidosCliente(false)"
+      :disabled="loadingPedidos"
+    >
+      <span :class="{ spin: loadingPedidos }">⟳</span>
+      {{ loadingPedidos ? 'Actualizando' : 'Actualizar' }}
+    </button>
+
   </div>
+
+
+  <div v-if="!pedidoActual && !loadingPedidos" class="empty-pro">
+    Aún no tienes pedidos activos
+  </div>
+
+
+  <div v-else class="timeline-pro">
+
+    <!-- BARRA PROGRESO -->
+    <div
+      class="progress-bar"
+      :style="{ width: ((currentStepIndex+1)/timelineSteps.length*100)+'%' }"
+    ></div>
+
+    <div
+      v-for="(step, index) in timelineSteps"
+      :key="step"
+      class="step-pro"
+      :class="{
+        completed: index < currentStepIndex,
+        active: index === currentStepIndex
+      }"
+    >
+      <div class="circle"></div>
+      <span>{{ stepLabels[step] }}</span>
+    </div>
+
+  </div>
+
+
+  <div v-if="pedidoActual" class="status-now">
+    Estado actual:
+    <strong>
+      {{ stepLabels[timelineSteps[currentStepIndex]] }}
+    </strong>
+  </div>
+
+  <p v-if="errorPedidos" class="order-error">{{ errorPedidos }}</p>
+
+</section>
+
+
+
+    <!-- ================= CONTENEDOR SCROLL ================= -->
+<div class="cart-scroll">
+
+  <div v-if="cart.length === 0">
+    Carrito vacío
+  </div>
+
+  <div
+    v-for="item in cart"
+    :key="item.id"
+    class="cart-item"
+  >
+    <div>
+      {{ item.nombre }}
+      <span class="qty">x {{ item.quantity }}</span>
+    </div>
+
+    <button
+      class="remove-item"
+      @click="removeFromCart(item.id)"
+    >
+      🗑
+    </button>
+  </div>
+
+</div>
+
+
+<!-- ================= FOOTER FIJO ================= -->
+<div v-if="cart.length > 0" class="cart-footer">
+
+  <h3>
+    Total: ${{ totalPrice.toLocaleString() }}
+  </h3>
+
+  <button
+    class="clear-btn"
+    @click="clearCart"
+  >
+    Vaciar
+  </button>
+
+  <button
+  class="send-btn"
+  @click="sendOrder"
+  :disabled="sendingOrder"
+>
+  <span v-if="sendingOrder" class="spinner"></span>
+  {{ sendingOrder ? 'Enviando...' : 'Enviar a cocina' }}
+</button>
+
+
+</div>
+
+
+
+
+  </div>
+<!-- 🔥 TOAST -->
+<transition name="toast">
+  <div
+    v-if="toast.show"
+    class="toast"
+    :class="toast.type"
+  >
+    {{ toast.message }}
+  </div>
+</transition>
+
+</div>
 </template>
+
 
 <style>
 
@@ -324,17 +445,22 @@ const currentStepIndex = computed(() => {
   right: 0;
   width: 380px;
   height: 100vh;
+
   background: rgba(0,0,0,0.65);
   backdrop-filter: blur(18px);
   border-left: 1px solid rgba(255,255,255,0.18);
-  padding: 32px;
+
+  padding: 24px;
   color: #fff;
-  overflow-y: auto;
-  z-index: 4000;
+
   display: flex;
   flex-direction: column;
-  gap: 22px;
+
+  z-index: 4000;
+
+  overflow: hidden; /* 🔥 CLAVE */
 }
+
 
 /* === ESTADO PEDIDO EN CARRITO === */
 .order-status-cart {
@@ -572,4 +698,474 @@ const currentStepIndex = computed(() => {
   border: none;
 }
 .modal-close:hover { background: rgba(255,255,255,0.25); }
+/* =====================================================
+   🔥 CARD PRO ESTADO PEDIDO (ULTRA MODERNO)
+===================================================== */
+
+.order-status-card-pro{
+  background: linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(18px);
+  border-radius: 20px;
+  padding: 20px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  box-shadow:
+    0 8px 28px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* HEADER */
+.order-header-pro{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.title{
+  font-size:17px;
+  font-weight:600;
+  margin:0;
+}
+
+.subtitle{
+  font-size:12px;
+  opacity:.65;
+  margin:2px 0 0;
+}
+
+/* BOTÓN REFRESH PRO */
+.refresh-pro{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);
+  color:#fff;
+  padding:7px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:12px;
+  transition:.25s;
+}
+
+.refresh-pro:hover{
+  background:#9c2030;
+  transform:translateY(-2px);
+}
+
+.spin{
+  animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+  from{ transform:rotate(0) }
+  to{ transform:rotate(360deg) }
+}
+
+/* TIMELINE PRO */
+.timeline-pro{
+  position:relative;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:20px 6px 0;
+}
+
+/* línea base */
+.timeline-pro::before{
+  content:"";
+  position:absolute;
+  top:26px;
+  left:0;
+  right:0;
+  height:2px;
+  background:rgba(255,255,255,.15);
+}
+
+/* barra progreso animada */
+.progress-bar{
+  position:absolute;
+  top:26px;
+  left:0;
+  height:2px;
+  background:linear-gradient(90deg,#2ecc71,#ffd7aa);
+  transition:width .6s ease;
+}
+
+/* pasos */
+.step-pro{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  font-size:11px;
+  text-align:center;
+  gap:8px;
+  z-index:2;
+}
+
+/* círculo */
+.circle{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:rgba(255,255,255,.15);
+  border:2px solid rgba(255,255,255,.25);
+  transition:.35s;
+}
+
+/* completado */
+.step-pro.completed .circle{
+  background:#2ecc71;
+  border-color:#2ecc71;
+  box-shadow:0 0 10px rgba(46,204,113,.6);
+}
+
+/* activo */
+.step-pro.active .circle{
+  background:#ffd7aa;
+  border-color:#ffd7aa;
+  box-shadow:0 0 12px rgba(255,215,170,.7);
+  transform:scale(1.15);
+}
+
+/* estado actual */
+.status-now{
+  text-align:center;
+  font-size:13px;
+  background:rgba(255,255,255,.06);
+  padding:8px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.status-now strong{
+  color:#ffd7aa;
+}
+
+/* vacío */
+.empty-pro{
+  opacity:.7;
+  font-size:13px;
+  text-align:center;
+}
+/* SOLO la lista scrollea */
+.cart-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* footer siempre visible */
+/* =====================================================
+   🔥 FOOTER PROFESIONAL PREMIUM (NUEVO)
+===================================================== */
+
+/* =====================================================
+   💎 FOOTER ULTRA PROFESIONAL (VERSIÓN FINAL PRO)
+===================================================== */
+
+.cart-footer {
+
+  position: sticky;
+  bottom: 22px;
+
+  margin-top: 22px;
+
+  padding: 14px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  /* glass premium más liviano */
+  background: rgba(18,18,18,.65);
+  backdrop-filter: blur(20px);
+
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.08);
+
+  box-shadow:
+    0 12px 35px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+
+/* =====================================================
+   TOTAL ESTILO BADGE / TARJETA COMPACTA
+===================================================== */
+
+.cart-footer h3{
+  margin:0;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  padding: 10px 16px;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  border-radius: 14px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,.07),
+    rgba(255,255,255,.03)
+  );
+
+  border: 1px solid rgba(255,255,255,.08);
+
+  letter-spacing:.3px;
+}
+
+/* etiqueta TOTAL pequeña */
+.cart-footer h3::before{
+  content:"Total";
+  font-size:12px;
+  opacity:.55;
+  font-weight:400;
+}
+
+/* precio destacado */
+.cart-footer h3{
+  color:#ffd7aa;
+  font-weight:700;
+}
+
+
+/* =====================================================
+   CONTENEDOR BOTONES
+===================================================== */
+
+.cart-footer .actions{
+  display:flex;
+  gap:10px;
+}
+
+
+/* =====================================================
+   BOTÓN VACIAR (SECUNDARIO SUAVE)
+===================================================== */
+
+.clear-btn{
+  flex:1;
+
+  padding:11px 12px;
+
+  font-size:14px;
+
+  background: rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+
+  border-radius:14px;
+
+  color:#ffbaba;
+
+  transition:.2s;
+}
+
+.clear-btn:hover{
+  background: rgba(255,80,80,.22);
+  transform: translateY(-1px);
+}
+
+
+/* =====================================================
+   BOTÓN ENVIAR (PRIMARIO PRO)
+===================================================== */
+
+.send-btn{
+  flex:2;
+
+  padding:12px;
+
+  font-size:14px;
+  font-weight:600;
+
+  border-radius:14px;
+  border:none;
+
+  background: linear-gradient(135deg,#b62232,#d92f45);
+
+  box-shadow: 0 8px 20px rgba(217,47,69,.35);
+
+  transition:.22s;
+}
+
+.send-btn:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(217,47,69,.55);
+}
+/* =========================
+   🔥 TOAST PRO MODERNO
+========================= */
+.toast{
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 22px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 14px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 28px rgba(0,0,0,.45);
+  z-index: 9999;
+  animation: pop .25s ease;
+}
+
+/* colores */
+.toast.success{
+  background: linear-gradient(135deg,#2ecc71,#27ae60);
+  color: white;
+}
+
+.toast.error{
+  background: linear-gradient(135deg,#e74c3c,#c0392b);
+  color: white;
+}
+
+/* animaciones */
+.toast-enter-active,
+.toast-leave-active{
+  transition: all .25s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to{
+  opacity:0;
+  transform:translate(-50%,20px);
+}
+
+@keyframes pop{
+  from{ transform:translate(-50%,20px) scale(.95); opacity:0 }
+  to{ transform:translate(-50%,0) scale(1); opacity:1 }
+}
+
+/* =========================
+   🔥 BOTÓN LOADING STATE
+========================= */
+
+.send-btn:disabled{
+  opacity: .65;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* spinner minimalista */
+.spinner{
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top: 2px solid #fff;
+  display: inline-block;
+  margin-right: 8px;
+  animation: spinBtn .6s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spinBtn{
+  to{ transform: rotate(360deg); }
+}
+
+/* 🔙 Volver al Admin (solo cuando admin_link es válido) */
+
+/* =========================
+   🧠 ADMIN TOPBAR (PRO)
+========================= */
+
+/* =========================
+   🧠 ADMIN TOPBAR — PRO CLEAN
+========================= */
+
+.admin-topbar{
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  right: 18px;
+  z-index: 9999;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  pointer-events: none; /* 🔥 hace que solo los botones reciban click */
+}
+
+
+/* ✅ baja el contenido para que no se pise con el header/logo */
+.admin-topbar-spacer{
+  height: 10px;
+}
+
+/* botón pro */
+.admin-back-btn{
+  pointer-events: auto;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 9px 16px;
+  border-radius: 14px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  color: #fff;
+  text-decoration: none;
+
+  /* 💎 floating clean */
+  background: rgba(20,20,20,.55);
+  backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255,255,255,.12);
+
+  box-shadow:
+    0 6px 18px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.05);
+
+  transition: all .18s ease;
+}
+
+/* hover */
+.admin-back-btn:hover{
+  background: rgba(30,30,30,.7);
+  transform: translateY(-1px);
+}
+
+/* click */
+.admin-back-btn:active{
+  transform: translateY(0);
+}
+
+/* centro */
+.admin-brand{
+  display:flex;
+  justify-content:center;
+  flex: 1;
+}
+
+.admin-pill{
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+
+  background: rgba(156,32,48,.22);
+  border: 1px solid rgba(156,32,48,.45);
+  color: #ffd7aa;
+
+  letter-spacing: .25px;
+}
+
+/* derecha vacía para balance visual */
+.admin-right{
+  width: 140px; /* similar al ancho del botón para centrar el título */
+}
+
 </style>

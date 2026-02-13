@@ -6,6 +6,8 @@ use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\MenuItemController ;
+use Illuminate\Support\Facades\URL;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -103,6 +105,31 @@ Route::middleware(['auth:web'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::get('/carta-digital', function () {
-    return redirect()->away('http://192.168.80.14:5174/');
+
+    // ✅ URL firmada solo para admin (expira en 10 min)
+    $signed = URL::temporarySignedRoute(
+        'carta.digital.admin',
+        now()->addMinutes(10),
+        ['return' => url('/admin')]
+    );
+
+    // ✅ Host actual (sin IP fija)
+    $scheme = request()->getScheme();
+    $host   = request()->getHost();
+
+    // Enviamos el signed URL como query al front
+    // (va codificado, el cliente normal no lo tendrá)
+    $cartaUrl = "{$scheme}://{$host}:5173/?admin_link=" . urlencode($signed);
+
+    return redirect()->away($cartaUrl);
+
 })->name('carta.digital');
-    
+
+Route::get('/carta-digital/admin-link', function () {
+    // Si llega aquí, la firma es válida (middleware 'signed')
+    return response()->json([
+        'ok' => true,
+        'return' => request('return', url('/admin'))
+    ]);
+})->middleware('signed')->name('carta.digital.admin');
+

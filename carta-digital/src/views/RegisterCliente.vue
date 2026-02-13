@@ -18,7 +18,7 @@ const email = ref('')
 const password = ref('')
 
 async function register() {
-  const res = await axios.post('http://192.168.80.14:8000/api/register-cliente', {
+  const res = await axios.post(`${API_BASE}/register-cliente`, {
     nombre: nombre.value,
     email: email.value,
     password: password.value
