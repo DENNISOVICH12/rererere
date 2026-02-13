@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -18,6 +19,7 @@
   --ok: #68b98f;
   --warn: #dfc36f;
   --danger: #f08ea0;
+
 }
 * { box-sizing: border-box; }
 body {
@@ -76,6 +78,7 @@ body {
   border: 1px solid rgba(240,142,160,.5);
   background: rgba(138,28,43,.35);
 }
+
 .toast {
   position: fixed;
   right: 16px;
@@ -83,6 +86,7 @@ body {
   background: rgba(17, 11, 18, .94);
   border: 1px solid rgba(165,58,74,.6);
   color: #f9e9ee;
+
   padding: 10px 12px;
   border-radius: 10px;
   z-index: 80;
@@ -141,6 +145,7 @@ body {
   background: rgba(12, 8, 13, .88);
   border-left: 1px solid var(--line);
   backdrop-filter: blur(10px);
+
   padding: 14px;
   overflow-y: auto;
   display: flex;
@@ -158,6 +163,7 @@ body {
 .ticket { background: rgba(18, 11, 18, .62); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
 .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ticket-grid p { margin: 0; color: #eadddf; }
+
 .priority-pill {
   margin-top: 6px;
   display: inline-block;
@@ -165,6 +171,7 @@ body {
   background: rgba(138,28,43,.35);
   color: #ffc2cf;
   border: 1px solid rgba(240,142,160,.6);
+
   font-size: .8rem;
   padding: 4px 9px;
   animation: pulseRed 1.2s infinite;
@@ -196,6 +203,7 @@ body {
   transition: all .2s ease;
 }
 .sec-btn:hover { border-color: rgba(165,58,74,.5); }
+
 .drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .25s ease; }
 .drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
 .drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(28px); }
@@ -208,6 +216,7 @@ body {
 @keyframes pulseRed {
   0%,100% { box-shadow: 0 0 0 rgba(240,142,160,0); }
   50% { box-shadow: 0 0 16px rgba(240,142,160,.35); }
+
 }
 @media (max-width: 1280px) {
   .topbar { grid-template-columns: 1fr; }
@@ -216,6 +225,7 @@ body {
 @media (max-width: 840px) {
   .board { grid-template-columns: 1fr; }
   .drawer { width: 100vw; }
+
 }
 </style>
 </head>
@@ -299,6 +309,7 @@ body {
     @toast="showToast"
   />
 
+
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
 </div>
 
@@ -337,6 +348,7 @@ const OrderDetailsDrawer = {
     },
     normalizedItems() {
       const source = this.order?.items || this.order?.detalles || this.order?.detalle || this.order?.pedido_detalles || [];
+
       if (!Array.isArray(source)) return [];
 
       return source.map((item, idx) => {
@@ -376,6 +388,7 @@ const OrderDetailsDrawer = {
       if (this.order._elapsedMin <= 6) return '';
       return `Atrasado +${Math.floor(this.order._elapsedMin - 6)} min`;
     },
+
     primaryAction() {
       if (!this.order) return null;
       if (this.order.estado === 'pendiente') return { label: '🔥 COMENZAR', next: 'preparando', className: 'action action-start' };
@@ -404,6 +417,7 @@ const OrderDetailsDrawer = {
       const ts = Date.parse(dateRaw);
       if (!Number.isFinite(ts)) return '-';
       return new Date(ts).toLocaleString('es-CO', {
+
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
       });
     },
@@ -550,6 +564,7 @@ const OrderDetailsDrawer = {
       </div>
     </transition>
   `,
+
 };
 
 Vue.createApp({
@@ -582,6 +597,7 @@ Vue.createApp({
       return this.orders.map((order) => {
         const parsedTs = Date.parse(order.created_at);
         const ts = Number.isFinite(parsedTs) ? parsedTs : this.nowTs;
+
         const elapsedMs = Math.max(this.nowTs - ts, 0);
         const status = String(order.estado || '').toLowerCase();
         return {
@@ -589,6 +605,7 @@ Vue.createApp({
           estado: status,
           notas: order.notas || order.note || '',
           items: order.items || order.detalles || order.detalle || order.pedido_detalles || [],
+
           _createdTs: ts,
           _elapsedMs: elapsedMs,
           _elapsedMin: elapsedMs / 60000,
@@ -736,6 +753,7 @@ Vue.createApp({
         this.orders = Array.isArray(incoming) ? incoming : [];
         this.error = '';
 
+
         if (!isInitial) {
           const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
           this.handleNewOrders(newOrders);
@@ -790,6 +808,7 @@ Vue.createApp({
     clearInterval(this.tickHandle);
     clearTimeout(this.toastHandle);
   },
+
 }).mount('#app');
 </script>
 </body>
