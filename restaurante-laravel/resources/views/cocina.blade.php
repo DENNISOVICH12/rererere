@@ -8,162 +8,215 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
 :root {
-  --bg: #090f1d;
-  --panel: #121b2d;
-  --panel-2: #0f1728;
-  --line: rgba(255,255,255,.11);
-  --text: #ecf1ff;
-  --muted: #9aa6c4;
-  --green: #22c55e;
-  --yellow: #facc15;
-  --red: #fb7185;
-  --orange: #f97316;
-  --blue: #38bdf8;
+  --text: #f5edf0;
+  --muted: #ccbfc4;
+  --line: rgba(255,255,255,.18);
+  --glass: rgba(14, 10, 16, .52);
+  --glass-strong: rgba(9, 7, 13, .72);
+  --wine: #8a1c2b;
+  --wine-soft: #a53a4a;
+  --wine-glow: rgba(165, 58, 74, .35);
+  --ok: #68b98f;
+  --warn: #dfc36f;
+  --danger: #f08ea0;
+
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top, #16223d, var(--bg) 60%);
-  color: var(--text);
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  color: var(--text);
+  background-image:
+    linear-gradient(120deg, rgba(0,0,0,.62), rgba(0,0,0,.62)),
+    url("https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1800&q=80");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 .kds { min-height: 100vh; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-.topbar { display: grid; grid-template-columns: 1.2fr auto auto; gap: 10px; align-items: center; }
-.topbar h1 { margin: 0; font-size: 1.65rem; }
+.topbar {
+  display: grid;
+  grid-template-columns: 1.3fr auto auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.25);
+}
+.topbar h1 { margin: 0; font-size: 1.55rem; letter-spacing: .01em; }
 .muted { margin: 2px 0 0; color: var(--muted); }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(86px, 1fr)); gap: 8px; }
-.stats article { background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 12px; padding: 8px; text-align: center; }
+.stats article {
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  text-align: center;
+}
 .stats span { color: var(--muted); font-size: .75rem; display: block; }
-.stats strong { font-size: 1.1rem; }
+.stats strong { font-size: 1rem; }
 .controls { display: flex; gap: 8px; }
-.ghost { border: 1px solid rgba(255,255,255,.24); background: transparent; color: var(--text); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
-.error { margin: 0; padding: 10px; border-radius: 10px; color: #ffe4e6; border: 1px solid rgba(251,113,133,.45); background: rgba(159,18,57,.22); }
+.ghost {
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 13px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.ghost:hover { border-color: rgba(165,58,74,.55); box-shadow: 0 0 0 1px rgba(165,58,74,.35); }
+.error {
+  margin: 0;
+  padding: 10px;
+  border-radius: 12px;
+  color: #ffd9df;
+  border: 1px solid rgba(240,142,160,.5);
+  background: rgba(138,28,43,.35);
+}
+
 .toast {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  background: rgba(15, 23, 40, .95);
-  border: 1px solid rgba(56, 189, 248, .45);
-  color: #dbeafe;
+  background: rgba(17, 11, 18, .94);
+  border: 1px solid rgba(165,58,74,.6);
+  color: #f9e9ee;
+
   padding: 10px 12px;
   border-radius: 10px;
   z-index: 80;
 }
 .board { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(250px, 1fr)); gap: 10px; }
-.col { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; min-height: 0; }
-.col-head { padding: 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.col {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-shadow: 0 8px 20px rgba(0,0,0,.22);
+}
+.col-head { padding: 12px; border-bottom: 1px solid rgba(255,255,255,.14); display: flex; justify-content: space-between; align-items: center; }
 .col-list { overflow-y: auto; min-height: 0; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; }
-.card-selected { border-color: rgba(56,189,248,.88); box-shadow: 0 0 0 1px rgba(56,189,248,.32); }
-.card-new { animation: glow 2s ease; }
-.card-critical { border-color: rgba(251,113,133,.7); }
+.card {
+  background: var(--glass-strong);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.card:hover { border-color: rgba(165,58,74,.55); box-shadow: 0 8px 18px rgba(0,0,0,.22), 0 0 0 1px rgba(165,58,74,.25); }
+.card-selected { border-color: rgba(165,58,74,.8); box-shadow: 0 0 0 1px rgba(165,58,74,.4); }
+.card-new { animation: glowPremium 2s ease; }
+.card-critical { border-color: rgba(240,142,160,.7); }
 .card-head { display: flex; justify-content: space-between; align-items: center; }
-.num { font-weight: 800; font-size: 1.15rem; }
+.num { font-weight: 800; font-size: 1.12rem; }
 .timer { border-radius: 999px; padding: 4px 10px; font-weight: 800; }
-
-.t-ok { color: #4ade80; background: rgba(34,197,94,.18); }
-.t-warn { color: #fde047; background: rgba(250,204,21,.18); }
-.t-critical { color: var(--red); background: rgba(251,113,133,.17); animation: pulseRed 1.2s infinite; }
+.t-ok { color: #8de7b8; background: rgba(104,185,143,.2); }
+.t-warn { color: #f6dea0; background: rgba(223,195,111,.2); }
+.t-critical { color: #ffc2cf; background: rgba(240,142,160,.19); animation: pulseRed 1.25s infinite; }
 .items { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .items li { display: flex; gap: 8px; align-items: baseline; }
-.qty { min-width: 42px; color: var(--yellow); font-weight: 900; font-size: 1.18rem; }
-.name { font-weight: 600; }
-.note { margin: 0; padding: 8px; border-radius: 8px; background: rgba(250,204,21,.14); color: #fde68a; font-size: .9rem; }
-.action { width: 100%; border: none; border-radius: 12px; padding: 16px 12px; font-size: 1.05rem; font-weight: 900; cursor: pointer; }
-
+.qty { min-width: 42px; color: #f3d6a2; font-weight: 900; font-size: 1.15rem; }
+.name { font-weight: 620; }
+.note { margin: 0; padding: 8px; border-radius: 8px; background: rgba(138,28,43,.28); color: #ffd6dd; font-size: .9rem; }
+.action { width: 100%; border: none; border-radius: 12px; padding: 14px 12px; font-size: 1.02rem; font-weight: 900; cursor: pointer; }
 .action[disabled] { opacity: .55; cursor: not-allowed; }
-.action-start { background: var(--orange); color: #fff; }
-.action-ready { background: var(--green); color: #082610; }
-.action-deliver { background: var(--blue); color: #07293b; }
-.fade-enter-active, .fade-leave-active, .fade-move { transition: all .32s ease; }
+.action-start { background: linear-gradient(180deg, #bc4d2d, #a73f22); color: #fff8f5; }
+.action-ready { background: linear-gradient(180deg, #3f8a66, #346f53); color: #e8fff2; }
+.action-deliver { background: linear-gradient(180deg, #4f7295, #3e5f80); color: #ebf5ff; }
+.fade-enter-active, .fade-leave-active, .fade-move { transition: all .28s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(8px); }
 
-/* Drawer */
-.drawer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(2, 6, 23, .52);
-  backdrop-filter: blur(2px);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 90;
-}
+.drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .52); display: flex; justify-content: flex-end; z-index: 90; }
 .drawer {
-  width: min(520px, 100vw);
+  width: min(540px, 100vw);
   height: 100%;
-  background: linear-gradient(180deg, #121b2d, #0f1728);
+  background: rgba(12, 8, 13, .88);
   border-left: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+
   padding: 14px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: -8px 0 30px rgba(0,0,0,.3);
 }
 .drawer-head { display: flex; justify-content: space-between; align-items: center; }
 .drawer-title { margin: 0; font-size: 1.5rem; }
-.badge {
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font-size: .82rem;
-  font-weight: 700;
-  padding: 4px 10px;
-}
-.b-pendiente { background: rgba(250,204,21,.15); color: #fde047; border-color: rgba(250,204,21,.5); }
-.b-preparando { background: rgba(249,115,22,.15); color: #fdba74; border-color: rgba(249,115,22,.5); }
-.b-listo { background: rgba(34,197,94,.15); color: #86efac; border-color: rgba(34,197,94,.45); }
-.b-entregado { background: rgba(56,189,248,.15); color: #7dd3fc; border-color: rgba(56,189,248,.45); }
-.ticket { background: rgba(2, 6, 23, .33); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.badge { border: 1px solid transparent; border-radius: 999px; font-size: .82rem; font-weight: 700; padding: 4px 10px; }
+.b-pendiente { background: rgba(223,195,111,.17); color: #ffe59f; border-color: rgba(223,195,111,.5); }
+.b-preparando { background: rgba(188,77,45,.17); color: #ffcfbb; border-color: rgba(188,77,45,.52); }
+.b-listo { background: rgba(104,185,143,.17); color: #c2f3da; border-color: rgba(104,185,143,.52); }
+.b-entregado { background: rgba(130,151,177,.17); color: #d9e6f5; border-color: rgba(130,151,177,.52); }
+.ticket { background: rgba(18, 11, 18, .62); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
 .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ticket-grid p { margin: 0; color: #dbe6ff; }
+.ticket-grid p { margin: 0; color: #eadddf; }
+
 .priority-pill {
   margin-top: 6px;
   display: inline-block;
   border-radius: 999px;
-  background: rgba(251,113,133,.15);
-  color: var(--red);
-  border: 1px solid rgba(251,113,133,.5);
+  background: rgba(138,28,43,.35);
+  color: #ffc2cf;
+  border: 1px solid rgba(240,142,160,.6);
+
   font-size: .8rem;
   padding: 4px 9px;
   animation: pulseRed 1.2s infinite;
 }
-.item-row { border-bottom: 1px dashed rgba(255,255,255,.14); padding: 8px 0; }
+.item-row { border-bottom: 1px dashed rgba(255,255,255,.18); padding: 8px 0; }
 .item-row:last-child { border-bottom: 0; }
 .item-main { display: flex; gap: 8px; align-items: baseline; }
-.item-extra, .item-note { margin: 4px 0 0 0; color: var(--muted); font-size: .9rem; }
-.drawer-items {
-  max-height: 46vh;
-  overflow-y: auto;
-  padding-right: 2px;
+.item-extra, .item-note { margin: 4px 0 0 0; color: #cbbec5; font-size: .9rem; }
+.drawer-items { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
+.items-summary { margin: 0 0 8px 0; color: #d3c3cb; font-size: .87rem; }
+.category-title { margin: 10px 0 4px 0; color: #f4d6de; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
+.empty-items {
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(240,142,160,.55);
+  background: rgba(138,28,43,.22);
+  color: #ffd6dd;
 }
-.items-summary {
-  margin: 0 0 8px 0;
-  color: var(--muted);
-  font-size: .87rem;
-}
-.category-title {
-  margin: 10px 0 4px 0;
-  color: #bfdbfe;
-  font-size: .82rem;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-
 .drawer-actions { display: grid; gap: 8px; }
 .secondary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.sec-btn { border: 1px solid rgba(255,255,255,.2); background: transparent; color: var(--text); border-radius: 10px; padding: 9px 10px; cursor: pointer; }
+.sec-btn {
+  border: 1px solid rgba(255,255,255,.24);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.sec-btn:hover { border-color: rgba(165,58,74,.5); }
+
 .drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .25s ease; }
 .drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
 .drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(28px); }
 
-@keyframes glow {
-  0% { box-shadow: 0 0 0 rgba(56,189,248,0); }
-  50% { box-shadow: 0 0 26px rgba(56,189,248,.46); }
-  100% { box-shadow: 0 0 0 rgba(56,189,248,0); }
+@keyframes glowPremium {
+  0% { box-shadow: 0 0 0 rgba(165,58,74,0); }
+  45% { box-shadow: 0 0 20px rgba(165,58,74,.36); }
+  100% { box-shadow: 0 0 0 rgba(165,58,74,0); }
 }
 @keyframes pulseRed {
-  0%,100% { box-shadow: 0 0 0 rgba(251,113,133,0); }
-  50% { box-shadow: 0 0 18px rgba(251,113,133,.45); }
+  0%,100% { box-shadow: 0 0 0 rgba(240,142,160,0); }
+  50% { box-shadow: 0 0 16px rgba(240,142,160,.35); }
+
 }
 @media (max-width: 1280px) {
   .topbar { grid-template-columns: 1fr; }
@@ -444,77 +497,74 @@ const OrderDetailsDrawer = {
     window.removeEventListener('keydown', this.onEsc);
   },
   template: `
-  <transition name="drawer-slide">
-    <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
-      <aside class="drawer">
-        <header class="drawer-head">
-          <h2 class="drawer-title">Pedido #@{{ order?.id || '-' }}</h2>
-          <button class="ghost" @click="$emit('close')">✕</button>
-        </header>
+    <transition name="drawer-slide">
+      <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
+        <aside class="drawer">
+          <header class="drawer-head">
+            <h2 class="drawer-title" v-text="'Pedido #' + (order?.id || '-')"></h2>
+            <button class="ghost" @click="$emit('close')">✕</button>
+          </header>
 
-        <section v-if="hasOrder" class="ticket">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-            <span class="badge" :class="statusClass">@{{ statusLabel(order.estado) }}</span>
-            <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')">
-              @{{ formatElapsed(order._elapsedMs) }}
-            </span>
-          </div>
+          <section v-if="hasOrder" class="ticket">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <span class="badge" :class="statusClass" v-text="statusLabel(order.estado)"></span>
+              <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')" v-text="formatElapsed(order._elapsedMs)"></span>
+            </div>
 
-          <div class="ticket-grid" style="margin-top:10px;">
-            <p><strong>Creado:</strong> @{{ fmtDate(order.created_at) }}</p>
-            <p><strong>Hora:</strong> @{{ fmtTime(order.created_at) }}</p>
-            <p><strong>Mesa:</strong> @{{ order.mesa || '-' }}</p>
-            <p><strong>Cliente:</strong> @{{ order.cliente?.nombre || order.cliente_nombre || '-' }}</p>
-          </div>
+            <div class="ticket-grid" style="margin-top:10px;">
+              <p><strong>Creado:</strong> <span v-text="fmtDate(order.created_at)"></span></p>
+              <p><strong>Hora:</strong> <span v-text="fmtTime(order.created_at)"></span></p>
+              <p><strong>Mesa:</strong> <span v-text="order.mesa || '-'"></span></p>
+              <p><strong>Cliente:</strong> <span v-text="order.cliente?.nombre || order.cliente_nombre || '-'"></span></p>
+            </div>
 
-          <span v-if="isPriority" class="priority-pill">⚠ Prioridad alta · @{{ delayLabel || 'Pedido priorizado' }}</span>
-        </section>
+            <span v-if="isPriority" class="priority-pill" v-text="'⚠ Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
+          </section>
 
+          <section v-if="hasOrder" class="ticket">
+            <h3 style="margin:0 0 8px 0;">Items</h3>
+            <p class="items-summary" v-text="normalizedItems.length + ' líneas · ' + totalItemsCount + ' unidades'"></p>
 
-        <section v-if="hasOrder" class="ticket">
-          <h3 style="margin:0 0 8px 0;">Items</h3>
-          <p class="items-summary">@{{ normalizedItems.length }} líneas · @{{ totalItemsCount }} unidades</p>
+            <div v-if="!normalizedItems.length" class="empty-items">
+              Este pedido no tiene items asociados. Revisar backend/relación.
+            </div>
 
+            <div v-else class="drawer-items">
+              <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
+                <h4 class="category-title" v-if="categoryName && categoryName !== 'General'" v-text="categoryName"></h4>
+                <article class="item-row" v-for="item in categoryItems" :key="item.id">
+                  <div class="item-main">
+                    <span class="qty" v-text="item.qty + 'x'"></span>
+                    <strong v-text="item.name"></strong>
+                  </div>
+                  <p v-if="item.extras" class="item-extra" v-text="'➕ ' + item.extras"></p>
+                  <p v-if="item.note" class="item-note" v-text="'📝 ' + item.note"></p>
+                </article>
+              </template>
+            </div>
+          </section>
 
-          <div class="drawer-items">
-            <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
-              <h4 class="category-title" v-if="categoryName && categoryName !== 'General'">@{{ categoryName }}</h4>
+          <section v-if="hasOrder && order.notas" class="ticket">
+            <h3 style="margin:0 0 8px 0;">Notas</h3>
+            <p class="note" v-text="order.notas"></p>
+          </section>
 
-              <article class="item-row" v-for="item in categoryItems" :key="item.id">
-                <div class="item-main">
-                  <span class="qty">@{{ item.qty }}x</span>
-                  <strong>@{{ item.name }}</strong>
-                </div>
-                <p v-if="item.extras" class="item-extra">➕ @{{ item.extras }}</p>
-                <p v-if="item.note" class="item-note">📝 @{{ item.note }}</p>
-              </article>
-            </template>
-          </div>
-        </section>
+          <section class="ticket drawer-actions" v-if="hasOrder">
+            <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Procesando...' : primaryAction.label"></button>
+            <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
 
-        <section v-if="hasOrder && order.notas" class="ticket">
-          <h3 style="margin:0 0 8px 0;">Notas</h3>
-          <p class="note">@{{ order.notas }}</p>
-        </section>
+            <div class="secondary-actions">
+              <button class="sec-btn" @click="printTicket">Imprimir</button>
+              <button class="sec-btn" @click="copySummary">Copiar resumen</button>
+              <button class="sec-btn" @click="$emit('priorityToggle', order.id)">Marcar prioridad</button>
+              <button class="sec-btn" @click="$emit('close')">Volver al tablero</button>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </transition>
+  `,
 
-        <section class="ticket drawer-actions" v-if="hasOrder">
-          <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction">
-            @{{ loadingAction ? 'Procesando...' : primaryAction.label }}
-          </button>
-
-          <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
-
-          <div class="secondary-actions">
-            <button class="sec-btn" @click="printTicket">Imprimir</button>
-            <button class="sec-btn" @click="copySummary">Copiar resumen</button>
-            <button class="sec-btn" @click="$emit('priorityToggle', order.id)">Marcar prioridad</button>
-            <button class="sec-btn" @click="$emit('close')">Volver al tablero</button>
-          </div>
-        </section>
-      </aside>
-    </div>
-  </transition>
-`,
 };
 
 Vue.createApp({
