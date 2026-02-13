@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -60,6 +61,7 @@ body {
 .card-head { display: flex; justify-content: space-between; align-items: center; }
 .num { font-weight: 800; font-size: 1.15rem; }
 .timer { border-radius: 999px; padding: 4px 10px; font-weight: 800; }
+
 .t-ok { color: #4ade80; background: rgba(34,197,94,.18); }
 .t-warn { color: #fde047; background: rgba(250,204,21,.18); }
 .t-critical { color: var(--red); background: rgba(251,113,133,.17); animation: pulseRed 1.2s infinite; }
@@ -69,6 +71,7 @@ body {
 .name { font-weight: 600; }
 .note { margin: 0; padding: 8px; border-radius: 8px; background: rgba(250,204,21,.14); color: #fde68a; font-size: .9rem; }
 .action { width: 100%; border: none; border-radius: 12px; padding: 16px 12px; font-size: 1.05rem; font-weight: 900; cursor: pointer; }
+
 .action[disabled] { opacity: .55; cursor: not-allowed; }
 .action-start { background: var(--orange); color: #fff; }
 .action-ready { background: var(--green); color: #082610; }
@@ -145,6 +148,7 @@ body {
   text-transform: uppercase;
   letter-spacing: .06em;
 }
+
 .drawer-actions { display: grid; gap: 8px; }
 .secondary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sec-btn { border: 1px solid rgba(255,255,255,.2); background: transparent; color: var(--text); border-radius: 10px; padding: 9px 10px; cursor: pointer; }
@@ -168,6 +172,7 @@ body {
 @media (max-width: 840px) {
   .board { grid-template-columns: 1fr; }
   .drawer { width: 100vw; }
+
 }
 </style>
 </head>
@@ -240,6 +245,7 @@ body {
       </transition-group>
     </section>
   </div>
+
 
   <order-details-drawer
     :open="drawerOpen"
@@ -328,6 +334,7 @@ const OrderDetailsDrawer = {
       if (this.order._elapsedMin <= 6) return '';
       return `Atrasado +${Math.floor(this.order._elapsedMin - 6)} min`;
     },
+
     primaryAction() {
       if (!this.order) return null;
       if (this.order.estado === 'pendiente') return { label: '🔥 COMENZAR', next: 'preparando', className: 'action action-start' };
@@ -412,6 +419,7 @@ const OrderDetailsDrawer = {
     copySummary() {
       if (!this.order) return;
       const lines = this.normalizedItems.map((item) => `- ${item.qty}x ${item.name}`);
+
       const summary = `Pedido #${this.order.id}\nEstado: ${this.statusLabel(this.order.estado)}\n${lines.join('\n')}\nNotas: ${this.order.notas || 'Sin notas'}`;
       navigator.clipboard?.writeText(summary);
       this.$emit('toast', '📋 Resumen copiado');
@@ -472,16 +480,19 @@ const OrderDetailsDrawer = {
                 </article>
               </template>
             </div>
+
           </section>
 
           <section v-if="hasOrder && order.notas" class="ticket">
             <h3 style="margin:0 0 8px 0;">Notas</h3>
             <p class="note">{{ order.notas }}</p>
+
           </section>
 
           <section class="ticket drawer-actions" v-if="hasOrder">
             <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction">
               {{ loadingAction ? 'Procesando...' : primaryAction.label }}
+
             </button>
             <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
 
@@ -681,6 +692,7 @@ Vue.createApp({
         this.orders = Array.isArray(incoming) ? incoming : [];
         this.error = '';
 
+
         if (!isInitial) {
           const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
           this.handleNewOrders(newOrders);
@@ -735,6 +747,7 @@ Vue.createApp({
     clearInterval(this.tickHandle);
     clearTimeout(this.toastHandle);
   },
+
 }).mount('#app');
 </script>
 </body>
