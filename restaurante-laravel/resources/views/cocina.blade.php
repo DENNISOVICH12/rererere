@@ -273,7 +273,8 @@ Vue.createApp({
                     _createdTs: ts,
                     _elapsedMs: elapsedMs,
                     _elapsedMin: elapsedMs / 60000,
-                    _urgency: (elapsedMs / 60000) + (String(order.estado).toLowerCase() === 'pendiente' ? 2 : 0),
+                    _urgency: (elapsedMs / 60000) + (String(order.estado || '').toLowerCase() === 'pendiente' ? 2 : 0),
+
                 };
             }).filter((order) => {
                 if (order.estado !== 'entregado') return true;
@@ -329,15 +330,14 @@ Vue.createApp({
             return null;
         },
         endpointFor(nextStatus, orderId) {
-            if (nextStatus === 'preparando') return `/api/kitchen/orders/${orderId}/start`;
-            if (nextStatus === 'listo') return `/api/kitchen/orders/${orderId}/ready`;
-            if (nextStatus === 'entregado') return `/api/kitchen/orders/${orderId}/deliver`;
-            return '';
+            return `/pedidos/${orderId}/estado`;
+
         },
         async fetchOrders(isInitial = false) {
             try {
                 const beforeIds = new Set(this.orders.map((o) => o.id));
-                const response = await fetch('/api/kitchen/orders', {
+                const response = await fetch('/pedidos', {
+
                     credentials: 'include',
                     headers: { 'Accept': 'application/json' },
                 });
@@ -354,7 +354,8 @@ Vue.createApp({
                     this.handleNewOrders(newOrders);
                 }
             } catch (e) {
-                this.error = 'No se pudo sincronizar la cocina con /api/kitchen/orders';
+                this.error = 'No se pudo sincronizar la cocina con /pedidos';
+
             }
         },
         handleNewOrders(newOrders) {
@@ -404,13 +405,16 @@ Vue.createApp({
 
             try {
                 const res = await fetch(endpoint, {
-                    method: 'PATCH',
+                    method: 'PUT',
+
                     credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': token,
                     },
+                    body: JSON.stringify({ estado: nextStatus }),
+
                 });
 
                 if (!res.ok) throw new Error('status ' + res.status);
