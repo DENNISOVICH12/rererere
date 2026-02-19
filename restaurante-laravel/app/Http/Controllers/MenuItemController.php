@@ -48,11 +48,10 @@ class MenuItemController extends Controller
 ]);
 
     if ($request->hasFile('imagen')) {
-        $path = $request->file('imagen')->store('menu_items', 'public');
-        $data['imagen'] = asset('storage/' . $path);
-        $data['image_path'] = $path;
-    }
-
+    $path = $request->file('imagen')->store('menu_items', 'public');
+    $data['image_path'] = $path;
+    $data['imagen'] = asset('storage/' . $path); // opcional, pero ok
+}
     $data['restaurant_id'] = 1;
 
     MenuItem::create($data);

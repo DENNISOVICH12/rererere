@@ -35,11 +35,18 @@ class MenuItem extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        if (! $this->image_path) {
-            return null;
+        // 1) Si ya guardaste URL completa en "imagen", úsala
+        if (!empty($this->imagen)) {
+            return $this->imagen;
         }
 
-        return Storage::url($this->image_path);
+        // 2) Si hay image_path, construye URL pública
+        if (!empty($this->image_path)) {
+            return asset('storage/' . ltrim($this->image_path, '/'));
+            // Alternativa: return Storage::disk('public')->url($this->image_path);
+        }
+
+        return null;
     }
 
 }
