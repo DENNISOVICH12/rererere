@@ -44,11 +44,13 @@ class MenuItemController extends Controller
     'categoria'   => 'required|in:plato,bebida',
     'precio'      => 'required|numeric|min:1',
     'imagen'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+    'image_path'  => 'nullable|string|max:255',
 ]);
 
     if ($request->hasFile('imagen')) {
         $path = $request->file('imagen')->store('menu_items', 'public');
         $data['imagen'] = asset('storage/' . $path);
+        $data['image_path'] = $path;
     }
 
     $data['restaurant_id'] = 1;
@@ -78,6 +80,7 @@ class MenuItemController extends Controller
             'items.*.categoria'     => ['required','string'],
             'items.*.precio'        => ['numeric','min:0'],
             'items.*.imagen'        => ['nullable','string'],
+            'items.*.image_path'    => ['nullable','string'],
             'items.*.disponible'    => ['boolean'],
             'items.*.restaurant_id' => ['nullable','integer'],
         ]);
@@ -126,6 +129,7 @@ class MenuItemController extends Controller
             'categoria'     => ['sometimes','string'],
             'precio'        => ['sometimes','numeric','min:1'],
             'imagen'        => ['sometimes','nullable','string'],
+            'image_path'    => ['sometimes','nullable','string'],
             'disponible'    => ['sometimes','boolean'],
             'restaurant_id' => ['sometimes','integer'],
         ]);
