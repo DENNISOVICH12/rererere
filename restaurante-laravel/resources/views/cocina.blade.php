@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+@php
+  $user = Auth::user();
+  $isAdmin = $user && ($user->rol ?? null) === 'admin';
+  $adminBackUrl = Route::has('admin.dashboard') ? route('admin.dashboard') : url('/admin');
+@endphp
 
 <html lang="es">
 <head>
@@ -146,9 +151,11 @@ body {
 .action:active { transform: translateY(0); }
 .action[disabled] { opacity: .55; cursor: not-allowed; transform: none; }
 
+
 .action-start { background: linear-gradient(180deg, #bc4d2d, #a73f22); color: #fff8f5; }
 .action-ready { background: linear-gradient(180deg, #3f8a66, #346f53); color: #e8fff2; }
 .action-deliver { background: linear-gradient(180deg, #4f7295, #3e5f80); color: #ebf5ff; }
+
 .fade-enter-active, .fade-leave-active, .fade-move { transition: all .28s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(8px); }
 
@@ -160,14 +167,12 @@ body {
   background: rgba(12, 8, 13, .88);
   border-left: 1px solid var(--line);
   backdrop-filter: blur(10px);
-
   padding: 14px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
   box-shadow: -8px 0 30px rgba(0,0,0,.3);
-}
 .drawer-head { display: flex; justify-content: space-between; align-items: center; }
 .drawer-title { margin: 0; font-size: 1.5rem; }
 .badge { border: 1px solid transparent; border-radius: 999px; font-size: .82rem; font-weight: 700; padding: 4px 10px; }
@@ -178,7 +183,6 @@ body {
 .ticket { background: rgba(18, 11, 18, .62); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
 .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ticket-grid p { margin: 0; color: #eadddf; }
-
 .priority-pill {
   margin-top: 6px;
   display: inline-block;
@@ -190,11 +194,13 @@ body {
   font-size: .8rem;
   padding: 4px 9px;
   animation: pulseRed 1.2s infinite;
+
 }
 .item-row { border-bottom: 1px dashed rgba(255,255,255,.18); padding: 8px 0; }
 .item-row:last-child { border-bottom: 0; }
 .item-main { display: flex; gap: 8px; align-items: baseline; }
 .item-extra, .item-note { margin: 4px 0 0 0; color: #cbbec5; font-size: .9rem; }
+
 .drawer-items { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
 .items-summary { margin: 0 0 8px 0; color: #d3c3cb; font-size: .87rem; }
 .category-title { margin: 10px 0 4px 0; color: #f4d6de; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
@@ -205,6 +211,7 @@ body {
   border: 1px dashed rgba(240,142,160,.55);
   background: rgba(138,28,43,.22);
   color: #ffd6dd;
+
 }
 .drawer-actions { display: grid; gap: 8px; }
 .secondary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -219,6 +226,7 @@ body {
 }
 .sec-btn:hover { border-color: rgba(165,58,74,.5); }
 
+
 .drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .25s ease; }
 .drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
 .drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(28px); }
@@ -226,11 +234,13 @@ body {
 @keyframes glowPremium {
   0% { box-shadow: 0 0 0 rgba(165,58,74,0); }
   45% { box-shadow: 0 0 20px rgba(165,58,74,.36); }
+
   100% { box-shadow: 0 0 0 rgba(165,58,74,0); }
 }
 @keyframes pulseRed {
   0%,100% { box-shadow: 0 0 0 rgba(240,142,160,0); }
   50% { box-shadow: 0 0 16px rgba(240,142,160,.35); }
+
 
 }
 @media (max-width: 1280px) {
@@ -246,10 +256,62 @@ body {
 .col-list::-webkit-scrollbar-thumb,.drawer-items::-webkit-scrollbar-thumb{background:rgba(165,58,74,.45);border-radius:999px;}
 .col-list::-webkit-scrollbar-track,.drawer-items::-webkit-scrollbar-track{background:transparent;}
 
+body.has-admin-back .kds {
+  padding-top: 76px;
+}
+.back-admin-btn {
+  position: fixed;
+  top: 16px;
+  left: 20px;
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(180, 192, 214, .30);
+  background: rgba(15, 20, 31, .62);
+  backdrop-filter: blur(7px);
+  color: var(--text);
+  text-decoration: none;
+  font-size: .88rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(2,6,13,.24);
+  transition: all .2s ease;
+}
+.back-admin-btn:hover {
+  border-color: rgba(110, 54, 66, .42);
+  box-shadow: 0 6px 16px rgba(2,6,13,.3);
+  transform: translateY(-1px);
+}
+.back-admin-btn svg {
+  width: 14px;
+  height: 14px;
+  opacity: .88;
+}
+@media (max-width: 840px) {
+  body.has-admin-back .kds {
+    padding-top: 84px;
+  }
+  .back-admin-btn {
+    left: 14px;
+    top: 12px;
+  }
+}
+
 </style>
 </head>
-<body>
+<body class="{{ $isAdmin ? 'has-admin-back' : '' }}">
 <div id="app" class="kds">
+  @if($isAdmin)
+    <a href="{{ $adminBackUrl }}" class="back-admin-btn" aria-label="Volver al panel de administración">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 6L4 12L10 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 12H20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Volver al Admin</span>
+    </a>
+  @endif
   <header class="topbar">
     <div>
       <h1>Modo Cocina PRO</h1>
@@ -265,7 +327,6 @@ body {
     <div class="controls">
       <button class="ghost" @click="soundEnabled = !soundEnabled"><span class="btn-icon">🔉</span> @{{ soundEnabled ? 'Sonido ON' : 'Sonido OFF' }}</button>
       <button class="ghost" @click="toggleFullscreen"><span class="btn-icon">⤢</span> Pantalla completa</button>
-
     </div>
   </header>
 
@@ -539,7 +600,6 @@ const OrderDetailsDrawer = {
             </div>
 
             <span v-if="isPriority" class="priority-pill" v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
-
           </section>
 
           <section v-if="hasOrder" class="ticket">
@@ -570,6 +630,7 @@ const OrderDetailsDrawer = {
             <h3 style="margin:0 0 8px 0;">Notas</h3>
             <p class="note" v-text="order.notas"></p>
           </section>
+
 
           <section class="ticket drawer-actions" v-if="hasOrder">
             <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Procesando...' : primaryAction.label"></button>
