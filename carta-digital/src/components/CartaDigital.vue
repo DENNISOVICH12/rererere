@@ -299,8 +299,33 @@ const filteredItems = computed(() =>
 /* PRODUCT CARD */
 .card { background:rgba(0,0,0,0.55); backdrop-filter:blur(14px); border-radius:18px; padding:18px; border:1px solid rgba(255,255,255,0.20); transition:.35s; }
 .card:hover { transform:translateY(-6px); }
-.card-img { width:100%; height:180px; object-fit:cover; border-radius:14px; margin-bottom:14px; background:#161214; }
-.placeholder-img { display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.18); color:rgba(248,236,228,0.75); font-weight:600; letter-spacing:.3px; }
+.card-img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  background: #161214;
+  transition: transform .35s ease, filter .25s ease;
+}
+
+.card:hover .card-img {
+  transform: scale(1.03);
+  filter: brightness(1.05);
+}
+
+.placeholder-img {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(248,236,228,0.75);
+  font-weight: 600;
+  letter-spacing: .3px;
+}
 
 .add-btn { background:#7a1522; color:#fff; border-radius:10px; padding:10px 18px; width:100%; border:none; transition:.3s; }
 .add-btn:hover { background:#9c2030; transform:translateY(-2px); }
