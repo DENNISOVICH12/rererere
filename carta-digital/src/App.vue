@@ -110,6 +110,7 @@ function getItemImage(item) {
 
   if (item?.image_path) {
     return `${backendBaseUrl()}/storage/${normalizePath(item.image_path)}`
+
   }
 
   return item?.imagen || null
@@ -125,6 +126,7 @@ function markCartImageError(itemId) {
 function hasCartImage(item) {
   return Boolean(getItemImage(item)) && !cartImageErrors.value[item.id]
 }
+
 
 
 /* =====================================================
@@ -385,6 +387,7 @@ const currentStepIndex = computed(() => {
       @error="markCartImageError(item.id)"
     />
     <div v-else class="cart-thumb cart-thumb-placeholder">
+
       <span>🍽</span>
     </div>
 

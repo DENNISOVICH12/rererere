@@ -38,6 +38,7 @@
       <div v-for="item in filteredItems" :key="item.id" class="card">
         <img
           v-if="hasItemImage(item)"
+
           :src="getItemImage(item)"
           class="card-img"
           loading="lazy"
@@ -233,6 +234,7 @@ function getItemImage(item) {
   }
 
   return item?.imagen || null
+
 }
 
 function markImageError(itemId) {
@@ -245,6 +247,7 @@ function markImageError(itemId) {
 function hasItemImage(item) {
   return Boolean(getItemImage(item)) && !imageErrors.value[item.id]
 }
+
 
 const filteredItems = computed(() =>
   selectedCategory.value === 'todos'
