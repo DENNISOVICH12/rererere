@@ -90,13 +90,43 @@ function handleLogout() {
   alert("👋 Sesión cerrada correctamente")
 }
 
+const cartImageErrors = ref({})
+
+function backendBaseUrl() {
+  return (API_BASE || '').replace(/\/?api\/?$/, '')
+}
+
+function normalizePath(path) {
+  return String(path)
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/')
+}
+
 function getItemImage(item) {
+  if (item?.image_url) {
+    return item.image_url
+  }
+
   if (item?.image_path) {
-    return `/storage/${item.image_path}`
+    return `${backendBaseUrl()}/storage/${normalizePath(item.image_path)}`
+
   }
 
   return item?.imagen || null
 }
+
+function markCartImageError(itemId) {
+  cartImageErrors.value = {
+    ...cartImageErrors.value,
+    [itemId]: true,
+  }
+}
+
+function hasCartImage(item) {
+  return Boolean(getItemImage(item)) && !cartImageErrors.value[item.id]
+}
+
 
 
 /* =====================================================
@@ -350,13 +380,14 @@ const currentStepIndex = computed(() => {
     class="cart-item"
   >
     <img
-      v-if="getItemImage(item)"
+      v-if="hasCartImage(item)"
       :src="getItemImage(item)"
       class="cart-thumb"
       alt="Imagen del plato"
-      @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'"
+      @error="markCartImageError(item.id)"
     />
-    <div class="cart-thumb cart-thumb-placeholder" :style="{ display: getItemImage(item) ? 'none' : 'flex' }">
+    <div v-else class="cart-thumb cart-thumb-placeholder">
+
       <span>🍽</span>
     </div>
 

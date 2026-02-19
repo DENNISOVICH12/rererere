@@ -37,7 +37,8 @@
     <div class="grid">
       <div v-for="item in filteredItems" :key="item.id" class="card">
         <img
-          v-if="!imageErrors[item.id]"
+          v-if="hasItemImage(item)"
+
           :src="getItemImage(item)"
           class="card-img"
           loading="lazy"
@@ -212,12 +213,28 @@ function cerrarModal() {
 
 const imageErrors = ref({})
 
+function backendBaseUrl() {
+  return (API_BASE || '').replace(/\/?api\/?$/, '')
+}
+
+function normalizePath(path) {
+  return String(path)
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/')
+}
+
 function getItemImage(item) {
-  if (item?.image_path) {
-    return `/storage/${item.image_path}`
+  if (item?.image_url) {
+    return item.image_url
   }
 
-  return item?.imagen || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><rect width="100%25" height="100%25" fill="%23221b1c"/><text x="50%25" y="50%25" fill="%23d7c9bc" font-size="36" text-anchor="middle" dominant-baseline="middle">Sin imagen</text></svg>'
+  if (item?.image_path) {
+    return `${backendBaseUrl()}/storage/${normalizePath(item.image_path)}`
+  }
+
+  return item?.imagen || null
+
 }
 
 function markImageError(itemId) {
@@ -226,6 +243,11 @@ function markImageError(itemId) {
     [itemId]: true,
   }
 }
+
+function hasItemImage(item) {
+  return Boolean(getItemImage(item)) && !imageErrors.value[item.id]
+}
+
 
 const filteredItems = computed(() =>
   selectedCategory.value === 'todos'
