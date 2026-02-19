@@ -36,16 +36,18 @@
     <!-- LISTA DE PRODUCTOS -->
     <div class="grid">
       <div v-for="item in filteredItems" :key="item.id" class="card">
-        <img
-          v-if="hasItemImage(item)"
-
-          :src="getItemImage(item)"
-          class="card-img"
-          loading="lazy"
-          @error="markImageError(item.id)"
-        />
-        <div v-else class="card-img placeholder-img">
-          <span>Sin imagen</span>
+        <div class="media">
+          <img
+            v-if="hasItemImage(item)"
+            :src="getItemImage(item)"
+            class="card-img img-center"
+            loading="lazy"
+            @error="markImageError(item.id)"
+          />
+          <div v-else class="placeholder-img">
+            <span>Sin imagen</span>
+          </div>
+          <div class="media-overlay"></div>
         </div>
         <div class="card-body">
           <h2>{{ item.nombre }}</h2>
@@ -299,32 +301,59 @@ const filteredItems = computed(() =>
 /* PRODUCT CARD */
 .card { background:rgba(0,0,0,0.55); backdrop-filter:blur(14px); border-radius:18px; padding:18px; border:1px solid rgba(255,255,255,0.20); transition:.35s; }
 .card:hover { transform:translateY(-6px); }
+.media {
+  position: relative;
+  height: 130px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
+  margin-bottom: 14px;
+}
+
 .card-img {
   width: 100%;
-  height: 160px;
+  height: 100%;
   object-fit: cover;
   object-position: center;
-  border-radius: 14px;
-  margin-bottom: 14px;
-  background: #161214;
+  display:block;
+  transform: scale(1);
   transition: transform .35s ease, filter .25s ease;
+}
+
+.media-overlay {
+  position:absolute;
+  inset:0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.35));
+  pointer-events:none;
 }
 
 .card:hover .card-img {
   transform: scale(1.03);
-  filter: brightness(1.05);
+  filter: brightness(1.05) contrast(1.02);
 }
 
 .placeholder-img {
-  height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.18);
+  height: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   color: rgba(248,236,228,0.75);
-  font-weight: 600;
-  letter-spacing: .3px;
+  font-weight:600;
+  letter-spacing:.3px;
+}
+
+.img-top { object-position: center 20%; }
+.img-center { object-position: center; }
+.img-bottom { object-position: center 80%; }
+
+@media (max-width: 520px) {
+  .media { height: 110px; }
+}
+
+@media (min-width: 900px) {
+  .media { height: 140px; }
+
 }
 
 .add-btn { background:#7a1522; color:#fff; border-radius:10px; padding:10px 18px; width:100%; border:none; transition:.3s; }
