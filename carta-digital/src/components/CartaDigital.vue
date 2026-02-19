@@ -353,6 +353,7 @@ const filteredItems = computed(() =>
 
 @media (min-width: 900px) {
   .media { height: 140px; }
+
 }
 
 .add-btn { background:#7a1522; color:#fff; border-radius:10px; padding:10px 18px; width:100%; border:none; transition:.3s; }
