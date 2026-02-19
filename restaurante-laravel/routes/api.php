@@ -12,11 +12,22 @@ use App\Http\Controllers\{
     BebidaTableController,
     PedidoDetalleController,
     AuthController,
-    OrderController
+    OrderController,
+    KitchenOrderController
 };
 
 // Health Check
 Route::get('/ping', [HealthController::class, 'ping']);
+
+
+// Kitchen Display System API
+Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
+    Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
+    Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
+    Route::patch('/kitchen/orders/{order}/start', [KitchenOrderController::class, 'start']);
+    Route::patch('/kitchen/orders/{order}/ready', [KitchenOrderController::class, 'ready']);
+    Route::patch('/kitchen/orders/{order}/deliver', [KitchenOrderController::class, 'deliver']);
+});
 
 // Registro cliente desde la carta digital
 Route::post('/login-cliente', [AuthController::class, 'loginCliente']);
