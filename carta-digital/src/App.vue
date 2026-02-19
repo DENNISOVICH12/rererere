@@ -90,6 +90,42 @@ function handleLogout() {
   alert("👋 Sesión cerrada correctamente")
 }
 
+const cartImageErrors = ref({})
+
+function backendBaseUrl() {
+  return (API_BASE || '').replace(/\/?api\/?$/, '')
+}
+
+function normalizePath(path) {
+  return String(path)
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/')
+}
+
+function getItemImage(item) {
+  if (item?.image_url) {
+    return item.image_url
+  }
+
+  if (item?.image_path) {
+    return `${backendBaseUrl()}/storage/${normalizePath(item.image_path)}`
+  }
+
+  return item?.imagen || null
+}
+
+function markCartImageError(itemId) {
+  cartImageErrors.value = {
+    ...cartImageErrors.value,
+    [itemId]: true,
+  }
+}
+
+function hasCartImage(item) {
+  return Boolean(getItemImage(item)) && !cartImageErrors.value[item.id]
+}
+
 
 /* =====================================================
    🔥 TOTAL
@@ -341,9 +377,23 @@ const currentStepIndex = computed(() => {
     :key="item.id"
     class="cart-item"
   >
-    <div>
-      {{ item.nombre }}
-      <span class="qty">x {{ item.quantity }}</span>
+    <img
+      v-if="hasCartImage(item)"
+      :src="getItemImage(item)"
+      class="cart-thumb"
+      alt="Imagen del plato"
+      @error="markCartImageError(item.id)"
+    />
+    <div v-else class="cart-thumb cart-thumb-placeholder">
+      <span>🍽</span>
+    </div>
+
+    <div class="cart-item-info">
+      <div class="cart-item-name">{{ item.nombre }}</div>
+      <div class="cart-item-meta">
+        <span class="qty">x {{ item.quantity }}</span>
+        <span class="item-price">${{ (item.precio * item.quantity).toLocaleString() }}</span>
+      </div>
     </div>
 
     <button
@@ -584,11 +634,49 @@ const currentStepIndex = computed(() => {
 /* ITEMS */
 .cart-item {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   padding: 14px 0;
   border-bottom: 1px solid rgba(255,255,255,0.15);
 }
-.qty { opacity: 0.8; font-size: 14px; }
+.cart-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: #161214;
+  flex-shrink: 0;
+}
+.cart-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.75);
+}
+.cart-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.cart-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8ece4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cart-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.qty { opacity: 0.8; font-size: 13px; }
+.item-price { color: #ffd7aa; font-size: 13px; font-weight: 600; }
 
 /* Botón eliminar */
 .remove-item {

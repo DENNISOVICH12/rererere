@@ -36,12 +36,16 @@
     <!-- LISTA DE PRODUCTOS -->
     <div class="grid">
       <div v-for="item in filteredItems" :key="item.id" class="card">
-        <img 
-          v-if="item.imagen"
-          :src="item.imagen"
+        <img
+          v-if="hasItemImage(item)"
+          :src="getItemImage(item)"
           class="card-img"
           loading="lazy"
+          @error="markImageError(item.id)"
         />
+        <div v-else class="card-img placeholder-img">
+          <span>Sin imagen</span>
+        </div>
         <div class="card-body">
           <h2>{{ item.nombre }}</h2>
           <p class="desc">{{ item.descripcion }}</p>
@@ -206,6 +210,42 @@ function cerrarModal() {
   showLogin.value = false
 }
 
+const imageErrors = ref({})
+
+function backendBaseUrl() {
+  return (API_BASE || '').replace(/\/?api\/?$/, '')
+}
+
+function normalizePath(path) {
+  return String(path)
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/')
+}
+
+function getItemImage(item) {
+  if (item?.image_url) {
+    return item.image_url
+  }
+
+  if (item?.image_path) {
+    return `${backendBaseUrl()}/storage/${normalizePath(item.image_path)}`
+  }
+
+  return item?.imagen || null
+}
+
+function markImageError(itemId) {
+  imageErrors.value = {
+    ...imageErrors.value,
+    [itemId]: true,
+  }
+}
+
+function hasItemImage(item) {
+  return Boolean(getItemImage(item)) && !imageErrors.value[item.id]
+}
+
 const filteredItems = computed(() =>
   selectedCategory.value === 'todos'
     ? items.value
@@ -256,7 +296,8 @@ const filteredItems = computed(() =>
 /* PRODUCT CARD */
 .card { background:rgba(0,0,0,0.55); backdrop-filter:blur(14px); border-radius:18px; padding:18px; border:1px solid rgba(255,255,255,0.20); transition:.35s; }
 .card:hover { transform:translateY(-6px); }
-.card-img { width:100%; height:180px; object-fit:cover; border-radius:14px; margin-bottom:14px; }
+.card-img { width:100%; height:180px; object-fit:cover; border-radius:14px; margin-bottom:14px; background:#161214; }
+.placeholder-img { display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.18); color:rgba(248,236,228,0.75); font-weight:600; letter-spacing:.3px; }
 
 .add-btn { background:#7a1522; color:#fff; border-radius:10px; padding:10px 18px; width:100%; border:none; transition:.3s; }
 .add-btn:hover { background:#9c2030; transform:translateY(-2px); }
