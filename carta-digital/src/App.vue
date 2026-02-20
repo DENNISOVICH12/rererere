@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import CartaDigital from './components/CartaDigital.vue'
-import { cart, removeFromCart, clearCart, openLoginModal } from './cart.js'
+import { cart, removeFromCart, clearCart, openLoginModal, saveCart } from './cart.js'
 import axios from 'axios'
 import { API_BASE } from './api.js'
 import { loadCliente, getCliente, cliente, logoutCliente } from "./cliente.js"
@@ -12,6 +12,10 @@ loadCliente()
 const showCart = ref(false)
 const cartButton = ref(null)
 const sendingOrder = ref(false)
+const noteItemId = ref(null)
+const noteDraft = ref("")
+const noteTextarea = ref(null)
+const NOTE_MAX_LENGTH = 140
 const pedidosCliente = ref([])
 const loadingPedidos = ref(false)
 const errorPedidos = ref("")
@@ -136,6 +140,61 @@ const totalPrice = computed(() =>
   cart.value.reduce((sum, item) => sum + item.precio * item.quantity, 0)
 )
 
+const activeNoteItem = computed(() =>
+  cart.value.find(item => item.id === noteItemId.value) ?? null
+)
+
+const noteCharCount = computed(() => noteDraft.value.length)
+
+function getNoteSummary(note) {
+  if (!note) return ''
+  return note.length > 38 ? `${note.slice(0, 38)}…` : note
+}
+
+function openNote(item) {
+  noteItemId.value = item.id
+  noteDraft.value = item.nota ?? ""
+
+  nextTick(() => {
+    noteTextarea.value?.focus()
+  })
+}
+
+function closeNoteEditor() {
+  noteItemId.value = null
+  noteDraft.value = ""
+}
+
+function cancelNote() {
+  closeNoteEditor()
+}
+
+function saveNote() {
+  const item = cart.value.find(i => i.id === noteItemId.value)
+  if (!item) {
+    closeNoteEditor()
+    return
+  }
+
+  const normalizedNote = noteDraft.value.trim()
+  const nextNote = normalizedNote || null
+
+  if ((item.nota || null) === nextNote) {
+    closeNoteEditor()
+    return
+  }
+
+  item.nota = nextNote
+  saveCart()
+  closeNoteEditor()
+}
+
+function handleNoteEditorEsc(event) {
+  if (event.key === 'Escape' && noteItemId.value !== null) {
+    cancelNote()
+  }
+}
+
 
 /* =====================================================
    🔥 ENVIAR PEDIDO
@@ -156,7 +215,8 @@ async function sendOrder() {
       items: cart.value.map(i => ({
         menu_item_id: i.id,
         cantidad: i.quantity,
-        precio_unitario: i.precio
+        precio_unitario: i.precio,
+        nota: i.nota || null // Si backend usa otro campo: ajustar aquí.
       }))
     })
 
@@ -242,9 +302,11 @@ onMounted(() => {
   }
 
   window.addEventListener("cart-updated", handler)
+  window.addEventListener('keydown', handleNoteEditorEsc)
 
   onUnmounted(() => {
     window.removeEventListener("cart-updated", handler)
+    window.removeEventListener('keydown', handleNoteEditorEsc)
   })
 })
 
@@ -397,6 +459,21 @@ const currentStepIndex = computed(() => {
         <span class="qty">x {{ item.quantity }}</span>
         <span class="item-price">${{ (item.precio * item.quantity).toLocaleString() }}</span>
       </div>
+
+      <div class="cart-note-row">
+        <button
+          class="cart-note-btn"
+          type="button"
+          @click="openNote(item)"
+        >
+          <span class="note-btn-icon" aria-hidden="true">✎</span>
+          {{ item.nota ? 'Editar nota' : 'Añadir nota' }}
+        </button>
+
+        <span v-if="item.nota" class="cart-note-status">Guardado</span>
+      </div>
+
+      <p v-if="item.nota" class="cart-note-preview">{{ getNoteSummary(item.nota) }}</p>
     </div>
 
     <button
@@ -437,9 +514,39 @@ const currentStepIndex = computed(() => {
 </div>
 
 
-
-
   </div>
+
+<transition name="note-modal">
+  <div
+    v-if="activeNoteItem"
+    class="note-modal-backdrop"
+    @click.self="cancelNote"
+  >
+    <div class="note-modal" role="dialog" aria-modal="true" :aria-label="`Nota para: ${activeNoteItem.nombre}`">
+      <button class="note-close" type="button" aria-label="Cerrar" @click="cancelNote">✕</button>
+      <h3>Nota para: {{ activeNoteItem.nombre }}</h3>
+
+      <textarea
+        ref="noteTextarea"
+        v-model="noteDraft"
+        class="note-textarea"
+        :maxlength="NOTE_MAX_LENGTH"
+        placeholder="Ej: Sin cebolla, salsa aparte…"
+      ></textarea>
+
+      <div class="note-meta">
+        <span>Instrucciones especiales</span>
+        <strong>{{ noteCharCount }}/{{ NOTE_MAX_LENGTH }}</strong>
+      </div>
+
+      <div class="note-actions">
+        <button type="button" class="note-cancel" @click="cancelNote">Cancelar</button>
+        <button type="button" class="note-save" @click="saveNote">Guardar</button>
+      </div>
+    </div>
+  </div>
+</transition>
+
 <!-- 🔥 TOAST -->
 <transition name="toast">
   <div
@@ -692,6 +799,176 @@ const currentStepIndex = computed(() => {
   color: #ff9c9c;
 }
 .remove-item:hover { background: #ff4b4b; color: white; transform: scale(1.1); }
+
+.cart-note-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-note-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.26);
+  background: linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+  color: #f5ece6;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+
+.cart-note-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,215,170,0.65);
+  background: linear-gradient(145deg, rgba(255,255,255,0.20), rgba(255,255,255,0.07));
+}
+
+.note-btn-icon {
+  font-size: 12px;
+  opacity: .9;
+}
+
+.cart-note-status {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: #9df1c6;
+  background: rgba(46,204,113,0.16);
+  border: 1px solid rgba(46,204,113,0.38);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.cart-note-preview {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.25;
+  color: rgba(255,255,255,0.72);
+}
+
+.note-modal-enter-active,
+.note-modal-leave-active {
+  transition: opacity .24s ease;
+}
+
+.note-modal-enter-active .note-modal,
+.note-modal-leave-active .note-modal {
+  transition: transform .24s cubic-bezier(.22,.61,.36,1), opacity .24s ease;
+}
+
+.note-modal-enter-from,
+.note-modal-leave-to {
+  opacity: 0;
+}
+
+.note-modal-enter-from .note-modal,
+.note-modal-leave-to .note-modal {
+  transform: scale(.94);
+  opacity: 0;
+}
+
+.note-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4,4,6,0.68);
+  backdrop-filter: blur(10px);
+  z-index: 6500;
+  padding: 16px;
+}
+
+.note-modal {
+  position: relative;
+  width: min(92vw, 520px);
+  background: linear-gradient(155deg, rgba(26,26,28,0.84), rgba(18,18,18,0.74));
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 20px;
+  box-shadow: 0 24px 56px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  padding: 22px;
+}
+
+.note-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  cursor: pointer;
+}
+
+.note-modal h3 {
+  margin: 0 34px 12px 0;
+  color: #f8ece4;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.note-textarea {
+  width: 100%;
+  min-height: 118px;
+  max-height: 240px;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  padding: 13px;
+  font-size: 13px;
+  line-height: 1.35;
+  outline: none;
+}
+
+.note-textarea:focus {
+  border-color: rgba(255,215,170,0.82);
+  box-shadow: 0 0 0 3px rgba(255,215,170,0.12);
+}
+
+.note-meta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: rgba(255,255,255,0.74);
+}
+
+.note-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.note-cancel,
+.note-save {
+  border-radius: 12px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.note-cancel {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.18);
+  color: #fff;
+}
+
+.note-save {
+  background: linear-gradient(135deg,#b62232,#d92f45);
+  color: #fff;
+}
 
 /* BOTONES CARRITO */
 .clear-btn,
