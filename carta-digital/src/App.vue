@@ -185,7 +185,7 @@ function saveNote() {
   }
 
   item.nota = nextNote
-
+ 
   saveCart()
   closeNoteEditor()
 }
@@ -539,9 +539,9 @@ const currentStepIndex = computed(() => {
 
       <div class="note-meta">
         <span>Instrucciones especiales</span>
-
         <strong>{{ noteCharCount }}/{{ NOTE_MAX_LENGTH }}</strong>
       </div>
+
 
       <div class="note-actions">
         <button type="button" class="note-cancel" @click="cancelNote">Cancelar</button>

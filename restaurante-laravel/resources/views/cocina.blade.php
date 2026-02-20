@@ -139,6 +139,10 @@ body {
 .qty { min-width: 42px; color: #f3d6a2; font-weight: 900; font-size: 1.15rem; }
 .name { font-weight: 620; }
 .note { margin: 0; padding: 8px; border-radius: 8px; background: rgba(91,42,53,.24); color: #dcc2c9; font-size: .9rem; }
+.card-head-meta { display:flex; align-items:center; gap:8px; }
+.note-indicator { display:inline-flex; align-items:center; gap:6px; padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(180, 192, 214, .28); background: rgba(180, 192, 214, .10); color: #d3dbea; font-size: .74rem; font-weight: 600; line-height: 1; }
+.note-indicator-icon { font-size: .72rem; opacity: .86; }
+.card-note-preview { margin: 0; color: #c5cedd; font-size: .8rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
 .action { width: 100%; border: none; border-radius: 12px; padding: 13px 12px; font-size: 0.98rem; font-weight: 800; letter-spacing: .01em; cursor: pointer; transition: transform .15s ease, filter .15s ease; }
 .action:hover { filter: brightness(1.03); transform: translateY(-1px); }
 .action:active { transform: translateY(0); }
@@ -188,6 +192,8 @@ body {
 .item-row:last-child { border-bottom: 0; }
 .item-main { display: flex; gap: 8px; align-items: baseline; }
 .item-extra, .item-note { margin: 4px 0 0 0; color: #b8c0cf; font-size: .88rem; }
+.item-client-note { margin: 6px 0 0; display: inline-block; max-width: 100%; border: 1px solid rgba(180, 192, 214, .28); background: rgba(180, 192, 214, .10); color: #d8dfeb; border-radius: 10px; padding: 6px 9px; font-size: .84rem; line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
+.order-comments-block { margin: 0; border: 1px solid rgba(180, 192, 214, .24); background: rgba(180, 192, 214, .08); color: #dce3ef; border-radius: 10px; padding: 10px; font-size: .9rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
 .drawer-items { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
 .items-summary { margin: 0 0 8px 0; color: #d3c3cb; font-size: .87rem; }
 .category-title { margin: 10px 0 4px 0; color: #f4d6de; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
@@ -333,7 +339,18 @@ body.has-admin-back .kds {
         >
           <header class="card-head">
             <span class="num">#@{{ order.id }}</span>
-            <span class="timer" :class="timerClass(order)">@{{ formatElapsed(order._elapsedMs) }}</span>
+            <div class="card-head-meta">
+              <span
+                v-if="orderNoteCount(order) > 0"
+                class="note-indicator"
+                role="status"
+                :aria-label="`Pedido con ${orderNoteCount(order)} nota(s)`"
+              >
+                <span class="note-indicator-icon" aria-hidden="true">✎</span>
+                <span>@{{ orderNoteCount(order) }}</span>
+              </span>
+              <span class="timer" :class="timerClass(order)">@{{ formatElapsed(order._elapsedMs) }}</span>
+            </div>
           </header>
 
           <ul class="items">
@@ -344,7 +361,7 @@ body.has-admin-back .kds {
           </ul>
 
 
-          <p v-if="order.notas" class="note">Nota: @{{ order.notas }}</p>
+          <p v-if="orderPreviewNote(order)" class="card-note-preview" :title="orderPreviewNote(order)">@{{ orderPreviewNote(order) }}</p>
 
           <button
             v-if="actionFor(order)"
@@ -416,7 +433,7 @@ const OrderDetailsDrawer = {
         const qty = Number(item.cantidad ?? item.quantity ?? 1) || 1;
         const name = item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? item.producto?.nombre ?? 'Item';
         const extrasRaw = item.extras ?? item.opciones ?? item.options ?? item.adiciones ?? null;
-        const notesRaw = item.notas ?? item.nota ?? item.note ?? null;
+        const notesRaw = item.nota ?? item.observacion ?? item.comentario ?? item.note ?? item.notas ?? null;
         const categoryRaw = item.categoria ?? item.category ?? item.tipo ?? item.menu_item?.categoria ?? item.menuItem?.categoria ?? null;
 
         const extras = Array.isArray(extrasRaw) ? extrasRaw.join(', ') : extrasRaw;
@@ -432,6 +449,17 @@ const OrderDetailsDrawer = {
           category: category || 'General',
         };
       });
+    },
+    orderComments() {
+      const raw = this.order?.comentarios ?? this.order?.comentario ?? this.order?.observacion ?? this.order?.nota ?? this.order?.notas ?? this.order?.note ?? null;
+      if (Array.isArray(raw)) return raw.join(' · ').trim();
+      return String(raw || '').trim();
+    },
+    notedItems() {
+      return this.normalizedItems.filter((item) => String(item.note || '').trim());
+    },
+    hasAnyNotes() {
+      return !!this.orderComments || this.notedItems.length > 0;
     },
     groupedItems() {
       const groups = {};
@@ -539,9 +567,18 @@ const OrderDetailsDrawer = {
     copySummary() {
       if (!this.order) return;
       const lines = this.normalizedItems.map((item) => `- ${item.qty}x ${item.name}`);
-      const summary = `Pedido #${this.order.id}\nEstado: ${this.statusLabel(this.order.estado)}\n${lines.join('\n')}\nNotas: ${this.order.notas || 'Sin notas'}`;
+      const summary = `Pedido #${this.order.id}\nEstado: ${this.statusLabel(this.order.estado)}\n${lines.join('\n')}\nComentarios: ${this.orderComments || 'Sin comentarios'}`;
       navigator.clipboard?.writeText(summary);
       this.$emit('toast', '📋 Resumen copiado');
+    },
+    copyNotes() {
+      if (!this.order || !this.hasAnyNotes) return;
+      const itemLines = this.notedItems.map((item) => `- ${item.qty}x ${item.name}: ${item.note}`);
+      const header = `Pedido #${this.order.id}`;
+      const general = this.orderComments ? `Comentario pedido: ${this.orderComments}` : '';
+      const text = [header, general, ...itemLines].filter(Boolean).join('\n');
+      navigator.clipboard?.writeText(text);
+      this.$emit('toast', '📋 Notas copiadas');
     },
     printTicket() {
       this.$emit('toast', '🖨️ Impresión pendiente de integrar');
@@ -582,6 +619,11 @@ const OrderDetailsDrawer = {
             <span v-if="isPriority" class="priority-pill" v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
           </section>
 
+          <section v-if="hasOrder && orderComments" class="ticket">
+            <h3 style="margin:0 0 8px 0;">Comentarios del pedido</h3>
+            <p class="order-comments-block" v-text="orderComments"></p>
+          </section>
+
           <section v-if="hasOrder" class="ticket">
             <h3 style="margin:0 0 8px 0;">Items</h3>
             <p class="items-summary" v-text="normalizedItems.length + ' líneas · ' + totalItemsCount + ' unidades'"></p>
@@ -599,15 +641,10 @@ const OrderDetailsDrawer = {
                     <strong v-text="item.name"></strong>
                   </div>
                   <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
-                  <p v-if="item.note" class="item-note" v-text="'Nota: ' + item.note"></p>
+                  <p v-if="item.note" class="item-client-note" v-text="'Nota del cliente: ' + item.note"></p>
                 </article>
               </template>
             </div>
-          </section>
-
-          <section v-if="hasOrder && order.notas" class="ticket">
-            <h3 style="margin:0 0 8px 0;">Notas</h3>
-            <p class="note" v-text="order.notas"></p>
           </section>
 
 
@@ -618,6 +655,7 @@ const OrderDetailsDrawer = {
             <div class="secondary-actions">
               <button class="sec-btn" @click="printTicket">Imprimir</button>
               <button class="sec-btn" @click="copySummary">Copiar resumen</button>
+              <button v-if="hasAnyNotes" class="sec-btn" @click="copyNotes">Copiar notas</button>
               <button class="sec-btn" @click="$emit('priorityToggle', order.id)">Marcar prioridad</button>
               <button class="sec-btn" @click="$emit('close')">Volver al tablero</button>
             </div>
@@ -666,7 +704,7 @@ Vue.createApp({
         return {
           ...order,
           estado: status,
-          notas: order.notas || order.note || '',
+          notas: order.notas || order.nota || order.observacion || order.comentario || order.note || '',
           items: order.items || order.detalles || order.detalle || order.pedido_detalles || [],
 
           _createdTs: ts,
@@ -705,6 +743,27 @@ Vue.createApp({
     },
   },
   methods: {
+    getOrderItems(order) {
+      if (!order) return [];
+      const source = order.items || order.detalles || order.detalle || order.pedido_detalles || [];
+      return Array.isArray(source) ? source : [];
+    },
+    getItemNote(item) {
+      const raw = item?.nota ?? item?.observacion ?? item?.comentario ?? item?.note ?? item?.notas ?? null;
+      if (Array.isArray(raw)) return raw.join(' · ').trim();
+      return String(raw || '').trim();
+    },
+    orderNoteCount(order) {
+      const itemNotes = this.getOrderItems(order).reduce((acc, item) => acc + (this.getItemNote(item) ? 1 : 0), 0);
+      const orderComment = String(order?.comentarios ?? order?.comentario ?? order?.observacion ?? order?.nota ?? order?.notas ?? order?.note ?? '').trim();
+      return itemNotes + (orderComment ? 1 : 0);
+    },
+    orderPreviewNote(order) {
+      const firstItemNote = this.getOrderItems(order).map((item) => this.getItemNote(item)).find(Boolean);
+      if (firstItemNote) return `Nota cliente: ${firstItemNote}`;
+      const orderComment = String(order?.comentarios ?? order?.comentario ?? order?.observacion ?? order?.nota ?? order?.notas ?? order?.note ?? '').trim();
+      return orderComment ? `Comentario: ${orderComment}` : '';
+    },
     showToast(message) {
       this.toastMessage = message;
       clearTimeout(this.toastHandle);
