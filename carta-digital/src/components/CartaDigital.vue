@@ -120,7 +120,6 @@ import { API_BASE } from '../api.js'
 import { addToCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
 
-
 const items = ref([])
 const selectedCategory = ref('todos')
 const categories = ['todos', 'plato', 'bebida']
@@ -137,21 +136,18 @@ const loadingLogin = ref(false)
 const showErrors = ref(false)
 const loginMessage = ref("")
 const registerMessage = ref("")
+
 // Cargar menú
 onMounted(async () => {
   try {
     const res = await fetch(`${API_BASE}/menu-items`)
-
     if (!res.ok) throw new Error('Error cargando menú')
-
     const data = await res.json()
     items.value = data.data || data
-
   } catch (err) {
     console.error(err)
   }
 })
-
 
 // Abrir modal desde carrito
 onMounted(() => {
@@ -180,7 +176,6 @@ async function login() {
     setCliente(res.data.cliente)
     loginMessage.value = "✅ Sesión iniciada"
     setTimeout(() => showLogin.value = false, 800)
-
   } catch {
     loginMessage.value = "❌ Usuario o contraseña incorrectos"
   } finally {
@@ -195,7 +190,7 @@ async function registerUser() {
   try {
     await axios.post(`${API_BASE}/register-cliente`, register.value)
 
-   const loginRes = await axios.post(`${API_BASE}/login-cliente`, {
+    const loginRes = await axios.post(`${API_BASE}/login-cliente`, {
       usuario: register.value.usuario,
       password: register.value.password
     })
@@ -203,7 +198,6 @@ async function registerUser() {
     setCliente(loginRes.data.cliente)
     registerMessage.value = "✅ Cuenta creada"
     setTimeout(() => showLogin.value = false, 800)
-
   } catch {
     registerMessage.value = "❌ Error registrando usuario"
   }
@@ -227,36 +221,24 @@ function normalizePath(path) {
 }
 
 function getItemImage(item) {
-  if (item?.image_url) {
-    return item.image_url
-  }
-
-  if (item?.image_path) {
-    return `${backendBaseUrl()}/storage/${normalizePath(item.image_path)}`
-  }
-
+  if (item?.image_url) return item.image_url
+  if (item?.image_path) return `${backendBaseUrl()}/storage/${normalizePath(item.image_path)}`
   return item?.imagen || null
-
 }
 
 function markImageError(itemId) {
-  imageErrors.value = {
-    ...imageErrors.value,
-    [itemId]: true,
-  }
+  imageErrors.value = { ...imageErrors.value, [itemId]: true }
 }
 
 function hasItemImage(item) {
   return Boolean(getItemImage(item)) && !imageErrors.value[item.id]
 }
 
-
 const filteredItems = computed(() =>
   selectedCategory.value === 'todos'
     ? items.value
     : items.value.filter(i => i.categoria === selectedCategory.value)
 )
-
 </script>
 
 <style scoped>
@@ -301,11 +283,18 @@ const filteredItems = computed(() =>
 /* PRODUCT CARD */
 .card { background:rgba(0,0,0,0.55); backdrop-filter:blur(14px); border-radius:18px; padding:18px; border:1px solid rgba(255,255,255,0.20); transition:.35s; }
 .card:hover { transform:translateY(-6px); }
+
+/* ✅ IMAGEN MÁS GRANDE + PRO */
 .media {
   position: relative;
-  height: 130px;
+  width: 100%;
   border-radius: 14px;
   overflow: hidden;
+
+  /* 🔥 clave: un "marco" grande y consistente */
+  aspect-ratio: 16 / 9;    /* se ve tipo app */
+  min-height: 170px;       /* fallback si el navegador no respeta aspect-ratio */
+
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.10);
   margin-bottom: 14px;
@@ -324,13 +313,13 @@ const filteredItems = computed(() =>
 .media-overlay {
   position:absolute;
   inset:0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.35));
+  background: linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.38));
   pointer-events:none;
 }
 
 .card:hover .card-img {
-  transform: scale(1.03);
-  filter: brightness(1.05) contrast(1.02);
+  transform: scale(1.04);
+  filter: brightness(1.06) contrast(1.03);
 }
 
 .placeholder-img {
@@ -347,13 +336,20 @@ const filteredItems = computed(() =>
 .img-center { object-position: center; }
 .img-bottom { object-position: center 80%; }
 
+/* ✅ Responsivo: en móvil que se vea grande sin exagerar */
 @media (max-width: 520px) {
-  .media { height: 110px; }
+  .media {
+    aspect-ratio: 4 / 3;  /* más “alto” para celular */
+    min-height: 190px;
+  }
 }
 
+/* ✅ Desktop: se ve más premium */
 @media (min-width: 900px) {
-  .media { height: 140px; }
-
+  .media {
+    aspect-ratio: 16 / 8; /* un poquito más panorámico */
+    min-height: 190px;
+  }
 }
 
 .add-btn { background:#7a1522; color:#fff; border-radius:10px; padding:10px 18px; width:100%; border:none; transition:.3s; }
