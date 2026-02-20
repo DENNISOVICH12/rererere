@@ -177,7 +177,15 @@ function saveNote() {
   }
 
   const normalizedNote = noteDraft.value.trim()
-  item.nota = normalizedNote || null
+  const nextNote = normalizedNote || null
+
+  if ((item.nota || null) === nextNote) {
+    closeNoteEditor()
+    return
+  }
+
+  item.nota = nextNote
+
   saveCart()
   closeNoteEditor()
 }
@@ -453,20 +461,21 @@ const currentStepIndex = computed(() => {
         <span class="item-price">${{ (item.precio * item.quantity).toLocaleString() }}</span>
       </div>
 
-      <button
-        v-if="!item.nota"
-        class="note-action"
-        type="button"
-        @click="openNote(item)"
-      >
-        <span aria-hidden="true">📝</span>
-        Añadir nota
-      </button>
+      <div class="cart-note-row">
+        <button
+          class="cart-note-btn"
+          type="button"
+          @click="openNote(item)"
+        >
+          <span class="note-btn-icon" aria-hidden="true">✎</span>
+          {{ item.nota ? 'Editar nota' : 'Añadir nota' }}
+        </button>
 
-      <div v-else class="note-chip-wrap">
-        <span class="note-chip">Nota: {{ getNoteSummary(item.nota) }}</span>
-        <button class="note-edit-btn" type="button" @click="openNote(item)">Editar</button>
+        <span v-if="item.nota" class="cart-note-status">Guardado</span>
       </div>
+
+      <p v-if="item.nota" class="cart-note-preview">{{ getNoteSummary(item.nota) }}</p>
+
     </div>
 
     <button
@@ -515,18 +524,22 @@ const currentStepIndex = computed(() => {
     class="note-modal-backdrop"
     @click.self="cancelNote"
   >
-    <div class="note-modal" role="dialog" aria-modal="true" :aria-label="`Modificar: ${activeNoteItem.nombre}`">
-      <h3>Modificar: {{ activeNoteItem.nombre }}</h3>
+    <div class="note-modal" role="dialog" aria-modal="true" :aria-label="`Nota para: ${activeNoteItem.nombre}`">
+      <button class="note-close" type="button" aria-label="Cerrar" @click="cancelNote">✕</button>
+      <h3>Nota para: {{ activeNoteItem.nombre }}</h3>
+
+
       <textarea
         ref="noteTextarea"
         v-model="noteDraft"
         class="note-textarea"
         :maxlength="NOTE_MAX_LENGTH"
-        placeholder="Ej: sin cebolla, salsa aparte, término medio…"
+        placeholder="Ej: Sin cebolla, salsa aparte…"
       ></textarea>
 
       <div class="note-meta">
-        <span>Instrucciones especiales del plato</span>
+        <span>Instrucciones especiales</span>
+
         <strong>{{ noteCharCount }}/{{ NOTE_MAX_LENGTH }}</strong>
       </div>
 
@@ -791,54 +804,57 @@ const currentStepIndex = computed(() => {
 }
 .remove-item:hover { background: #ff4b4b; color: white; transform: scale(1.1); }
 
-.note-action {
-  width: fit-content;
-  margin-top: 6px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: rgba(255,255,255,0.72);
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: color .2s ease;
-}
-.note-action:hover { color: #ffd7aa; }
-
-.note-chip-wrap {
-  margin-top: 7px;
+.cart-note-row {
+  margin-top: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
 }
 
-.note-chip {
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.18);
+.cart-note-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 11px;
-  color: #f3e7df;
-  max-width: 175px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.note-edit-btn {
-  background: rgba(255,255,255,0.09);
-  border: 1px solid rgba(255,255,255,0.22);
-  color: #fff;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 11px;
+  border: 1px solid rgba(255,255,255,0.26);
+  background: linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+  color: #f5ece6;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  transition: .2s ease;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
 }
-.note-edit-btn:hover { background: rgba(156,32,48,.55); }
+
+.cart-note-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,215,170,0.65);
+  background: linear-gradient(145deg, rgba(255,255,255,0.20), rgba(255,255,255,0.07));
+}
+
+.note-btn-icon {
+  font-size: 12px;
+  opacity: .9;
+}
+
+.cart-note-status {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: #9df1c6;
+  background: rgba(46,204,113,0.16);
+  border: 1px solid rgba(46,204,113,0.38);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.cart-note-preview {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.25;
+  color: rgba(255,255,255,0.72);
+}
+
 
 .note-modal-enter-active,
 .note-modal-leave-active {
@@ -847,7 +863,8 @@ const currentStepIndex = computed(() => {
 
 .note-modal-enter-active .note-modal,
 .note-modal-leave-active .note-modal {
-  transition: transform .24s ease, opacity .24s ease;
+  transition: transform .24s cubic-bezier(.22,.61,.36,1), opacity .24s ease;
+
 }
 
 .note-modal-enter-from,
@@ -857,7 +874,8 @@ const currentStepIndex = computed(() => {
 
 .note-modal-enter-from .note-modal,
 .note-modal-leave-to .note-modal {
-  transform: translateY(20px) scale(.98);
+  transform: scale(.94);
+
   opacity: 0;
 }
 
@@ -867,42 +885,63 @@ const currentStepIndex = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(4px);
+  background: rgba(4,4,6,0.68);
+  backdrop-filter: blur(10px);
   z-index: 6500;
+  padding: 16px;
 }
 
 .note-modal {
-  width: min(92vw, 420px);
-  background: rgba(20,20,20,0.78);
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 18px;
-  box-shadow: 0 20px 48px rgba(0,0,0,0.5);
-  padding: 20px;
+  position: relative;
+  width: min(92vw, 520px);
+  background: linear-gradient(155deg, rgba(26,26,28,0.84), rgba(18,18,18,0.74));
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 20px;
+  box-shadow: 0 24px 56px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  padding: 22px;
+}
+
+.note-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  cursor: pointer;
 }
 
 .note-modal h3 {
-  margin: 0 0 12px;
+  margin: 0 34px 12px 0;
   color: #f8ece4;
   font-size: 16px;
+  font-weight: 600;
+
 }
 
 .note-textarea {
   width: 100%;
-  min-height: 108px;
+  min-height: 118px;
+  max-height: 240px;
   resize: vertical;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.06);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.05);
   color: #fff;
-  padding: 12px;
+  padding: 13px;
   font-size: 13px;
+  line-height: 1.35;
+
   outline: none;
 }
 
 .note-textarea:focus {
   border-color: rgba(255,215,170,0.82);
-  box-shadow: 0 0 0 3px rgba(255,215,170,0.15);
+  box-shadow: 0 0 0 3px rgba(255,215,170,0.12);
+
 }
 
 .note-meta {
@@ -911,7 +950,8 @@ const currentStepIndex = computed(() => {
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: rgba(255,255,255,0.72);
+  color: rgba(255,255,255,0.74);
+
 }
 
 .note-actions {
@@ -924,7 +964,8 @@ const currentStepIndex = computed(() => {
 .note-cancel,
 .note-save {
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 10px 16px;
+
   border: 1px solid transparent;
   cursor: pointer;
   font-weight: 600;
