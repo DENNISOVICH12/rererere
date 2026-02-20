@@ -185,6 +185,7 @@ function saveNote() {
   }
 
   item.nota = nextNote
+ 
   saveCart()
   closeNoteEditor()
 }
@@ -474,6 +475,7 @@ const currentStepIndex = computed(() => {
       </div>
 
       <p v-if="item.nota" class="cart-note-preview">{{ getNoteSummary(item.nota) }}</p>
+
     </div>
 
     <button
@@ -526,6 +528,7 @@ const currentStepIndex = computed(() => {
       <button class="note-close" type="button" aria-label="Cerrar" @click="cancelNote">✕</button>
       <h3>Nota para: {{ activeNoteItem.nombre }}</h3>
 
+
       <textarea
         ref="noteTextarea"
         v-model="noteDraft"
@@ -538,6 +541,7 @@ const currentStepIndex = computed(() => {
         <span>Instrucciones especiales</span>
         <strong>{{ noteCharCount }}/{{ NOTE_MAX_LENGTH }}</strong>
       </div>
+
 
       <div class="note-actions">
         <button type="button" class="note-cancel" @click="cancelNote">Cancelar</button>
@@ -851,6 +855,7 @@ const currentStepIndex = computed(() => {
   color: rgba(255,255,255,0.72);
 }
 
+
 .note-modal-enter-active,
 .note-modal-leave-active {
   transition: opacity .24s ease;
@@ -859,6 +864,7 @@ const currentStepIndex = computed(() => {
 .note-modal-enter-active .note-modal,
 .note-modal-leave-active .note-modal {
   transition: transform .24s cubic-bezier(.22,.61,.36,1), opacity .24s ease;
+
 }
 
 .note-modal-enter-from,
@@ -869,6 +875,7 @@ const currentStepIndex = computed(() => {
 .note-modal-enter-from .note-modal,
 .note-modal-leave-to .note-modal {
   transform: scale(.94);
+
   opacity: 0;
 }
 
@@ -912,6 +919,7 @@ const currentStepIndex = computed(() => {
   color: #f8ece4;
   font-size: 16px;
   font-weight: 600;
+
 }
 
 .note-textarea {
@@ -926,12 +934,14 @@ const currentStepIndex = computed(() => {
   padding: 13px;
   font-size: 13px;
   line-height: 1.35;
+
   outline: none;
 }
 
 .note-textarea:focus {
   border-color: rgba(255,215,170,0.82);
   box-shadow: 0 0 0 3px rgba(255,215,170,0.12);
+
 }
 
 .note-meta {
@@ -941,6 +951,7 @@ const currentStepIndex = computed(() => {
   align-items: center;
   font-size: 11px;
   color: rgba(255,255,255,0.74);
+
 }
 
 .note-actions {
@@ -954,6 +965,7 @@ const currentStepIndex = computed(() => {
 .note-save {
   border-radius: 12px;
   padding: 10px 16px;
+
   border: 1px solid transparent;
   cursor: pointer;
   font-weight: 600;
