@@ -24,7 +24,6 @@
   --ok: #4d7f67;
   --warn: #8f7448;
   --danger: #8f4f5d;
-
 }
 * { box-sizing: border-box; }
 body {
@@ -34,7 +33,6 @@ body {
   color: var(--text);
   background-image:
     linear-gradient(140deg, rgba(8,11,17,.82), rgba(11,15,23,.78)),
-
     url("https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1800&q=80");
   background-size: cover;
   background-position: center;
@@ -138,11 +136,23 @@ body {
 .items li { display: flex; gap: 8px; align-items: baseline; }
 .qty { min-width: 42px; color: #f3d6a2; font-weight: 900; font-size: 1.15rem; }
 .name { font-weight: 620; }
-.note { margin: 0; padding: 8px; border-radius: 8px; background: rgba(91,42,53,.24); color: #dcc2c9; font-size: .9rem; }
+
 .card-head-meta { display:flex; align-items:center; gap:8px; }
 .note-indicator { display:inline-flex; align-items:center; gap:6px; padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(180, 192, 214, .28); background: rgba(180, 192, 214, .10); color: #d3dbea; font-size: .74rem; font-weight: 600; line-height: 1; }
 .note-indicator-icon { font-size: .72rem; opacity: .86; }
-.card-note-preview { margin: 0; color: #c5cedd; font-size: .8rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+
+.card-note-preview {
+  margin: 0;
+  color: #c5cedd;
+  font-size: .8rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
 .action { width: 100%; border: none; border-radius: 12px; padding: 13px 12px; font-size: 0.98rem; font-weight: 800; letter-spacing: .01em; cursor: pointer; transition: transform .15s ease, filter .15s ease; }
 .action:hover { filter: brightness(1.03); transform: translateY(-1px); }
 .action:active { transform: translateY(0); }
@@ -191,9 +201,36 @@ body {
 .item-row { border-bottom: 1px dashed rgba(255,255,255,.18); padding: 8px 0; }
 .item-row:last-child { border-bottom: 0; }
 .item-main { display: flex; gap: 8px; align-items: baseline; }
-.item-extra, .item-note { margin: 4px 0 0 0; color: #b8c0cf; font-size: .88rem; }
-.item-client-note { margin: 6px 0 0; display: inline-block; max-width: 100%; border: 1px solid rgba(180, 192, 214, .28); background: rgba(180, 192, 214, .10); color: #d8dfeb; border-radius: 10px; padding: 6px 9px; font-size: .84rem; line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
-.order-comments-block { margin: 0; border: 1px solid rgba(180, 192, 214, .24); background: rgba(180, 192, 214, .08); color: #dce3ef; border-radius: 10px; padding: 10px; font-size: .9rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+.item-extra { margin: 4px 0 0 0; color: #b8c0cf; font-size: .88rem; }
+
+/* ✅ NOTA CLIENTE: se ve premium y clara */
+.item-client-note{
+  margin: 6px 0 0;
+  display: inline-block;
+  max-width: 100%;
+  border: 1px solid rgba(180, 192, 214, .28);
+  background: rgba(180, 192, 214, .10);
+  color: #d8dfeb;
+  border-radius: 10px;
+  padding: 6px 9px;
+  font-size: .84rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.order-comments-block {
+  margin: 0;
+  border: 1px solid rgba(180, 192, 214, .24);
+  background: rgba(180, 192, 214, .08);
+  color: #dce3ef;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: .9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .drawer-items { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
 .items-summary { margin: 0 0 8px 0; color: #d3c3cb; font-size: .87rem; }
 .category-title { margin: 10px 0 4px 0; color: #f4d6de; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
@@ -238,14 +275,11 @@ body {
   .board { grid-template-columns: 1fr; }
   .drawer { width: 100vw; }
 }
-
 .col-list::-webkit-scrollbar,.drawer-items::-webkit-scrollbar{width:8px;height:8px;}
 .col-list::-webkit-scrollbar-thumb,.drawer-items::-webkit-scrollbar-thumb{background:rgba(111,123,145,.45);border-radius:999px;}
 .col-list::-webkit-scrollbar-track,.drawer-items::-webkit-scrollbar-track{background:transparent;}
 
-body.has-admin-back .kds {
-  padding-top: 64px;
-}
+body.has-admin-back .kds { padding-top: 64px; }
 .back-admin-btn {
   position: fixed;
   top: 14px;
@@ -272,23 +306,14 @@ body.has-admin-back .kds {
   color: #f0e8eb;
   transform: translateY(-1px);
 }
-.back-admin-btn .back-admin-icon {
-  font-size: .95rem;
-  line-height: 1;
-  opacity: .9;
-}
+.back-admin-btn .back-admin-icon { font-size: .95rem; line-height: 1; opacity: .9; }
 @media (max-width: 840px) {
-  body.has-admin-back .kds {
-    padding-top: 72px;
-  }
-  .back-admin-btn {
-    left: 12px;
-    top: 10px;
-  }
+  body.has-admin-back .kds { padding-top: 72px; }
+  .back-admin-btn { left: 12px; top: 10px; }
 }
-
 </style>
 </head>
+
 <body class="{{ $isAdmin ? 'has-admin-back' : '' }}">
 <div id="app" class="kds">
   @if($isAdmin)
@@ -297,6 +322,7 @@ body.has-admin-back .kds {
       <span>Volver al Admin</span>
     </a>
   @endif
+
   <header class="topbar">
     <div>
       <h1>Modo Cocina PRO</h1>
@@ -354,12 +380,11 @@ body.has-admin-back .kds {
           </header>
 
           <ul class="items">
-            <li v-for="(item, idx) in (order.items || []).slice(0, 4)" :key="item.id || `${order.id}-${idx}`">
-              <span class="qty">@{{ item.cantidad ?? item.quantity ?? 1 }}x</span>
-              <span class="name">@{{ item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? 'Item' }}</span>
+            <li v-for="(item, idx) in getOrderItems(order).slice(0,4)" :key="item._k || item.id || `${order.id}-${idx}`">
+              <span class="qty">@{{ item._qty }}x</span>
+              <span class="name">@{{ item._name }}</span>
             </li>
           </ul>
-
 
           <p v-if="orderPreviewNote(order)" class="card-note-preview" :title="orderPreviewNote(order)">@{{ orderPreviewNote(order) }}</p>
 
@@ -387,7 +412,6 @@ body.has-admin-back .kds {
     @toast="showToast"
   />
 
-
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
 </div>
 
@@ -395,6 +419,108 @@ body.has-admin-back .kds {
 <script>
 const POLLING_MS = 4000;
 const DELIVERED_HIDE_MS = 15 * 60 * 1000;
+
+/* =========================================================
+   ✅ HELPERS "DEEP" PARA NOTAS / CANTIDAD / NOMBRE / CATEGORÍA
+   (tu API puede mandar item.pivot.nota, item.detalle.nota, etc.)
+========================================================= */
+function asText(v) {
+  if (Array.isArray(v)) return v.join(' · ');
+  if (v === null || v === undefined) return '';
+  return String(v);
+}
+function deepGet(obj, path) {
+  try {
+    return path.split('.').reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : undefined), obj);
+  } catch { return undefined; }
+}
+function pickFirst(obj, paths) {
+  for (const p of paths) {
+    const val = deepGet(obj, p);
+    const txt = asText(val).trim();
+    if (txt) return txt;
+  }
+  return '';
+}
+function pickFirstNum(obj, paths, fallback = 1) {
+  for (const p of paths) {
+    const val = deepGet(obj, p);
+    const n = Number(val);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return fallback;
+}
+function normalizeOrderItems(order) {
+  const source =
+    order?.items ||
+    order?.detalles ||
+    order?.detalle ||
+    order?.pedido_detalles ||
+    order?.order_items ||
+    [];
+
+  const arr = Array.isArray(source) ? source : [];
+
+  return arr.map((raw, idx) => {
+    // merge "pivot" o "detalle" si vienen así
+    const merged = {
+      ...raw,
+      ...(raw?.pivot || {}),
+      ...(raw?.detalle || {}),
+      ...(raw?.pedido_detalle || {}),
+      ...(raw?.order_item || {}),
+    };
+
+    const qty = pickFirstNum(merged, [
+      'cantidad','quantity','qty',
+      'pivot.cantidad','pivot.quantity','pivot.qty',
+      'detalle.cantidad','pedido_detalle.cantidad','order_item.cantidad',
+    ], 1);
+
+    const name = pickFirst(merged, [
+      'nombre',
+      'menu_item.nombre',
+      'menuItem.nombre',
+      'producto.nombre',
+      'product.nombre',
+      'item.nombre',
+    ]) || 'Item';
+
+    const category = pickFirst(merged, [
+      'categoria','category','tipo',
+      'menu_item.categoria','menuItem.categoria'
+    ]) || 'General';
+
+    const note = pickFirst(merged, [
+      // comunes
+      'nota','observacion','comentario','note','notas',
+      // nombres típicos en apps
+      'instrucciones','instrucciones_especiales','instruccionesEspeciales',
+      'special_instructions','specialInstructions',
+      'comentarios_cliente','comentario_cliente','customer_note','customerNote',
+      // anidados
+      'pivot.nota','pivot.observacion','pivot.comentario','pivot.note','pivot.notas',
+      'detalle.nota','pedido_detalle.nota','order_item.nota',
+      'detalle.observacion','pedido_detalle.observacion','order_item.observacion',
+      'detalle.comentario','pedido_detalle.comentario','order_item.comentario',
+    ]);
+
+    const extras = pickFirst(merged, [
+      'extras','opciones','options','adiciones',
+      'pivot.extras','pivot.opciones','detalle.extras'
+    ]);
+
+    return {
+      ...raw,
+      _k: raw?.id || `${order?.id || 'o'}-${idx}`,
+      _qty: qty,
+      _name: name,
+      _category: category,
+      _note: note,
+      _extras: extras,
+    };
+  });
+}
 
 const OrderDetailsDrawer = {
   props: {
@@ -404,96 +530,72 @@ const OrderDetailsDrawer = {
   },
   emits: ['close', 'actionDone', 'priorityToggle', 'toast'],
   data() {
-    return {
-      loadingAction: false,
-    };
+    return { loadingAction: false };
   },
   computed: {
-    hasOrder() {
-      return !!this.order;
-    },
+    hasOrder() { return !!this.order; },
     statusClass() {
       const status = this.order?.estado;
       if (!status) return '';
       return `b-${status}`;
     },
-    isOverdue() {
-      return this.order ? this.order._elapsedMin > 6 : false;
-    },
+    isOverdue() { return this.order ? this.order._elapsedMin > 6 : false; },
     isPriority() {
       if (!this.order) return false;
       return this.isOverdue || !!this.priorityOverrides[this.order.id];
     },
+
     normalizedItems() {
-      const source = this.order?.items || this.order?.detalles || this.order?.detalle || this.order?.pedido_detalles || [];
-
-      if (!Array.isArray(source)) return [];
-
-      return source.map((item, idx) => {
-        const qty = Number(item.cantidad ?? item.quantity ?? 1) || 1;
-        const name = item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? item.producto?.nombre ?? 'Item';
-        const extrasRaw = item.extras ?? item.opciones ?? item.options ?? item.adiciones ?? null;
-        const notesRaw = item.nota ?? item.observacion ?? item.comentario ?? item.note ?? item.notas ?? null;
-        const categoryRaw = item.categoria ?? item.category ?? item.tipo ?? item.menu_item?.categoria ?? item.menuItem?.categoria ?? null;
-
-        const extras = Array.isArray(extrasRaw) ? extrasRaw.join(', ') : extrasRaw;
-        const note = Array.isArray(notesRaw) ? notesRaw.join(' · ') : notesRaw;
-        const category = String(categoryRaw || '').trim();
-
-        return {
-          id: item.id || `${this.order?.id || 'o'}-${idx}`,
-          qty,
-          name,
-          extras: extras || '',
-          note: note || '',
-          category: category || 'General',
-        };
-      });
+      return normalizeOrderItems(this.order);
     },
+
     orderComments() {
-      const raw = this.order?.comentarios ?? this.order?.comentario ?? this.order?.observacion ?? this.order?.nota ?? this.order?.notas ?? this.order?.note ?? null;
-      if (Array.isArray(raw)) return raw.join(' · ').trim();
+      const raw = pickFirst(this.order || {}, [
+        'comentarios','comentario','observacion','nota','notas','note',
+        'special_instructions','specialInstructions','instrucciones'
+      ]);
       return String(raw || '').trim();
     },
+
     notedItems() {
-      return this.normalizedItems.filter((item) => String(item.note || '').trim());
+      return this.normalizedItems.filter((it) => String(it._note || '').trim());
     },
+
     hasAnyNotes() {
       return !!this.orderComments || this.notedItems.length > 0;
     },
+
     groupedItems() {
       const groups = {};
-      this.normalizedItems.forEach((item) => {
-        if (!groups[item.category]) groups[item.category] = [];
-        groups[item.category].push(item);
+      this.normalizedItems.forEach((it) => {
+        const key = it._category || 'General';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(it);
       });
       return groups;
     },
+
     totalItemsCount() {
-      return this.normalizedItems.reduce((acc, item) => acc + item.qty, 0);
+      return this.normalizedItems.reduce((acc, it) => acc + (Number(it._qty) || 0), 0);
     },
+
     delayLabel() {
       if (!this.order) return '';
       if (this.order._elapsedMin <= 6) return '';
       return `Atrasado +${Math.floor(this.order._elapsedMin - 6)} min`;
     },
+
     primaryAction() {
       if (!this.order) return null;
       if (this.order.estado === 'pendiente') return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
       if (this.order.estado === 'preparando') return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
       if (this.order.estado === 'listo') return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
-
       return null;
     },
   },
   methods: {
     statusLabel(status) {
-      return {
-        pendiente: 'Pendiente',
-        preparando: 'En preparación',
-        listo: 'Listo',
-        entregado: 'Entregado',
-      }[status] || status;
+      return { pendiente:'Pendiente', preparando:'En preparación', listo:'Listo', entregado:'Entregado' }[status] || status;
     },
     fmtTime(dateRaw) {
       if (!dateRaw) return '-';
@@ -505,10 +607,7 @@ const OrderDetailsDrawer = {
       if (!dateRaw) return '-';
       const ts = Date.parse(dateRaw);
       if (!Number.isFinite(ts)) return '-';
-      return new Date(ts).toLocaleString('es-CO', {
-
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-      });
+      return new Date(ts).toLocaleString('es-CO', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
     },
     formatElapsed(ms) {
       const sec = Math.floor(ms / 1000);
@@ -526,7 +625,6 @@ const OrderDetailsDrawer = {
       if (!this.primaryAction || !this.order || this.loadingAction) return;
       const token = document.querySelector('meta[name="csrf-token"]')?.content;
       this.loadingAction = true;
-
       try {
         const endpoint = this.endpointFor(this.primaryAction.next, this.order.id);
         let res = await fetch(endpoint, {
@@ -555,10 +653,9 @@ const OrderDetailsDrawer = {
         }
 
         if (!res.ok) throw new Error('status ' + res.status);
-
         this.$emit('actionDone', { orderId: this.order.id, nextStatus: this.primaryAction.next });
         this.$emit('toast', '✅ Pedido actualizado');
-      } catch (e) {
+      } catch {
         this.$emit('toast', '⚠️ No se pudo actualizar el pedido');
       } finally {
         this.loadingAction = false;
@@ -566,34 +663,28 @@ const OrderDetailsDrawer = {
     },
     copySummary() {
       if (!this.order) return;
-      const lines = this.normalizedItems.map((item) => `- ${item.qty}x ${item.name}`);
+      const lines = this.normalizedItems.map((it) => `- ${it._qty}x ${it._name}${it._note ? `: ${it._note}` : ''}`);
       const summary = `Pedido #${this.order.id}\nEstado: ${this.statusLabel(this.order.estado)}\n${lines.join('\n')}\nComentarios: ${this.orderComments || 'Sin comentarios'}`;
       navigator.clipboard?.writeText(summary);
       this.$emit('toast', '📋 Resumen copiado');
     },
     copyNotes() {
       if (!this.order || !this.hasAnyNotes) return;
-      const itemLines = this.notedItems.map((item) => `- ${item.qty}x ${item.name}: ${item.note}`);
+      const itemLines = this.notedItems.map((it) => `- ${it._qty}x ${it._name}: ${it._note}`);
       const header = `Pedido #${this.order.id}`;
       const general = this.orderComments ? `Comentario pedido: ${this.orderComments}` : '';
       const text = [header, general, ...itemLines].filter(Boolean).join('\n');
       navigator.clipboard?.writeText(text);
       this.$emit('toast', '📋 Notas copiadas');
     },
-    printTicket() {
-      this.$emit('toast', '🖨️ Impresión pendiente de integrar');
-    },
+    printTicket() { this.$emit('toast', '🖨️ Impresión pendiente de integrar'); },
     onEsc(evt) {
       if (evt.key === 'Escape' && this.open) this.$emit('close');
       if (evt.key === 'Enter' && this.open) this.executePrimaryAction();
     },
   },
-  mounted() {
-    window.addEventListener('keydown', this.onEsc);
-  },
-  beforeUnmount() {
-    window.removeEventListener('keydown', this.onEsc);
-  },
+  mounted() { window.addEventListener('keydown', this.onEsc); },
+  beforeUnmount() { window.removeEventListener('keydown', this.onEsc); },
   template: `
     <transition name="drawer-slide">
       <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
@@ -635,18 +726,17 @@ const OrderDetailsDrawer = {
             <div v-else class="drawer-items">
               <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
                 <h4 class="category-title" v-if="categoryName && categoryName !== 'General'" v-text="categoryName"></h4>
-                <article class="item-row" v-for="item in categoryItems" :key="item.id">
+                <article class="item-row" v-for="it in categoryItems" :key="it._k">
                   <div class="item-main">
-                    <span class="qty" v-text="item.qty + 'x'"></span>
-                    <strong v-text="item.name"></strong>
+                    <span class="qty" v-text="it._qty + 'x'"></span>
+                    <strong v-text="it._name"></strong>
                   </div>
-                  <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
-                  <p v-if="item.note" class="item-client-note" v-text="'Nota del cliente: ' + item.note"></p>
+                  <p v-if="it._extras" class="item-extra" v-text="'Extras: ' + it._extras"></p>
+                  <p v-if="it._note" class="item-client-note" v-text="'Nota del cliente: ' + it._note"></p>
                 </article>
               </template>
             </div>
           </section>
-
 
           <section class="ticket drawer-actions" v-if="hasOrder">
             <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Procesando...' : primaryAction.label"></button>
@@ -665,7 +755,6 @@ const OrderDetailsDrawer = {
     </transition>
   `,
 };
-
 
 Vue.createApp({
   components: { OrderDetailsDrawer },
@@ -686,7 +775,6 @@ Vue.createApp({
         { key: 'preparando', title: 'En preparación' },
         { key: 'listo', title: 'Listos' },
         { key: 'entregado', title: 'Entregados' },
-
       ],
       pollHandle: null,
       tickHandle: null,
@@ -701,11 +789,12 @@ Vue.createApp({
 
         const elapsedMs = Math.max(this.nowTs - ts, 0);
         const status = String(order.estado || '').toLowerCase();
+
         return {
           ...order,
           estado: status,
-          notas: order.notas || order.nota || order.observacion || order.comentario || order.note || '',
-          items: order.items || order.detalles || order.detalle || order.pedido_detalles || [],
+          // ✅ items normalizados para TODO el app (tablero + notas)
+          _itemsNorm: normalizeOrderItems(order),
 
           _createdTs: ts,
           _elapsedMs: elapsedMs,
@@ -728,52 +817,55 @@ Vue.createApp({
     },
     selectedOrder() {
       if (!this.selectedOrderId) return null;
-      return this.normalized.find((order) => order.id === this.selectedOrderId) || null;
+      return this.normalized.find((o) => o.id === this.selectedOrderId) || null;
     },
-    activeCount() {
-      return this.grouped.pendiente.length + this.grouped.preparando.length + this.grouped.listo.length;
-    },
-    delayedCount() {
-      return this.normalized.filter((order) => order.estado !== 'entregado' && order._elapsedMin > 6).length;
-    },
+    activeCount() { return this.grouped.pendiente.length + this.grouped.preparando.length + this.grouped.listo.length; },
+    delayedCount() { return this.normalized.filter((o) => o.estado !== 'entregado' && o._elapsedMin > 6).length; },
     averageMinutes() {
-      const active = this.normalized.filter((order) => order.estado !== 'entregado');
+      const active = this.normalized.filter((o) => o.estado !== 'entregado');
       if (!active.length) return 0;
-      return active.reduce((acc, order) => acc + order._elapsedMin, 0) / active.length;
+      return active.reduce((acc, o) => acc + o._elapsedMin, 0) / active.length;
     },
   },
   methods: {
     getOrderItems(order) {
+      // ✅ usa lo ya normalizado cuando exista
       if (!order) return [];
-      const source = order.items || order.detalles || order.detalle || order.pedido_detalles || [];
-      return Array.isArray(source) ? source : [];
+      if (Array.isArray(order._itemsNorm)) return order._itemsNorm;
+      return normalizeOrderItems(order);
     },
-    getItemNote(item) {
-      const raw = item?.nota ?? item?.observacion ?? item?.comentario ?? item?.note ?? item?.notas ?? null;
-      if (Array.isArray(raw)) return raw.join(' · ').trim();
-      return String(raw || '').trim();
-    },
+
     orderNoteCount(order) {
-      const itemNotes = this.getOrderItems(order).reduce((acc, item) => acc + (this.getItemNote(item) ? 1 : 0), 0);
-      const orderComment = String(order?.comentarios ?? order?.comentario ?? order?.observacion ?? order?.nota ?? order?.notas ?? order?.note ?? '').trim();
-      return itemNotes + (orderComment ? 1 : 0);
+      const items = this.getOrderItems(order);
+      const itemNotes = items.reduce((acc, it) => acc + (String(it._note || '').trim() ? 1 : 0), 0);
+
+      const orderComment = pickFirst(order || {}, [
+        'comentarios','comentario','observacion','nota','notas','note',
+        'special_instructions','specialInstructions','instrucciones'
+      ]);
+
+      return itemNotes + (String(orderComment || '').trim() ? 1 : 0);
     },
+
     orderPreviewNote(order) {
-      const firstItemNote = this.getOrderItems(order).map((item) => this.getItemNote(item)).find(Boolean);
+      const items = this.getOrderItems(order);
+      const firstItemNote = items.map((it) => String(it._note || '').trim()).find(Boolean);
       if (firstItemNote) return `Nota cliente: ${firstItemNote}`;
-      const orderComment = String(order?.comentarios ?? order?.comentario ?? order?.observacion ?? order?.nota ?? order?.notas ?? order?.note ?? '').trim();
-      return orderComment ? `Comentario: ${orderComment}` : '';
+
+      const orderComment = pickFirst(order || {}, [
+        'comentarios','comentario','observacion','nota','notas','note',
+        'special_instructions','specialInstructions','instrucciones'
+      ]);
+      return String(orderComment || '').trim() ? `Comentario: ${String(orderComment).trim()}` : '';
     },
+
     showToast(message) {
       this.toastMessage = message;
       clearTimeout(this.toastHandle);
       this.toastHandle = setTimeout(() => { this.toastMessage = ''; }, 2200);
     },
     togglePriority(orderId) {
-      this.priorityOverrides = {
-        ...this.priorityOverrides,
-        [orderId]: !this.priorityOverrides[orderId],
-      };
+      this.priorityOverrides = { ...this.priorityOverrides, [orderId]: !this.priorityOverrides[orderId] };
       this.showToast('🚩 Prioridad actualizada');
     },
     formatElapsed(ms) {
@@ -791,7 +883,6 @@ Vue.createApp({
       if (order.estado === 'pendiente') return { label: 'Comenzar', className: 'action-start', run: () => this.quickAction(order.id, 'preparando') };
       if (order.estado === 'preparando') return { label: 'Marcar listo', className: 'action-ready', run: () => this.quickAction(order.id, 'listo') };
       if (order.estado === 'listo') return { label: 'Entregar', className: 'action-deliver', run: () => this.quickAction(order.id, 'entregado') };
-
       return null;
     },
     async quickAction(orderId, nextStatus) {
@@ -834,7 +925,7 @@ Vue.createApp({
 
         if (!res.ok) throw new Error('status ' + res.status);
 
-        this.orders = this.orders.map((order) => order.id === orderId ? { ...order, estado: nextStatus } : order);
+        this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: nextStatus } : o);
         this.showToast('✅ Pedido actualizado');
       } catch (e) {
         this.error = 'No se pudo actualizar el estado del pedido';
@@ -851,7 +942,7 @@ Vue.createApp({
       this.selectedOrderId = null;
     },
     handleActionDone(payload) {
-      this.orders = this.orders.map((order) => order.id === payload.orderId ? { ...order, estado: payload.nextStatus } : order);
+      this.orders = this.orders.map((o) => o.id === payload.orderId ? { ...o, estado: payload.nextStatus } : o);
       this.fetchOrders(false);
     },
     async fetchOrders(isInitial = false) {
@@ -871,12 +962,10 @@ Vue.createApp({
 
         if (!response.ok) throw new Error('status ' + response.status);
 
-
         const payload = await response.json();
         const incoming = payload?.data ?? payload ?? [];
         this.orders = Array.isArray(incoming) ? incoming : [];
         this.error = '';
-
 
         if (!isInitial) {
           const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
@@ -890,17 +979,17 @@ Vue.createApp({
       if (!newOrders.length) return;
       if (this.soundEnabled) this.beep();
       const next = new Set(this.highlightedIds);
-      newOrders.forEach((order) => {
-        next.add(order.id);
+      newOrders.forEach((o) => {
+        next.add(o.id);
         this.$nextTick(() => {
-          const el = document.getElementById(`order-${order.id}`);
+          const el = document.getElementById(`order-${o.id}`);
           el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
       });
       this.highlightedIds = next;
       setTimeout(() => {
         const clean = new Set(this.highlightedIds);
-        newOrders.forEach((order) => clean.delete(order.id));
+        newOrders.forEach((o) => clean.delete(o.id));
         this.highlightedIds = clean;
       }, 3600);
     },
@@ -932,7 +1021,6 @@ Vue.createApp({
     clearInterval(this.tickHandle);
     clearTimeout(this.toastHandle);
   },
-
 }).mount('#app');
 </script>
 </body>
