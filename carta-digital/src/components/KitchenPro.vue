@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import NotePreview from './NotePreview.vue'
 import {
   deliverKitchenOrder,
   fetchKitchenOrders,
@@ -131,6 +132,16 @@ function timerClass(order) {
   if (order._elapsedMinutes > 6) return 'timer--critical'
   if (order._elapsedMinutes >= 3) return 'timer--warn'
   return 'timer--ok'
+}
+
+function getItemNote(item) {
+  return item?.nota || item?.notas || item?.note || ''
+}
+
+function getItemContext(item) {
+  const qty = item?.cantidad ?? item?.quantity ?? 1
+  const name = item?.nombre ?? item?.menu_item?.nombre ?? 'Ítem'
+  return `${qty}x ${name}`
 }
 
 function isProcessing(orderId) {
@@ -401,12 +412,24 @@ onUnmounted(() => {
 
             <ul class="order-items">
               <li v-for="item in order.items" :key="item.id || `${order.id}-${item.nombre}`">
-                <span class="qty">{{ item.cantidad ?? item.quantity ?? 1 }}x</span>
-                <span class="name">{{ item.nombre ?? item.menu_item?.nombre ?? 'Item' }}</span>
+                <div class="order-item-main">
+                  <span class="qty">{{ item.cantidad ?? item.quantity ?? 1 }}x</span>
+                  <span class="name">{{ item.nombre ?? item.menu_item?.nombre ?? 'Item' }}</span>
+                </div>
+                <NotePreview
+                  v-if="getItemNote(item)"
+                  :text="getItemNote(item)"
+                  :context="getItemContext(item)"
+                />
               </li>
             </ul>
 
-            <p v-if="order.notas" class="order-note">📝 {{ order.notas }}</p>
+            <NotePreview
+              v-if="order.notas"
+              class="order-note"
+              :text="order.notas"
+              context="Pedido"
+            />
 
             <button
               v-if="getActionForOrder(order)"
@@ -599,6 +622,12 @@ onUnmounted(() => {
 
 .order-items li {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-item-main {
+  display: flex;
   gap: 8px;
   align-items: baseline;
 }
@@ -616,12 +645,7 @@ onUnmounted(() => {
 }
 
 .order-note {
-  margin: 0;
-  background: rgba(250, 204, 21, 0.1);
-  color: #fde68a;
-  border-radius: 8px;
-  padding: 8px;
-  font-size: 0.88rem;
+  width: 100%;
 }
 
 .action-btn {
