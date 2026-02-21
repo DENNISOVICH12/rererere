@@ -126,6 +126,7 @@ body {
 .card-selected { border-color: rgba(124, 137, 160, .55); box-shadow: 0 0 0 1px rgba(124, 137, 160, .22); }
 .card-new { animation: glowPremium 1.6s ease; }
 .card-critical { border-color: rgba(143, 79, 93, .55); }
+.card-saving { box-shadow: 0 0 0 1px rgba(104, 141, 193, .35); }
 .card-head { display: flex; justify-content: space-between; align-items: center; }
 .num { font-weight: 800; font-size: 1.12rem; }
 .timer { border-radius: 999px; padding: 4px 10px; font-weight: 800; letter-spacing: .02em; }
@@ -544,6 +545,7 @@ body.has-admin-back .kds { padding-top: 64px; }
             'card-new': highlightedIds.has(order.id),
             'card-critical': order._elapsedMin > 6,
             'card-selected': selectedOrderId === order.id,
+            'card-saving': processingIds.has(order.id),
           }"
           @click="openOrderDetails(order)"
         >
@@ -579,7 +581,7 @@ body.has-admin-back .kds { padding-top: 64px; }
             :disabled="processingIds.has(order.id)"
             @click.stop="actionFor(order).run()"
           >
-            @{{ processingIds.has(order.id) ? 'Procesando...' : actionFor(order).label }}
+            @{{ processingIds.has(order.id) ? 'Guardando…' : actionFor(order).label }}
           </button>
         </article>
       </transition-group>
@@ -592,6 +594,7 @@ body.has-admin-back .kds { padding-top: 64px; }
     :priority-overrides="priorityOverrides"
     @close="closeOrderDetails"
     @action-done="handleActionDone"
+    @action-requested="quickAction"
     @toast="showToast"
   />
 
@@ -712,7 +715,7 @@ const OrderDetailsDrawer = {
     open: { type: Boolean, default: false },
     priorityOverrides: { type: Object, default: () => ({}) }, // lo dejo para no dañar tu lógica global
   },
-  emits: ['close', 'actionDone', 'toast'],
+  emits: ['close', 'actionDone', 'actionRequested', 'toast'],
 
   data() {
     return {
@@ -938,48 +941,10 @@ const OrderDetailsDrawer = {
 
     async executePrimaryAction() {
       if (!this.primaryAction || !this.order || this.loadingAction) return;
-      const token = document.querySelector('meta[name="csrf-token"]')?.content;
       this.loadingAction = true;
-
-      try {
-        const endpoint = this.endpointFor(this.primaryAction.next, this.order.id);
-
-        let res = await fetch(endpoint, {
-          method: endpoint.startsWith('/api/kitchen') ? 'PATCH' : 'PUT',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': token,
-          },
-          body: endpoint.startsWith('/api/kitchen')
-            ? undefined
-            : JSON.stringify({ estado: this.primaryAction.next }),
-        });
-
-        if (!res.ok && endpoint.startsWith('/api/kitchen')) {
-          const fallback = `/pedidos/${this.order.id}/estado`;
-          res = await fetch(fallback, {
-            method: 'PUT',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'X-CSRF-TOKEN': token,
-            },
-            body: JSON.stringify({ estado: this.primaryAction.next }),
-          });
-        }
-
-        if (!res.ok) throw new Error('status ' + res.status);
-
-        this.$emit('actionDone', { orderId: this.order.id, nextStatus: this.primaryAction.next });
-        this.$emit('toast', '✅ Pedido actualizado');
-      } catch (e) {
-        this.$emit('toast', '⚠️ No se pudo actualizar el pedido');
-      } finally {
-        this.loadingAction = false;
-      }
+      this.$emit('actionRequested', this.order.id, this.primaryAction.next);
+      this.$emit('actionDone', { orderId: this.order.id, nextStatus: this.primaryAction.next });
+      setTimeout(() => { this.loadingAction = false; }, 150);
     },
 
     onEsc(evt) {
@@ -1083,7 +1048,7 @@ const OrderDetailsDrawer = {
 
           <!-- ✅ SOLO ACCIÓN PRINCIPAL (sin botones secundarios) -->
           <section class="ticket drawer-actions" v-if="hasOrder">
-            <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Procesando...' : primaryAction.label"></button>
+            <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Guardando…' : primaryAction.label"></button>
 
             <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
           </section>
@@ -1125,6 +1090,9 @@ Vue.createApp({
       soundEnabled: true,
       highlightedIds: new Set(),
       processingIds: new Set(),
+      optimisticSnapshots: {},
+      lastSyncAt: null,
+      syncInFlight: false,
       selectedOrderId: null,
       drawerOpen: false,
       priorityOverrides: {},
@@ -1246,7 +1214,18 @@ Vue.createApp({
     },
     async quickAction(orderId, nextStatus) {
       if (this.processingIds.has(orderId)) return;
+
+      const index = this.orders.findIndex((o) => o.id === orderId);
+      if (index < 0) return;
+
+      const current = this.orders[index];
+      this.optimisticSnapshots = {
+        ...this.optimisticSnapshots,
+        [orderId]: { estado: current.estado, updated_at: current.updated_at },
+      };
+
       const set = new Set(this.processingIds); set.add(orderId); this.processingIds = set;
+      this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: nextStatus } : o);
 
       const token = document.querySelector('meta[name="csrf-token"]')?.content;
       let endpoint = '/pedidos/' + orderId + '/estado';
@@ -1284,12 +1263,30 @@ Vue.createApp({
 
         if (!res.ok) throw new Error('status ' + res.status);
 
-        this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: nextStatus } : o);
-        this.showToast('✅ Pedido actualizado');
+        const payload = await res.json().catch(() => null);
+        const serverData = payload?.data;
+        if (serverData?.id) {
+          this.orders = this.orders.map((o) => o.id === orderId
+            ? { ...o, estado: serverData.estado || nextStatus, updated_at: serverData.updated_at || o.updated_at }
+            : o);
+        }
+
+        const nextSnapshots = { ...this.optimisticSnapshots };
+        delete nextSnapshots[orderId];
+        this.optimisticSnapshots = nextSnapshots;
+        this.error = '';
       } catch (e) {
+        const snapshot = this.optimisticSnapshots[orderId];
+        if (snapshot) {
+          this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: snapshot.estado, updated_at: snapshot.updated_at } : o);
+        }
+        this.showToast('⚠️ No se pudo guardar. Revertido.');
         this.error = 'No se pudo actualizar el estado del pedido';
       } finally {
         const done = new Set(this.processingIds); done.delete(orderId); this.processingIds = done;
+        const nextSnapshots = { ...this.optimisticSnapshots };
+        delete nextSnapshots[orderId];
+        this.optimisticSnapshots = nextSnapshots;
       }
     },
     openOrderDetails(order) {
@@ -1302,12 +1299,38 @@ Vue.createApp({
     },
     handleActionDone(payload) {
       this.orders = this.orders.map((o) => o.id === payload.orderId ? { ...o, estado: payload.nextStatus } : o);
-      this.fetchOrders(false);
+    },
+    mergeIncomingOrders(incomingOrders, isInitial = false) {
+      const beforeIds = new Set(this.orders.map((o) => o.id));
+      if (isInitial) {
+        this.orders = incomingOrders;
+      } else {
+        const incomingById = new Map(incomingOrders.map((o) => [o.id, o]));
+        const merged = this.orders.map((order) => {
+          const candidate = incomingById.get(order.id);
+          if (!candidate) return order;
+          if (this.processingIds.has(order.id)) return order;
+          incomingById.delete(order.id);
+          return { ...order, ...candidate };
+        });
+        for (const pending of incomingById.values()) {
+          merged.push(pending);
+        }
+        this.orders = merged;
+      }
+
+      const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
+      if (!isInitial) this.handleNewOrders(newOrders);
     },
     async fetchOrders(isInitial = false) {
+      if (this.syncInFlight) return;
+      this.syncInFlight = true;
+
       try {
-        const beforeIds = new Set(this.orders.map((o) => o.id));
-        let response = await fetch('/api/kitchen/orders', {
+        const qs = new URLSearchParams();
+        if (!isInitial && this.lastSyncAt) qs.set('since', this.lastSyncAt);
+
+        let response = await fetch(`/api/kitchen/orders${qs.toString() ? `?${qs.toString()}` : ''}`, {
           credentials: 'include',
           headers: { 'Accept': 'application/json' },
         });
@@ -1323,15 +1346,14 @@ Vue.createApp({
 
         const payload = await response.json();
         const incoming = payload?.data ?? payload ?? [];
-        this.orders = Array.isArray(incoming) ? incoming : [];
+        const items = Array.isArray(incoming) ? incoming : [];
+        this.mergeIncomingOrders(items, isInitial || !this.lastSyncAt);
+        this.lastSyncAt = payload?.meta?.server_time || new Date().toISOString();
         this.error = '';
-
-        if (!isInitial) {
-          const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
-          this.handleNewOrders(newOrders);
-        }
       } catch (e) {
         this.error = 'No se pudo sincronizar la cocina';
+      } finally {
+        this.syncInFlight = false;
       }
     },
     handleNewOrders(newOrders) {

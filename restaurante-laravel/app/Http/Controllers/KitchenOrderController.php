@@ -3,18 +3,43 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pedido;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class KitchenOrderController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $since = $this->parseSince($request->query('since'));
+        $activeOnly = $request->boolean('active_only', true);
+
         $orders = Pedido::query()
-            ->with(['detalle.menuItem', 'cliente'])
+            ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id'])
+            ->when($activeOnly, function ($query) {
+                $query->where(function ($stateQuery) {
+                    $stateQuery->whereIn('estado', ['pendiente', 'preparando', 'listo'])
+                        ->orWhere(function ($subQuery) {
+                            $subQuery->where('estado', 'entregado')
+                                ->where('updated_at', '>=', now()->subMinutes(15));
+                        });
+                });
+            })
+            ->when($since, fn ($query) => $query->where('updated_at', '>', $since))
+            ->with([
+                'cliente:id,nombre',
+                'detalle' => fn ($query) => $query
+                    ->select(['id', 'pedido_id', 'menu_item_id', 'cantidad', 'extras', 'nota'])
+                    ->with(['menuItem:id,nombre,categoria']),
+            ])
             ->orderByDesc('created_at')
             ->get();
 
         return response()->json([
+            'meta' => [
+                'server_time' => now()->toIso8601String(),
+                'incremental' => (bool) $since,
+            ],
             'data' => $orders->map(fn (Pedido $pedido) => $this->transformOrder($pedido)),
         ]);
     }
@@ -45,13 +70,40 @@ class KitchenOrderController extends Controller
 
     private function updateStatus(Pedido $order, string $status): JsonResponse
     {
+        if ($order->estado === $status) {
+            return response()->json([
+                'data' => $this->transformStatusPayload($order),
+            ]);
+        }
+
         $order->estado = $status;
         $order->save();
-        $order->loadMissing(['detalle.menuItem', 'cliente']);
 
         return response()->json([
-            'data' => $this->transformOrder($order),
+            'data' => $this->transformStatusPayload($order),
         ]);
+    }
+
+    private function parseSince(?string $raw): ?CarbonImmutable
+    {
+        if (!$raw) {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($raw);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function transformStatusPayload(Pedido $pedido): array
+    {
+        return [
+            'id' => $pedido->id,
+            'estado' => $pedido->estado,
+            'updated_at' => optional($pedido->updated_at)->toIso8601String(),
+        ];
     }
 
     private function transformOrder(Pedido $pedido): array
