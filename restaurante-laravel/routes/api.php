@@ -13,7 +13,8 @@ use App\Http\Controllers\{
     PedidoDetalleController,
     AuthController,
     OrderController,
-    KitchenOrderController
+    KitchenOrderController,
+    MeseroOrderController
 };
 
 // Health Check
@@ -27,6 +28,14 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
     Route::patch('/kitchen/orders/{order}/start', [KitchenOrderController::class, 'start']);
     Route::patch('/kitchen/orders/{order}/ready', [KitchenOrderController::class, 'ready']);
     Route::patch('/kitchen/orders/{order}/deliver', [KitchenOrderController::class, 'deliver']);
+});
+
+Route::middleware(['auth:web', 'role:mesero'])->group(function () {
+    Route::get('/mesero/orders', [MeseroOrderController::class, 'index']);
+    Route::get('/mesero/orders/{pedido}', [MeseroOrderController::class, 'show']);
+    Route::put('/mesero/orders/{pedido}', [MeseroOrderController::class, 'update']);
+    Route::delete('/mesero/orders/{pedido}', [MeseroOrderController::class, 'destroy']);
+    Route::get('/mesero/menu-items', [MeseroOrderController::class, 'menuItems']);
 });
 
 // Registro cliente desde la carta digital

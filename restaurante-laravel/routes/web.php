@@ -86,8 +86,9 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
 | PANEL MESEROS
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:web', 'role:admin,mesero'])->group(function () {
-    Route::view('/meseros', 'meseros')->name('meseros.panel');
+Route::middleware(['auth:web', 'role:mesero'])->group(function () {
+    Route::view('/mesero', 'mesero')->name('mesero.panel');
+    Route::redirect('/meseros', '/mesero');
 });
 
 /*
