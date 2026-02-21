@@ -35,6 +35,7 @@ class OrderController extends Controller
             'cantidad' => $item['cantidad'],
             'precio_unitario' => $item['precio_unitario'],
             'importe' => $item['precio_unitario'] * $item['cantidad'],
+            'nota' => $item['nota'] ?? null, // ✅ agregar
         ]);
     }
 

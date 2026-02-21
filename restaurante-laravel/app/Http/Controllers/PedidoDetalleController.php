@@ -67,7 +67,7 @@ class PedidoDetalleController extends Controller
             'cantidad' => 'nullable|integer|min:1',
             'precio_unitario' => 'nullable|numeric|min:0',
             'subtotal' => 'nullable|numeric|min:0',
-            'nota' => 'nullable|string'
+            'nota' => $item['nota'] ?? null,
         ]);
 
         $detalle->update($request->all());
