@@ -311,6 +311,84 @@ body.has-admin-back .kds { padding-top: 64px; }
   body.has-admin-back .kds { padding-top: 72px; }
   .back-admin-btn { left: 12px; top: 10px; }
 }
+/* =========================
+   📝 NOTAS DEL CLIENTE (PRO)
+========================= */
+.notes-section { padding: 12px; }
+.notes-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom: 10px;
+}
+.notes-title { font-weight: 800; letter-spacing: .01em; }
+.notes-count{
+  font-size: .78rem;
+  color: #d3dbea;
+  border: 1px solid rgba(180,192,214,.26);
+  background: rgba(180,192,214,.10);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.notes-list{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+.notes-row{
+  border: 1px solid rgba(180,192,214,.18);
+  background: rgba(180,192,214,.08);
+  border-radius: 12px;
+  padding: 10px;
+}
+.notes-row-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom: 6px;
+}
+.notes-chip{
+  font-size: .78rem;
+  font-weight: 800;
+  color: #f3d6a2;
+  background: rgba(143,116,72,.18);
+  border: 1px solid rgba(143,116,72,.30);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+.notes-item-name{ font-weight: 800; }
+.notes-row-note{
+  color: #dce3ef;
+  font-size: .92rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Nota por item más pro */
+.item-client-note{
+  margin: 8px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  border: 1px solid rgba(180,192,214,.22);
+  background: rgba(180,192,214,.10);
+  color: #d8dfeb;
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: .86rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.item-note-label{
+  font-size: .75rem;
+  font-weight: 800;
+  opacity: .85;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
 </style>
 </head>
 
@@ -408,7 +486,6 @@ body.has-admin-back .kds { padding-top: 64px; }
     :priority-overrides="priorityOverrides"
     @close="closeOrderDetails"
     @action-done="handleActionDone"
-    @priority-toggle="togglePriority"
     @toast="showToast"
   />
 
@@ -522,43 +599,115 @@ function normalizeOrderItems(order) {
   });
 }
 
+
 const OrderDetailsDrawer = {
   props: {
     order: { type: Object, default: null },
     open: { type: Boolean, default: false },
-    priorityOverrides: { type: Object, default: () => ({}) },
+    priorityOverrides: { type: Object, default: () => ({}) }, // lo dejo para no dañar tu lógica global
   },
-  emits: ['close', 'actionDone', 'priorityToggle', 'toast'],
+  emits: ['close', 'actionDone', 'toast'], // ✅ quitamos priorityToggle del drawer
   data() {
     return { loadingAction: false };
   },
   computed: {
     hasOrder() { return !!this.order; },
+
     statusClass() {
       const status = this.order?.estado;
       if (!status) return '';
       return `b-${status}`;
     },
-    isOverdue() { return this.order ? this.order._elapsedMin > 6 : false; },
+
+    isOverdue() {
+      return this.order ? this.order._elapsedMin > 6 : false;
+    },
+
     isPriority() {
       if (!this.order) return false;
+      // ✅ prioridad automática por atraso + override si existe (aunque ya no lo togglearás desde el drawer)
       return this.isOverdue || !!this.priorityOverrides[this.order.id];
     },
 
+    // ✅ NORMALIZA ITEMS + NOTAS POR ITEM
     normalizedItems() {
-      return normalizeOrderItems(this.order);
+      const source =
+        this.order?.items ||
+        this.order?.detalles ||
+        this.order?.detalle ||
+        this.order?.pedido_detalles ||
+        [];
+
+      if (!Array.isArray(source)) return [];
+
+      return source.map((item, idx) => {
+        const qty = Number(item.cantidad ?? item.quantity ?? 1) || 1;
+
+        const name =
+          item.nombre ??
+          item.menu_item?.nombre ??
+          item.menuItem?.nombre ??
+          item.producto?.nombre ??
+          'Item';
+
+        // extras opcionales
+        const extrasRaw =
+          item.extras ?? item.opciones ?? item.options ?? item.adiciones ?? null;
+
+        // ✅ nota por item (muy robusta)
+        const notesRaw =
+          item.nota ??
+          item.notas ??
+          item.observacion ??
+          item.comentario ??
+          item.note ??
+          item?.pivot?.nota ??
+          item?.pivot?.comentario ??
+          item?.detalle?.nota ??
+          item?.order_item?.nota ??
+          item?.pedido_detalle?.nota ??
+          null;
+
+        const categoryRaw =
+          item.categoria ??
+          item.category ??
+          item.tipo ??
+          item.menu_item?.categoria ??
+          item.menuItem?.categoria ??
+          null;
+
+        const extras = Array.isArray(extrasRaw) ? extrasRaw.join(', ') : extrasRaw;
+        const note = Array.isArray(notesRaw) ? notesRaw.join(' · ') : notesRaw;
+        const category = String(categoryRaw || '').trim();
+
+        return {
+          id: item.id || `${this.order?.id || 'o'}-${idx}`,
+          qty,
+          name,
+          extras: String(extras || '').trim(),
+          note: String(note || '').trim(),
+          category: category || 'General',
+        };
+      });
     },
 
+    // ✅ NOTA GENERAL DEL PEDIDO (IMPORTANTE: incluye order.notas)
     orderComments() {
-      const raw = pickFirst(this.order || {}, [
-        'comentarios','comentario','observacion','nota','notas','note',
-        'special_instructions','specialInstructions','instrucciones'
-      ]);
+      const raw =
+        this.order?.comentarios ??
+        this.order?.comentario ??
+        this.order?.observacion ??
+        this.order?.nota ??
+        this.order?.notas ??     // ✅ CLAVE (porque tú lo seteas en normalized())
+        this.order?.note ??
+        null;
+
+      if (Array.isArray(raw)) return raw.join(' · ').trim();
       return String(raw || '').trim();
     },
 
     notedItems() {
-      return this.normalizedItems.filter((it) => String(it._note || '').trim());
+      return this.normalizedItems.filter((i) => (i.note || '').trim().length > 0);
     },
 
     hasAnyNotes() {
@@ -567,16 +716,16 @@ const OrderDetailsDrawer = {
 
     groupedItems() {
       const groups = {};
-      this.normalizedItems.forEach((it) => {
-        const key = it._category || 'General';
+      this.normalizedItems.forEach((item) => {
+        const key = item.category || 'General';
         if (!groups[key]) groups[key] = [];
-        groups[key].push(it);
+        groups[key].push(item);
       });
       return groups;
     },
 
     totalItemsCount() {
-      return this.normalizedItems.reduce((acc, it) => acc + (Number(it._qty) || 0), 0);
+      return this.normalizedItems.reduce((acc, item) => acc + item.qty, 0);
     },
 
     delayLabel() {
@@ -587,46 +736,64 @@ const OrderDetailsDrawer = {
 
     primaryAction() {
       if (!this.order) return null;
-      if (this.order.estado === 'pendiente') return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
-      if (this.order.estado === 'preparando') return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
-      if (this.order.estado === 'listo') return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
+      if (this.order.estado === 'pendiente')
+        return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
+      if (this.order.estado === 'preparando')
+        return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
+      if (this.order.estado === 'listo')
+        return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
       return null;
     },
   },
+
   methods: {
     statusLabel(status) {
-      return { pendiente:'Pendiente', preparando:'En preparación', listo:'Listo', entregado:'Entregado' }[status] || status;
+      return {
+        pendiente: 'Pendiente',
+        preparando: 'En preparación',
+        listo: 'Listo',
+        entregado: 'Entregado',
+      }[status] || status;
     },
+
     fmtTime(dateRaw) {
       if (!dateRaw) return '-';
       const ts = Date.parse(dateRaw);
       if (!Number.isFinite(ts)) return '-';
       return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
     },
+
     fmtDate(dateRaw) {
       if (!dateRaw) return '-';
       const ts = Date.parse(dateRaw);
       if (!Number.isFinite(ts)) return '-';
-      return new Date(ts).toLocaleString('es-CO', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return new Date(ts).toLocaleString('es-CO', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      });
     },
+
     formatElapsed(ms) {
       const sec = Math.floor(ms / 1000);
       const m = String(Math.floor(sec / 60)).padStart(2, '0');
       const s = String(sec % 60).padStart(2, '0');
       return `${m}:${s}`;
     },
+
     endpointFor(nextStatus, orderId) {
       if (nextStatus === 'preparando') return `/api/kitchen/orders/${orderId}/start`;
       if (nextStatus === 'listo') return `/api/kitchen/orders/${orderId}/ready`;
       if (nextStatus === 'entregado') return `/api/kitchen/orders/${orderId}/deliver`;
       return `/pedidos/${orderId}/estado`;
     },
+
     async executePrimaryAction() {
       if (!this.primaryAction || !this.order || this.loadingAction) return;
       const token = document.querySelector('meta[name="csrf-token"]')?.content;
       this.loadingAction = true;
+
       try {
         const endpoint = this.endpointFor(this.primaryAction.next, this.order.id);
+
         let res = await fetch(endpoint, {
           method: endpoint.startsWith('/api/kitchen') ? 'PATCH' : 'PUT',
           credentials: 'include',
@@ -635,7 +802,9 @@ const OrderDetailsDrawer = {
             'Accept': 'application/json',
             'X-CSRF-TOKEN': token,
           },
-          body: endpoint.startsWith('/api/kitchen') ? undefined : JSON.stringify({ estado: this.primaryAction.next }),
+          body: endpoint.startsWith('/api/kitchen')
+            ? undefined
+            : JSON.stringify({ estado: this.primaryAction.next }),
         });
 
         if (!res.ok && endpoint.startsWith('/api/kitchen')) {
@@ -653,38 +822,30 @@ const OrderDetailsDrawer = {
         }
 
         if (!res.ok) throw new Error('status ' + res.status);
+
         this.$emit('actionDone', { orderId: this.order.id, nextStatus: this.primaryAction.next });
         this.$emit('toast', '✅ Pedido actualizado');
-      } catch {
+      } catch (e) {
         this.$emit('toast', '⚠️ No se pudo actualizar el pedido');
       } finally {
         this.loadingAction = false;
       }
     },
-    copySummary() {
-      if (!this.order) return;
-      const lines = this.normalizedItems.map((it) => `- ${it._qty}x ${it._name}${it._note ? `: ${it._note}` : ''}`);
-      const summary = `Pedido #${this.order.id}\nEstado: ${this.statusLabel(this.order.estado)}\n${lines.join('\n')}\nComentarios: ${this.orderComments || 'Sin comentarios'}`;
-      navigator.clipboard?.writeText(summary);
-      this.$emit('toast', '📋 Resumen copiado');
-    },
-    copyNotes() {
-      if (!this.order || !this.hasAnyNotes) return;
-      const itemLines = this.notedItems.map((it) => `- ${it._qty}x ${it._name}: ${it._note}`);
-      const header = `Pedido #${this.order.id}`;
-      const general = this.orderComments ? `Comentario pedido: ${this.orderComments}` : '';
-      const text = [header, general, ...itemLines].filter(Boolean).join('\n');
-      navigator.clipboard?.writeText(text);
-      this.$emit('toast', '📋 Notas copiadas');
-    },
-    printTicket() { this.$emit('toast', '🖨️ Impresión pendiente de integrar'); },
+
     onEsc(evt) {
       if (evt.key === 'Escape' && this.open) this.$emit('close');
       if (evt.key === 'Enter' && this.open) this.executePrimaryAction();
     },
   },
-  mounted() { window.addEventListener('keydown', this.onEsc); },
-  beforeUnmount() { window.removeEventListener('keydown', this.onEsc); },
+
+  mounted() {
+    window.addEventListener('keydown', this.onEsc);
+  },
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.onEsc);
+  },
+
+  // ✅ TEMPLATE: sin secondary-actions + con notas visibles
   template: `
     <transition name="drawer-slide">
       <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
@@ -697,7 +858,10 @@ const OrderDetailsDrawer = {
           <section v-if="hasOrder" class="ticket">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
               <span class="badge" :class="statusClass" v-text="statusLabel(order.estado)"></span>
-              <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')" v-text="formatElapsed(order._elapsedMs)"></span>
+              <span class="timer"
+                :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')"
+                v-text="formatElapsed(order._elapsedMs)">
+              </span>
             </div>
 
             <div class="ticket-grid" style="margin-top:10px;">
@@ -707,12 +871,29 @@ const OrderDetailsDrawer = {
               <p><strong>Cliente:</strong> <span v-text="order.cliente?.nombre || order.cliente_nombre || '-'"></span></p>
             </div>
 
-            <span v-if="isPriority" class="priority-pill" v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
+            <span v-if="isPriority" class="priority-pill"
+              v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')">
+            </span>
           </section>
 
-          <section v-if="hasOrder && orderComments" class="ticket">
-            <h3 style="margin:0 0 8px 0;">Comentarios del pedido</h3>
-            <p class="order-comments-block" v-text="orderComments"></p>
+          <!-- ✅ NOTAS DEL CLIENTE (GENERAL + RESUMEN) -->
+          <section v-if="hasOrder && hasAnyNotes" class="ticket notes-section">
+            <div class="notes-head">
+              <div class="notes-title">📝 Notas del cliente</div>
+              <div class="notes-count" v-text="(orderComments ? 1 : 0) + notedItems.length"></div>
+            </div>
+
+            <p v-if="orderComments" class="order-comments-block" v-text="orderComments"></p>
+
+            <div v-if="notedItems.length" class="notes-list">
+              <div class="notes-row" v-for="it in notedItems" :key="it.id">
+                <div class="notes-row-left">
+                  <span class="notes-chip" v-text="it.qty + 'x'"></span>
+                  <strong class="notes-item-name" v-text="it.name"></strong>
+                </div>
+                <div class="notes-row-note" v-text="it.note"></div>
+              </div>
+            </div>
           </section>
 
           <section v-if="hasOrder" class="ticket">
@@ -726,30 +907,37 @@ const OrderDetailsDrawer = {
             <div v-else class="drawer-items">
               <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
                 <h4 class="category-title" v-if="categoryName && categoryName !== 'General'" v-text="categoryName"></h4>
-                <article class="item-row" v-for="it in categoryItems" :key="it._k">
+
+                <article class="item-row" v-for="item in categoryItems" :key="item.id">
                   <div class="item-main">
-                    <span class="qty" v-text="it._qty + 'x'"></span>
-                    <strong v-text="it._name"></strong>
+                    <span class="qty" v-text="item.qty + 'x'"></span>
+                    <strong v-text="item.name"></strong>
                   </div>
-                  <p v-if="it._extras" class="item-extra" v-text="'Extras: ' + it._extras"></p>
-                  <p v-if="it._note" class="item-client-note" v-text="'Nota del cliente: ' + it._note"></p>
+
+                  <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
+
+                  <!-- ✅ NOTA POR ITEM MÁS PRO -->
+                  <p v-if="item.note" class="item-client-note">
+                    <span class="item-note-label">Nota</span>
+                    <span v-text="item.note"></span>
+                  </p>
                 </article>
               </template>
             </div>
           </section>
 
+          <!-- ✅ SOLO ACCIÓN PRINCIPAL (sin botones secundarios) -->
           <section class="ticket drawer-actions" v-if="hasOrder">
-            <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Procesando...' : primaryAction.label"></button>
-            <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
+            <button v-if="primaryAction"
+              :class="primaryAction.className"
+              :disabled="loadingAction"
+              @click="executePrimaryAction"
+              v-text="loadingAction ? 'Procesando...' : primaryAction.label">
+            </button>
 
-            <div class="secondary-actions">
-              <button class="sec-btn" @click="printTicket">Imprimir</button>
-              <button class="sec-btn" @click="copySummary">Copiar resumen</button>
-              <button v-if="hasAnyNotes" class="sec-btn" @click="copyNotes">Copiar notas</button>
-              <button class="sec-btn" @click="$emit('priorityToggle', order.id)">Marcar prioridad</button>
-              <button class="sec-btn" @click="$emit('close')">Volver al tablero</button>
-            </div>
+            <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
           </section>
+
         </aside>
       </div>
     </transition>
