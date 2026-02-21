@@ -24,7 +24,6 @@
   --ok: #4d7f67;
   --warn: #8f7448;
   --danger: #8f4f5d;
-
 }
 * { box-sizing: border-box; }
 body {
@@ -34,7 +33,6 @@ body {
   color: var(--text);
   background-image:
     linear-gradient(140deg, rgba(8,11,17,.82), rgba(11,15,23,.78)),
-
     url("https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1800&q=80");
   background-size: cover;
   background-position: center;
@@ -138,11 +136,23 @@ body {
 .items li { display: flex; gap: 8px; align-items: baseline; }
 .qty { min-width: 42px; color: #f3d6a2; font-weight: 900; font-size: 1.15rem; }
 .name { font-weight: 620; }
-.note { margin: 0; padding: 8px; border-radius: 8px; background: rgba(91,42,53,.24); color: #dcc2c9; font-size: .9rem; }
+
 .card-head-meta { display:flex; align-items:center; gap:8px; }
 .note-indicator { display:inline-flex; align-items:center; gap:6px; padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(180, 192, 214, .28); background: rgba(180, 192, 214, .10); color: #d3dbea; font-size: .74rem; font-weight: 600; line-height: 1; }
 .note-indicator-icon { font-size: .72rem; opacity: .86; }
-.card-note-preview { margin: 0; color: #c5cedd; font-size: .8rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+
+.card-note-preview {
+  margin: 0;
+  color: #c5cedd;
+  font-size: .8rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
 .action { width: 100%; border: none; border-radius: 12px; padding: 13px 12px; font-size: 0.98rem; font-weight: 800; letter-spacing: .01em; cursor: pointer; transition: transform .15s ease, filter .15s ease; }
 .action:hover { filter: brightness(1.03); transform: translateY(-1px); }
 .action:active { transform: translateY(0); }
@@ -228,6 +238,7 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+
   word-break: break-word;
 }
 .drawer-items { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
@@ -269,14 +280,11 @@ body {
   .item-main { flex-direction: column; align-items: stretch; }
   .item-note-chip { max-width: 100%; width: fit-content; }
 }
-
 .col-list::-webkit-scrollbar,.drawer-items::-webkit-scrollbar{width:8px;height:8px;}
 .col-list::-webkit-scrollbar-thumb,.drawer-items::-webkit-scrollbar-thumb{background:rgba(111,123,145,.45);border-radius:999px;}
 .col-list::-webkit-scrollbar-track,.drawer-items::-webkit-scrollbar-track{background:transparent;}
 
-body.has-admin-back .kds {
-  padding-top: 64px;
-}
+body.has-admin-back .kds { padding-top: 64px; }
 .back-admin-btn {
   position: fixed;
   top: 14px;
@@ -303,23 +311,92 @@ body.has-admin-back .kds {
   color: #f0e8eb;
   transform: translateY(-1px);
 }
-.back-admin-btn .back-admin-icon {
-  font-size: .95rem;
-  line-height: 1;
-  opacity: .9;
-}
+.back-admin-btn .back-admin-icon { font-size: .95rem; line-height: 1; opacity: .9; }
 @media (max-width: 840px) {
-  body.has-admin-back .kds {
-    padding-top: 72px;
-  }
-  .back-admin-btn {
-    left: 12px;
-    top: 10px;
-  }
+  body.has-admin-back .kds { padding-top: 72px; }
+  .back-admin-btn { left: 12px; top: 10px; }
+}
+/* =========================
+   📝 NOTAS DEL CLIENTE (PRO)
+========================= */
+.notes-section { padding: 12px; }
+.notes-head {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom: 10px;
+}
+.notes-title { font-weight: 800; letter-spacing: .01em; }
+.notes-count{
+  font-size: .78rem;
+  color: #d3dbea;
+  border: 1px solid rgba(180,192,214,.26);
+  background: rgba(180,192,214,.10);
+  border-radius: 999px;
+  padding: 3px 9px;
 }
 
+.notes-list{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+.notes-row{
+  border: 1px solid rgba(180,192,214,.18);
+  background: rgba(180,192,214,.08);
+  border-radius: 12px;
+  padding: 10px;
+}
+.notes-row-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom: 6px;
+}
+.notes-chip{
+  font-size: .78rem;
+  font-weight: 800;
+  color: #f3d6a2;
+  background: rgba(143,116,72,.18);
+  border: 1px solid rgba(143,116,72,.30);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+.notes-item-name{ font-weight: 800; }
+.notes-row-note{
+  color: #dce3ef;
+  font-size: .92rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Nota por item más pro */
+.item-client-note{
+  margin: 8px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  border: 1px solid rgba(180,192,214,.22);
+  background: rgba(180,192,214,.10);
+  color: #d8dfeb;
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: .86rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.item-note-label{
+  font-size: .75rem;
+  font-weight: 800;
+  opacity: .85;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
 </style>
 </head>
+
 <body class="{{ $isAdmin ? 'has-admin-back' : '' }}">
 <div id="app" class="kds">
   @if($isAdmin)
@@ -328,6 +405,7 @@ body.has-admin-back .kds {
       <span>Volver al Admin</span>
     </a>
   @endif
+
   <header class="topbar">
     <div>
       <h1>Modo Cocina PRO</h1>
@@ -385,12 +463,11 @@ body.has-admin-back .kds {
           </header>
 
           <ul class="items">
-            <li v-for="(item, idx) in (order.items || []).slice(0, 4)" :key="item.id || `${order.id}-${idx}`">
-              <span class="qty">@{{ item.cantidad ?? item.quantity ?? 1 }}x</span>
-              <span class="name">@{{ item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? 'Item' }}</span>
+            <li v-for="(item, idx) in getOrderItems(order).slice(0,4)" :key="item._k || item.id || `${order.id}-${idx}`">
+              <span class="qty">@{{ item._qty }}x</span>
+              <span class="name">@{{ item._name }}</span>
             </li>
           </ul>
-
 
           <p v-if="orderPreviewNote(order)" class="card-note-preview" :title="orderPreviewNote(order)">@{{ orderPreviewNote(order) }}</p>
 
@@ -414,10 +491,8 @@ body.has-admin-back .kds {
     :priority-overrides="priorityOverrides"
     @close="closeOrderDetails"
     @action-done="handleActionDone"
-    @priority-toggle="togglePriority"
     @toast="showToast"
   />
-
 
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
 </div>
@@ -427,36 +502,147 @@ body.has-admin-back .kds {
 const POLLING_MS = 4000;
 const DELIVERED_HIDE_MS = 15 * 60 * 1000;
 
+/* =========================================================
+   ✅ HELPERS "DEEP" PARA NOTAS / CANTIDAD / NOMBRE / CATEGORÍA
+   (tu API puede mandar item.pivot.nota, item.detalle.nota, etc.)
+========================================================= */
+function asText(v) {
+  if (Array.isArray(v)) return v.join(' · ');
+  if (v === null || v === undefined) return '';
+  return String(v);
+}
+function deepGet(obj, path) {
+  try {
+    return path.split('.').reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : undefined), obj);
+  } catch { return undefined; }
+}
+function pickFirst(obj, paths) {
+  for (const p of paths) {
+    const val = deepGet(obj, p);
+    const txt = asText(val).trim();
+    if (txt) return txt;
+  }
+  return '';
+}
+function pickFirstNum(obj, paths, fallback = 1) {
+  for (const p of paths) {
+    const val = deepGet(obj, p);
+    const n = Number(val);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return fallback;
+}
+function normalizeOrderItems(order) {
+  const source =
+    order?.items ||
+    order?.detalles ||
+    order?.detalle ||
+    order?.pedido_detalles ||
+    order?.order_items ||
+    [];
+
+  const arr = Array.isArray(source) ? source : [];
+
+  return arr.map((raw, idx) => {
+    // merge "pivot" o "detalle" si vienen así
+    const merged = {
+      ...raw,
+      ...(raw?.pivot || {}),
+      ...(raw?.detalle || {}),
+      ...(raw?.pedido_detalle || {}),
+      ...(raw?.order_item || {}),
+    };
+
+    const qty = pickFirstNum(merged, [
+      'cantidad','quantity','qty',
+      'pivot.cantidad','pivot.quantity','pivot.qty',
+      'detalle.cantidad','pedido_detalle.cantidad','order_item.cantidad',
+    ], 1);
+
+    const name = pickFirst(merged, [
+      'nombre',
+      'menu_item.nombre',
+      'menuItem.nombre',
+      'producto.nombre',
+      'product.nombre',
+      'item.nombre',
+    ]) || 'Item';
+
+    const category = pickFirst(merged, [
+      'categoria','category','tipo',
+      'menu_item.categoria','menuItem.categoria'
+    ]) || 'General';
+
+    const note = pickFirst(merged, [
+      // comunes
+      'nota','observacion','comentario','note','notas',
+      // nombres típicos en apps
+      'instrucciones','instrucciones_especiales','instruccionesEspeciales',
+      'special_instructions','specialInstructions',
+      'comentarios_cliente','comentario_cliente','customer_note','customerNote',
+      // anidados
+      'pivot.nota','pivot.observacion','pivot.comentario','pivot.note','pivot.notas',
+      'detalle.nota','pedido_detalle.nota','order_item.nota',
+      'detalle.observacion','pedido_detalle.observacion','order_item.observacion',
+      'detalle.comentario','pedido_detalle.comentario','order_item.comentario',
+    ]);
+
+    const extras = pickFirst(merged, [
+      'extras','opciones','options','adiciones',
+      'pivot.extras','pivot.opciones','detalle.extras'
+    ]);
+
+    return {
+      ...raw,
+      _k: raw?.id || `${order?.id || 'o'}-${idx}`,
+      _qty: qty,
+      _name: name,
+      _category: category,
+      _note: note,
+      _extras: extras,
+    };
+  });
+}
+
+
 const OrderDetailsDrawer = {
   props: {
     order: { type: Object, default: null },
     open: { type: Boolean, default: false },
-    priorityOverrides: { type: Object, default: () => ({}) },
+    priorityOverrides: { type: Object, default: () => ({}) }, // lo dejo para no dañar tu lógica global
   },
   emits: ['close', 'actionDone', 'toast'],
+
   data() {
-    return {
-      loadingAction: false,
-    };
+    return { loadingAction: false };
   },
   computed: {
-    hasOrder() {
-      return !!this.order;
-    },
+    hasOrder() { return !!this.order; },
+
     statusClass() {
       const status = this.order?.estado;
       if (!status) return '';
       return `b-${status}`;
     },
+
     isOverdue() {
       return this.order ? this.order._elapsedMin > 6 : false;
     },
+
     isPriority() {
       if (!this.order) return false;
+      // ✅ prioridad automática por atraso + override si existe (aunque ya no lo togglearás desde el drawer)
       return this.isOverdue || !!this.priorityOverrides[this.order.id];
     },
+
+    // ✅ NORMALIZA ITEMS + NOTAS POR ITEM
     normalizedItems() {
-      const source = this.order?.items || this.order?.detalles || this.order?.detalle || this.order?.pedido_detalles || [];
+      const source =
+        this.order?.items ||
+        this.order?.detalles ||
+        this.order?.detalle ||
+        this.order?.pedido_detalles ||
+        [];
 
       if (!Array.isArray(source)) return [];
 
@@ -480,6 +666,7 @@ const OrderDetailsDrawer = {
           ?? '';
         const categoryRaw = item.categoria ?? item.category ?? item.tipo ?? item.menu_item?.categoria ?? item.menuItem?.categoria ?? null;
 
+
         const extras = Array.isArray(extrasRaw) ? extrasRaw.join(', ') : extrasRaw;
         const note = this.normalizeNoteValue(raw);
         const category = String(categoryRaw || '').trim();
@@ -488,40 +675,51 @@ const OrderDetailsDrawer = {
           id: item.id || `${this.order?.id || 'o'}-${idx}`,
           qty,
           name,
-          extras: extras || '',
-          note: note || '',
+          extras: String(extras || '').trim(),
+          note: String(note || '').trim(),
           category: category || 'General',
         };
       });
     },
+
+    // ✅ NOTA GENERAL DEL PEDIDO (IMPORTANTE: incluye order.notas)
     orderComments() {
       return this.extractNote(this.order);
+
     },
+
     groupedItems() {
       const groups = {};
       this.normalizedItems.forEach((item) => {
-        if (!groups[item.category]) groups[item.category] = [];
-        groups[item.category].push(item);
+        const key = item.category || 'General';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item);
       });
       return groups;
     },
+
     totalItemsCount() {
       return this.normalizedItems.reduce((acc, item) => acc + item.qty, 0);
     },
+
     delayLabel() {
       if (!this.order) return '';
       if (this.order._elapsedMin <= 6) return '';
       return `Atrasado +${Math.floor(this.order._elapsedMin - 6)} min`;
     },
+
     primaryAction() {
       if (!this.order) return null;
-      if (this.order.estado === 'pendiente') return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
-      if (this.order.estado === 'preparando') return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
-      if (this.order.estado === 'listo') return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
-
+      if (this.order.estado === 'pendiente')
+        return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
+      if (this.order.estado === 'preparando')
+        return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
+      if (this.order.estado === 'listo')
+        return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
       return null;
     },
   },
+
   methods: {
     normalizeNoteValue(raw) {
       if (Array.isArray(raw)) {
@@ -577,33 +775,37 @@ const OrderDetailsDrawer = {
         entregado: 'Entregado',
       }[status] || status;
     },
+
     fmtTime(dateRaw) {
       if (!dateRaw) return '-';
       const ts = Date.parse(dateRaw);
       if (!Number.isFinite(ts)) return '-';
       return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
     },
+
     fmtDate(dateRaw) {
       if (!dateRaw) return '-';
       const ts = Date.parse(dateRaw);
       if (!Number.isFinite(ts)) return '-';
       return new Date(ts).toLocaleString('es-CO', {
-
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
       });
     },
+
     formatElapsed(ms) {
       const sec = Math.floor(ms / 1000);
       const m = String(Math.floor(sec / 60)).padStart(2, '0');
       const s = String(sec % 60).padStart(2, '0');
       return `${m}:${s}`;
     },
+
     endpointFor(nextStatus, orderId) {
       if (nextStatus === 'preparando') return `/api/kitchen/orders/${orderId}/start`;
       if (nextStatus === 'listo') return `/api/kitchen/orders/${orderId}/ready`;
       if (nextStatus === 'entregado') return `/api/kitchen/orders/${orderId}/deliver`;
       return `/pedidos/${orderId}/estado`;
     },
+
     async executePrimaryAction() {
       if (!this.primaryAction || !this.order || this.loadingAction) return;
       const token = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -611,6 +813,7 @@ const OrderDetailsDrawer = {
 
       try {
         const endpoint = this.endpointFor(this.primaryAction.next, this.order.id);
+
         let res = await fetch(endpoint, {
           method: endpoint.startsWith('/api/kitchen') ? 'PATCH' : 'PUT',
           credentials: 'include',
@@ -619,7 +822,9 @@ const OrderDetailsDrawer = {
             'Accept': 'application/json',
             'X-CSRF-TOKEN': token,
           },
-          body: endpoint.startsWith('/api/kitchen') ? undefined : JSON.stringify({ estado: this.primaryAction.next }),
+          body: endpoint.startsWith('/api/kitchen')
+            ? undefined
+            : JSON.stringify({ estado: this.primaryAction.next }),
         });
 
         if (!res.ok && endpoint.startsWith('/api/kitchen')) {
@@ -646,17 +851,21 @@ const OrderDetailsDrawer = {
         this.loadingAction = false;
       }
     },
+
     onEsc(evt) {
       if (evt.key === 'Escape' && this.open) this.$emit('close');
       if (evt.key === 'Enter' && this.open) this.executePrimaryAction();
     },
   },
+
   mounted() {
     window.addEventListener('keydown', this.onEsc);
   },
   beforeUnmount() {
     window.removeEventListener('keydown', this.onEsc);
   },
+
+  // ✅ TEMPLATE: sin secondary-actions + con notas visibles
   template: `
     <transition name="drawer-slide">
       <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
@@ -669,7 +878,10 @@ const OrderDetailsDrawer = {
           <section v-if="hasOrder" class="ticket">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
               <span class="badge" :class="statusClass" v-text="statusLabel(order.estado)"></span>
-              <span class="timer" :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')" v-text="formatElapsed(order._elapsedMs)"></span>
+              <span class="timer"
+                :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')"
+                v-text="formatElapsed(order._elapsedMs)">
+              </span>
             </div>
 
             <div class="ticket-grid" style="margin-top:10px;">
@@ -679,12 +891,15 @@ const OrderDetailsDrawer = {
               <p><strong>Cliente:</strong> <span v-text="order.cliente?.nombre || order.cliente_nombre || '-'"></span></p>
             </div>
 
-            <span v-if="isPriority" class="priority-pill" v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
+            <span v-if="isPriority" class="priority-pill"
+              v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')">
+            </span>
           </section>
 
           <section v-if="hasOrder && orderComments" class="ticket notes-section">
             <h3 class="notes-title"><span aria-hidden="true">📝</span> Notas del cliente</h3>
             <p class="notes-block" v-text="orderComments"></p>
+
           </section>
 
           <section v-if="hasOrder" class="ticket">
@@ -698,6 +913,7 @@ const OrderDetailsDrawer = {
             <div v-else class="drawer-items">
               <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
                 <h4 class="category-title" v-if="categoryName && categoryName !== 'General'" v-text="categoryName"></h4>
+
                 <article class="item-row" v-for="item in categoryItems" :key="item.id">
                   <div class="item-main">
                     <div class="item-left">
@@ -708,23 +924,26 @@ const OrderDetailsDrawer = {
                       ✎ <span class="item-note-text" v-text="item.note"></span>
                     </span>
                   </div>
+
                   <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
+
                 </article>
               </template>
             </div>
           </section>
 
-
+          <!-- ✅ SOLO ACCIÓN PRINCIPAL (sin botones secundarios) -->
           <section class="ticket drawer-actions" v-if="hasOrder">
             <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Procesando...' : primaryAction.label"></button>
+
             <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
           </section>
+
         </aside>
       </div>
     </transition>
   `,
 };
-
 
 Vue.createApp({
   components: { OrderDetailsDrawer },
@@ -745,7 +964,6 @@ Vue.createApp({
         { key: 'preparando', title: 'En preparación' },
         { key: 'listo', title: 'Listos' },
         { key: 'entregado', title: 'Entregados' },
-
       ],
       pollHandle: null,
       tickHandle: null,
@@ -760,11 +978,12 @@ Vue.createApp({
 
         const elapsedMs = Math.max(this.nowTs - ts, 0);
         const status = String(order.estado || '').toLowerCase();
+
         return {
           ...order,
           estado: status,
-          notas: order.notas || order.nota || order.observacion || order.comentario || order.note || '',
-          items: order.items || order.detalles || order.detalle || order.pedido_detalles || [],
+          // ✅ items normalizados para TODO el app (tablero + notas)
+          _itemsNorm: normalizeOrderItems(order),
 
           _createdTs: ts,
           _elapsedMs: elapsedMs,
@@ -787,52 +1006,55 @@ Vue.createApp({
     },
     selectedOrder() {
       if (!this.selectedOrderId) return null;
-      return this.normalized.find((order) => order.id === this.selectedOrderId) || null;
+      return this.normalized.find((o) => o.id === this.selectedOrderId) || null;
     },
-    activeCount() {
-      return this.grouped.pendiente.length + this.grouped.preparando.length + this.grouped.listo.length;
-    },
-    delayedCount() {
-      return this.normalized.filter((order) => order.estado !== 'entregado' && order._elapsedMin > 6).length;
-    },
+    activeCount() { return this.grouped.pendiente.length + this.grouped.preparando.length + this.grouped.listo.length; },
+    delayedCount() { return this.normalized.filter((o) => o.estado !== 'entregado' && o._elapsedMin > 6).length; },
     averageMinutes() {
-      const active = this.normalized.filter((order) => order.estado !== 'entregado');
+      const active = this.normalized.filter((o) => o.estado !== 'entregado');
       if (!active.length) return 0;
-      return active.reduce((acc, order) => acc + order._elapsedMin, 0) / active.length;
+      return active.reduce((acc, o) => acc + o._elapsedMin, 0) / active.length;
     },
   },
   methods: {
     getOrderItems(order) {
+      // ✅ usa lo ya normalizado cuando exista
       if (!order) return [];
-      const source = order.items || order.detalles || order.detalle || order.pedido_detalles || [];
-      return Array.isArray(source) ? source : [];
+      if (Array.isArray(order._itemsNorm)) return order._itemsNorm;
+      return normalizeOrderItems(order);
     },
-    getItemNote(item) {
-      const raw = item?.nota ?? item?.observacion ?? item?.comentario ?? item?.note ?? item?.notas ?? null;
-      if (Array.isArray(raw)) return raw.join(' · ').trim();
-      return String(raw || '').trim();
-    },
+
     orderNoteCount(order) {
-      const itemNotes = this.getOrderItems(order).reduce((acc, item) => acc + (this.getItemNote(item) ? 1 : 0), 0);
-      const orderComment = String(order?.comentarios ?? order?.comentario ?? order?.observacion ?? order?.nota ?? order?.notas ?? order?.note ?? '').trim();
-      return itemNotes + (orderComment ? 1 : 0);
+      const items = this.getOrderItems(order);
+      const itemNotes = items.reduce((acc, it) => acc + (String(it._note || '').trim() ? 1 : 0), 0);
+
+      const orderComment = pickFirst(order || {}, [
+        'comentarios','comentario','observacion','nota','notas','note',
+        'special_instructions','specialInstructions','instrucciones'
+      ]);
+
+      return itemNotes + (String(orderComment || '').trim() ? 1 : 0);
     },
+
     orderPreviewNote(order) {
-      const firstItemNote = this.getOrderItems(order).map((item) => this.getItemNote(item)).find(Boolean);
+      const items = this.getOrderItems(order);
+      const firstItemNote = items.map((it) => String(it._note || '').trim()).find(Boolean);
       if (firstItemNote) return `Nota cliente: ${firstItemNote}`;
-      const orderComment = String(order?.comentarios ?? order?.comentario ?? order?.observacion ?? order?.nota ?? order?.notas ?? order?.note ?? '').trim();
-      return orderComment ? `Comentario: ${orderComment}` : '';
+
+      const orderComment = pickFirst(order || {}, [
+        'comentarios','comentario','observacion','nota','notas','note',
+        'special_instructions','specialInstructions','instrucciones'
+      ]);
+      return String(orderComment || '').trim() ? `Comentario: ${String(orderComment).trim()}` : '';
     },
+
     showToast(message) {
       this.toastMessage = message;
       clearTimeout(this.toastHandle);
       this.toastHandle = setTimeout(() => { this.toastMessage = ''; }, 2200);
     },
     togglePriority(orderId) {
-      this.priorityOverrides = {
-        ...this.priorityOverrides,
-        [orderId]: !this.priorityOverrides[orderId],
-      };
+      this.priorityOverrides = { ...this.priorityOverrides, [orderId]: !this.priorityOverrides[orderId] };
       this.showToast('🚩 Prioridad actualizada');
     },
     formatElapsed(ms) {
@@ -850,7 +1072,6 @@ Vue.createApp({
       if (order.estado === 'pendiente') return { label: 'Comenzar', className: 'action-start', run: () => this.quickAction(order.id, 'preparando') };
       if (order.estado === 'preparando') return { label: 'Marcar listo', className: 'action-ready', run: () => this.quickAction(order.id, 'listo') };
       if (order.estado === 'listo') return { label: 'Entregar', className: 'action-deliver', run: () => this.quickAction(order.id, 'entregado') };
-
       return null;
     },
     async quickAction(orderId, nextStatus) {
@@ -893,7 +1114,7 @@ Vue.createApp({
 
         if (!res.ok) throw new Error('status ' + res.status);
 
-        this.orders = this.orders.map((order) => order.id === orderId ? { ...order, estado: nextStatus } : order);
+        this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: nextStatus } : o);
         this.showToast('✅ Pedido actualizado');
       } catch (e) {
         this.error = 'No se pudo actualizar el estado del pedido';
@@ -910,7 +1131,7 @@ Vue.createApp({
       this.selectedOrderId = null;
     },
     handleActionDone(payload) {
-      this.orders = this.orders.map((order) => order.id === payload.orderId ? { ...order, estado: payload.nextStatus } : order);
+      this.orders = this.orders.map((o) => o.id === payload.orderId ? { ...o, estado: payload.nextStatus } : o);
       this.fetchOrders(false);
     },
     async fetchOrders(isInitial = false) {
@@ -930,12 +1151,10 @@ Vue.createApp({
 
         if (!response.ok) throw new Error('status ' + response.status);
 
-
         const payload = await response.json();
         const incoming = payload?.data ?? payload ?? [];
         this.orders = Array.isArray(incoming) ? incoming : [];
         this.error = '';
-
 
         if (!isInitial) {
           const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
@@ -949,17 +1168,17 @@ Vue.createApp({
       if (!newOrders.length) return;
       if (this.soundEnabled) this.beep();
       const next = new Set(this.highlightedIds);
-      newOrders.forEach((order) => {
-        next.add(order.id);
+      newOrders.forEach((o) => {
+        next.add(o.id);
         this.$nextTick(() => {
-          const el = document.getElementById(`order-${order.id}`);
+          const el = document.getElementById(`order-${o.id}`);
           el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
       });
       this.highlightedIds = next;
       setTimeout(() => {
         const clean = new Set(this.highlightedIds);
-        newOrders.forEach((order) => clean.delete(order.id));
+        newOrders.forEach((o) => clean.delete(o.id));
         this.highlightedIds = clean;
       }, 3600);
     },
@@ -991,7 +1210,6 @@ Vue.createApp({
     clearInterval(this.tickHandle);
     clearTimeout(this.toastHandle);
   },
-
 }).mount('#app');
 </script>
 </body>
