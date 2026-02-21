@@ -232,6 +232,18 @@ body {
   line-height: 1.2;
   flex-shrink: 0;
 }
+.item-note-chip--button {
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.item-note-chip--button:hover,
+.item-note-chip--button:focus-visible {
+  border-color: rgba(212, 222, 240, .65);
+  background: rgba(180, 192, 214, .18);
+  box-shadow: 0 0 0 2px rgba(180, 192, 214, .16);
+  outline: none;
+}
 .item-note-text {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -256,6 +268,95 @@ body {
 .drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .25s ease; }
 .drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
 .drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(28px); }
+
+
+.note-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 6, 14, .72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 120;
+}
+.note-modal {
+  width: min(540px, 100%);
+  background: linear-gradient(180deg, rgba(15, 20, 31, .98), rgba(12, 17, 27, .98));
+  border: 1px solid rgba(180, 192, 214, .24);
+  border-radius: 16px;
+  box-shadow: 0 20px 48px rgba(2,6,13,.46);
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  max-height: min(78vh, 640px);
+}
+.note-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.note-modal-title {
+  margin: 0;
+  font-size: 1rem;
+  color: #e5edf8;
+}
+.note-modal-context {
+  margin: 0;
+  color: #b8c4d9;
+  font-size: .88rem;
+}
+.note-modal-content {
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(180, 192, 214, .18);
+  background: rgba(18, 24, 37, .8);
+  padding: 12px;
+}
+.note-modal-content p {
+  margin: 0;
+  color: #eaf1fb;
+  line-height: 1.58;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.note-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+.note-modal-close {
+  border: 1px solid rgba(180, 192, 214, .28);
+  background: rgba(180, 192, 214, .1);
+  color: #e5edf8;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.note-modal-close-ghost {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.note-modal-enter-active, .note-modal-leave-active {
+  transition: opacity .18s ease;
+}
+.note-modal-enter-active .note-modal,
+.note-modal-leave-active .note-modal {
+  transition: transform .22s ease, opacity .22s ease;
+}
+.note-modal-enter-from, .note-modal-leave-to {
+  opacity: 0;
+}
+.note-modal-enter-from .note-modal,
+.note-modal-leave-to .note-modal {
+  transform: translateY(10px) scale(.98);
+  opacity: 0;
+}
+body.note-modal-open { overflow: hidden; }
 
 @keyframes glowPremium {
   0% { box-shadow: 0 0 0 rgba(165,58,74,0); }
@@ -614,7 +715,13 @@ const OrderDetailsDrawer = {
   emits: ['close', 'actionDone', 'toast'],
 
   data() {
-    return { loadingAction: false };
+    return {
+      loadingAction: false,
+      noteModalOpen: false,
+      noteModalText: '',
+      noteModalContext: '',
+      noteModalTitleId: 'note-modal-title',
+    };
   },
   computed: {
     hasOrder() { return !!this.order; },
@@ -721,6 +828,29 @@ const OrderDetailsDrawer = {
   },
 
   methods: {
+    openNoteModal(noteText, contextText = '') {
+      const normalized = this.normalizeNoteValue(noteText);
+      if (!normalized) return;
+
+      this.noteModalText = normalized;
+      this.noteModalContext = String(contextText || '').trim();
+      this.noteModalOpen = true;
+      document.body.classList.add('note-modal-open');
+    },
+
+    closeNoteModal() {
+      this.noteModalOpen = false;
+      this.noteModalText = '';
+      this.noteModalContext = '';
+      document.body.classList.remove('note-modal-open');
+    },
+
+    onNoteChipKeydown(event, noteText, contextText = '') {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      this.openNoteModal(noteText, contextText);
+    },
+
     normalizeNoteValue(raw) {
       if (Array.isArray(raw)) {
         return raw
@@ -853,8 +983,12 @@ const OrderDetailsDrawer = {
     },
 
     onEsc(evt) {
+      if (evt.key === 'Escape' && this.noteModalOpen) {
+        this.closeNoteModal();
+        return;
+      }
       if (evt.key === 'Escape' && this.open) this.$emit('close');
-      if (evt.key === 'Enter' && this.open) this.executePrimaryAction();
+      if (evt.key === 'Enter' && this.open && !this.noteModalOpen) this.executePrimaryAction();
     },
   },
 
@@ -863,6 +997,13 @@ const OrderDetailsDrawer = {
   },
   beforeUnmount() {
     window.removeEventListener('keydown', this.onEsc);
+    document.body.classList.remove('note-modal-open');
+  },
+
+  watch: {
+    open(nextOpen) {
+      if (!nextOpen && this.noteModalOpen) this.closeNoteModal();
+    },
   },
 
   // ✅ TEMPLATE: sin secondary-actions + con notas visibles
@@ -920,9 +1061,17 @@ const OrderDetailsDrawer = {
                       <span class="qty" v-text="item.qty + 'x'"></span>
                       <strong class="item-name" v-text="item.name"></strong>
                     </div>
-                    <span v-if="item.note" class="item-note-chip" :title="item.note">
+                    <button
+                      v-if="item.note"
+                      type="button"
+                      class="item-note-chip item-note-chip--button"
+                      :title="item.note"
+                      :data-note="item.note"
+                      @click.stop="openNoteModal(item.note, item.qty + 'x ' + item.name)"
+                      @keydown="onNoteChipKeydown($event, item.note, item.qty + 'x ' + item.name)"
+                    >
                       ✎ <span class="item-note-text" v-text="item.note"></span>
-                    </span>
+                    </button>
                   </div>
 
                   <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
@@ -938,6 +1087,27 @@ const OrderDetailsDrawer = {
 
             <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
           </section>
+
+          <transition name="note-modal">
+            <div v-if="noteModalOpen" class="note-modal-overlay" @click.self="closeNoteModal">
+              <section class="note-modal" role="dialog" aria-modal="true" :aria-labelledby="noteModalTitleId">
+                <header class="note-modal-head">
+                  <h3 class="note-modal-title" :id="noteModalTitleId">Nota del cliente</h3>
+                  <button type="button" class="ghost note-modal-close note-modal-close-ghost" aria-label="Cerrar" @click="closeNoteModal">✕</button>
+                </header>
+
+                <p v-if="noteModalContext" class="note-modal-context" v-text="noteModalContext"></p>
+
+                <div class="note-modal-content">
+                  <p v-text="noteModalText"></p>
+                </div>
+
+                <footer class="note-modal-footer">
+                  <button type="button" class="note-modal-close" @click="closeNoteModal">Cerrar</button>
+                </footer>
+              </section>
+            </div>
+          </transition>
 
         </aside>
       </div>
