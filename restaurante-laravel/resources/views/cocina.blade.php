@@ -190,10 +190,46 @@ body {
 }
 .item-row { border-bottom: 1px dashed rgba(255,255,255,.18); padding: 8px 0; }
 .item-row:last-child { border-bottom: 0; }
-.item-main { display: flex; gap: 8px; align-items: baseline; }
+.item-main { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
+.item-left { display:flex; gap:8px; align-items:baseline; min-width:0; }
+.item-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .item-extra, .item-note { margin: 4px 0 0 0; color: #b8c0cf; font-size: .88rem; }
-.item-client-note { margin: 6px 0 0; display: inline-block; max-width: 100%; border: 1px solid rgba(180, 192, 214, .28); background: rgba(180, 192, 214, .10); color: #d8dfeb; border-radius: 10px; padding: 6px 9px; font-size: .84rem; line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
-.order-comments-block { margin: 0; border: 1px solid rgba(180, 192, 214, .24); background: rgba(180, 192, 214, .08); color: #dce3ef; border-radius: 10px; padding: 10px; font-size: .9rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+.notes-section { display: grid; gap: 10px; }
+.notes-title { margin: 0; display: inline-flex; align-items: center; gap: 8px; color: #e6dde4; font-size: .95rem; letter-spacing: .01em; }
+.notes-block {
+  margin: 0;
+  border: 1px solid rgba(180, 192, 214, .26);
+  background: linear-gradient(180deg, rgba(180, 192, 214, .12), rgba(180, 192, 214, .06));
+  color: #e2e9f4;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: .93rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.item-note-chip {
+  max-width: 52%;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  border: 1px solid rgba(180, 192, 214, .30);
+  background: rgba(180, 192, 214, .12);
+  color: #dce4f0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: .79rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+.item-note-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
 .drawer-items { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
 .items-summary { margin: 0 0 8px 0; color: #d3c3cb; font-size: .87rem; }
 .category-title { margin: 10px 0 4px 0; color: #f4d6de; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
@@ -206,17 +242,6 @@ body {
   color: #d7b9c1;
 }
 .drawer-actions { display: grid; gap: 8px; }
-.secondary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.sec-btn {
-  border: 1px solid rgba(255,255,255,.24);
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 9px 10px;
-  cursor: pointer;
-  transition: all .2s ease;
-}
-.sec-btn:hover { border-color: rgba(110,54,66,.38); }
 .drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .25s ease; }
 .drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
 .drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(28px); }
@@ -237,6 +262,12 @@ body {
 @media (max-width: 840px) {
   .board { grid-template-columns: 1fr; }
   .drawer { width: 100vw; }
+  .notes-block { padding: 10px; font-size: .9rem; }
+  .item-note-chip { font-size: .76rem; }
+}
+@media (max-width: 520px) {
+  .item-main { flex-direction: column; align-items: stretch; }
+  .item-note-chip { max-width: 100%; width: fit-content; }
 }
 
 .col-list::-webkit-scrollbar,.drawer-items::-webkit-scrollbar{width:8px;height:8px;}
@@ -402,7 +433,7 @@ const OrderDetailsDrawer = {
     open: { type: Boolean, default: false },
     priorityOverrides: { type: Object, default: () => ({}) },
   },
-  emits: ['close', 'actionDone', 'priorityToggle', 'toast'],
+  emits: ['close', 'actionDone', 'toast'],
   data() {
     return {
       loadingAction: false,
@@ -433,11 +464,24 @@ const OrderDetailsDrawer = {
         const qty = Number(item.cantidad ?? item.quantity ?? 1) || 1;
         const name = item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? item.producto?.nombre ?? 'Item';
         const extrasRaw = item.extras ?? item.opciones ?? item.options ?? item.adiciones ?? null;
-        const notesRaw = item.nota ?? item.observacion ?? item.comentario ?? item.note ?? item.notas ?? null;
+        const raw = item.nota
+          ?? item.note
+          ?? item.notas
+          ?? item.observacion
+          ?? item.observaciones
+          ?? item.comentario
+          ?? item.comentarios
+          ?? item.instrucciones
+          ?? item.special_instructions
+          ?? item.pivot?.nota
+          ?? item.detalle?.nota
+          ?? item.pedido_detalle?.nota
+          ?? item.order_item?.nota
+          ?? '';
         const categoryRaw = item.categoria ?? item.category ?? item.tipo ?? item.menu_item?.categoria ?? item.menuItem?.categoria ?? null;
 
         const extras = Array.isArray(extrasRaw) ? extrasRaw.join(', ') : extrasRaw;
-        const note = Array.isArray(notesRaw) ? notesRaw.join(' · ') : notesRaw;
+        const note = this.normalizeNoteValue(raw);
         const category = String(categoryRaw || '').trim();
 
         return {
@@ -451,15 +495,7 @@ const OrderDetailsDrawer = {
       });
     },
     orderComments() {
-      const raw = this.order?.comentarios ?? this.order?.comentario ?? this.order?.observacion ?? this.order?.nota ?? this.order?.notas ?? this.order?.note ?? null;
-      if (Array.isArray(raw)) return raw.join(' · ').trim();
-      return String(raw || '').trim();
-    },
-    notedItems() {
-      return this.normalizedItems.filter((item) => String(item.note || '').trim());
-    },
-    hasAnyNotes() {
-      return !!this.orderComments || this.notedItems.length > 0;
+      return this.extractNote(this.order);
     },
     groupedItems() {
       const groups = {};
@@ -487,6 +523,52 @@ const OrderDetailsDrawer = {
     },
   },
   methods: {
+    normalizeNoteValue(raw) {
+      if (Array.isArray(raw)) {
+        return raw
+          .map((entry) => String(entry ?? '').trim())
+          .filter(Boolean)
+          .join(' · ')
+          .trim();
+      }
+
+      if (typeof raw === 'object' && raw !== null) {
+        return Object.values(raw)
+          .map((entry) => String(entry ?? '').trim())
+          .filter(Boolean)
+          .join(' · ')
+          .trim();
+      }
+
+      return String(raw ?? '').trim();
+    },
+    extractNote(source) {
+      if (!source || typeof source !== 'object') return '';
+
+      const directFields = ['nota', 'nota_cliente', 'notas', 'observacion', 'observaciones', 'comentario', 'comentarios', 'note', 'notes', 'special_instructions', 'instrucciones'];
+      const nestedFields = ['pivot', 'detalle', 'pedido_detalle', 'pedidoDetalle', 'order_item', 'orderItem'];
+
+      const candidates = [];
+
+      directFields.forEach((field) => {
+        candidates.push(source[field]);
+      });
+
+      nestedFields.forEach((container) => {
+        const nested = source[container];
+        if (!nested || typeof nested !== 'object') return;
+        directFields.forEach((field) => {
+          candidates.push(nested[field]);
+        });
+      });
+
+      for (const candidate of candidates) {
+        const normalized = this.normalizeNoteValue(candidate);
+        if (normalized) return normalized;
+      }
+
+      return '';
+    },
     statusLabel(status) {
       return {
         pendiente: 'Pendiente',
@@ -564,25 +646,6 @@ const OrderDetailsDrawer = {
         this.loadingAction = false;
       }
     },
-    copySummary() {
-      if (!this.order) return;
-      const lines = this.normalizedItems.map((item) => `- ${item.qty}x ${item.name}`);
-      const summary = `Pedido #${this.order.id}\nEstado: ${this.statusLabel(this.order.estado)}\n${lines.join('\n')}\nComentarios: ${this.orderComments || 'Sin comentarios'}`;
-      navigator.clipboard?.writeText(summary);
-      this.$emit('toast', '📋 Resumen copiado');
-    },
-    copyNotes() {
-      if (!this.order || !this.hasAnyNotes) return;
-      const itemLines = this.notedItems.map((item) => `- ${item.qty}x ${item.name}: ${item.note}`);
-      const header = `Pedido #${this.order.id}`;
-      const general = this.orderComments ? `Comentario pedido: ${this.orderComments}` : '';
-      const text = [header, general, ...itemLines].filter(Boolean).join('\n');
-      navigator.clipboard?.writeText(text);
-      this.$emit('toast', '📋 Notas copiadas');
-    },
-    printTicket() {
-      this.$emit('toast', '🖨️ Impresión pendiente de integrar');
-    },
     onEsc(evt) {
       if (evt.key === 'Escape' && this.open) this.$emit('close');
       if (evt.key === 'Enter' && this.open) this.executePrimaryAction();
@@ -619,9 +682,9 @@ const OrderDetailsDrawer = {
             <span v-if="isPriority" class="priority-pill" v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')"></span>
           </section>
 
-          <section v-if="hasOrder && orderComments" class="ticket">
-            <h3 style="margin:0 0 8px 0;">Comentarios del pedido</h3>
-            <p class="order-comments-block" v-text="orderComments"></p>
+          <section v-if="hasOrder && orderComments" class="ticket notes-section">
+            <h3 class="notes-title"><span aria-hidden="true">📝</span> Notas del cliente</h3>
+            <p class="notes-block" v-text="orderComments"></p>
           </section>
 
           <section v-if="hasOrder" class="ticket">
@@ -637,11 +700,15 @@ const OrderDetailsDrawer = {
                 <h4 class="category-title" v-if="categoryName && categoryName !== 'General'" v-text="categoryName"></h4>
                 <article class="item-row" v-for="item in categoryItems" :key="item.id">
                   <div class="item-main">
-                    <span class="qty" v-text="item.qty + 'x'"></span>
-                    <strong v-text="item.name"></strong>
+                    <div class="item-left">
+                      <span class="qty" v-text="item.qty + 'x'"></span>
+                      <strong class="item-name" v-text="item.name"></strong>
+                    </div>
+                    <span v-if="item.note" class="item-note-chip" :title="item.note">
+                      ✎ <span class="item-note-text" v-text="item.note"></span>
+                    </span>
                   </div>
                   <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
-                  <p v-if="item.note" class="item-client-note" v-text="'Nota del cliente: ' + item.note"></p>
                 </article>
               </template>
             </div>
@@ -651,14 +718,6 @@ const OrderDetailsDrawer = {
           <section class="ticket drawer-actions" v-if="hasOrder">
             <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Procesando...' : primaryAction.label"></button>
             <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
-
-            <div class="secondary-actions">
-              <button class="sec-btn" @click="printTicket">Imprimir</button>
-              <button class="sec-btn" @click="copySummary">Copiar resumen</button>
-              <button v-if="hasAnyNotes" class="sec-btn" @click="copyNotes">Copiar notas</button>
-              <button class="sec-btn" @click="$emit('priorityToggle', order.id)">Marcar prioridad</button>
-              <button class="sec-btn" @click="$emit('close')">Volver al tablero</button>
-            </div>
           </section>
         </aside>
       </div>
