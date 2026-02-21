@@ -38,7 +38,7 @@ class AuthController extends Controller
         return match ($user->rol) {
             'admin'    => redirect('/admin'),
             'cocinero' => redirect('/cocina'),
-            'mesero'   => redirect('/meseros'),
+            'mesero'   => redirect('/mesero'),
             default    => redirect('/dashboard'),
         };
     }
