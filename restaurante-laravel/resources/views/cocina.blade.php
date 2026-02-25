@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Modo Cocina PRO</title>
+<title>KDS Cocina</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
 :root {
@@ -41,30 +41,65 @@ body {
 .kds { min-height: 100vh; padding: 18px 20px; max-width: 1640px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .topbar {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
   align-items: center;
-  background: var(--glass);
-  backdrop-filter: blur(8px);
+  background: rgba(10, 15, 24, .78);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 10px 14px;
+  border-radius: 14px;
+  padding: 8px 12px;
   box-shadow: 0 6px 18px rgba(2,6,13,.26);
 }
-.topbar h1 { margin: 0; font-size: 1.42rem; letter-spacing: .01em; }
-.muted { margin: 2px 0 0; color: var(--muted); }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(86px, 1fr)); gap: 8px; }
-.stats article {
-  background: rgba(148, 163, 184, .06);
+.topbar-title { margin: 0; font-size: 1.16rem; font-weight: 700; letter-spacing: .01em; }
+.status-chips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 5px 10px;
-  text-align: center;
-  min-width: 86px;
+  padding: 4px 9px;
+  background: rgba(180, 192, 214, .08);
+  font-size: .83rem;
+  color: #e5edf8;
+  line-height: 1;
+  min-height: 30px;
 }
-.stats span { color: var(--muted); font-size: .75rem; display: block; }
-.stats strong { font-size: 1rem; }
-.controls { display: flex; gap: 8px; justify-content: flex-end; }
+.status-chip-label { color: #bec8da; font-weight: 600; }
+.status-chip-value { font-weight: 800; }
+.status-chip--pending { border-color: rgba(143,116,72,.45); }
+.status-chip--cooking { border-color: rgba(127,80,55,.45); }
+.status-chip--ready { border-color: rgba(77,127,103,.48); }
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.controls { display: flex; gap: 6px; justify-content: flex-end; }
+.user-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.user-label {
+  font-size: .78rem;
+  color: #d6dfef;
+  border: 1px solid rgba(180, 192, 214, .25);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(180, 192, 214, .08);
+  white-space: nowrap;
+}
 .col-title { font-weight: 700; letter-spacing: .01em; }
 .count-chip { padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.07); font-size: .82rem; color: #f3e9ed; }
 .btn-icon { opacity: .85; margin-right: 4px; }
@@ -74,9 +109,13 @@ body {
   background: rgba(255,255,255,.06);
   color: var(--text);
   border-radius: 999px;
-  padding: 9px 13px;
+  padding: 7px 11px;
+  min-height: 34px;
   cursor: pointer;
   transition: all .2s ease;
+  font-size: .82rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 .ghost:hover { border-color: rgba(110, 54, 66, .42); box-shadow: 0 0 0 1px rgba(110, 54, 66, .20); }
 .error {
@@ -369,10 +408,23 @@ body.note-modal-open { overflow: hidden; }
   50% { box-shadow: 0 0 8px rgba(143,79,93,.18); }
 }
 @media (max-width: 1280px) {
-  .topbar { grid-template-columns: 1fr; }
+  .topbar {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+    gap: 8px;
+  }
+  .topbar-right { justify-content: space-between; }
   .board { grid-template-columns: repeat(2, minmax(250px, 1fr)); }
 }
 @media (max-width: 840px) {
+  .topbar { padding: 8px 10px; }
+  .topbar-title { font-size: 1.06rem; }
+  .status-chips { gap: 6px; }
+  .status-chip { font-size: .8rem; min-height: 32px; }
+  .topbar-right { justify-content: flex-start; }
+  .controls { width: 100%; }
+  .controls .ghost { flex: 1; justify-content: center; }
+  .user-panel { width: 100%; justify-content: space-between; }
   .board { grid-template-columns: 1fr; }
   .drawer { width: 100vw; }
   .notes-block { padding: 10px; font-size: .9rem; }
@@ -509,20 +561,31 @@ body.has-admin-back .kds { padding-top: 64px; }
   @endif
 
   <header class="topbar">
-    <div>
-      <h1>Modo Cocina PRO</h1>
-      <p class="muted">Velocidad > lectura · KDS profesional</p>
+    <h1 class="topbar-title">KDS Cocina</h1>
+
+    <div class="status-chips" role="status" aria-live="polite" aria-label="Resumen de estados">
+      <span class="status-chip status-chip--pending"><span class="status-chip-label">Pendiente</span><span class="status-chip-value">@{{ grouped.pendiente.length }}</span></span>
+      <span class="status-chip status-chip--cooking"><span class="status-chip-label">En cocina</span><span class="status-chip-value">@{{ grouped.preparando.length }}</span></span>
+      <span class="status-chip status-chip--ready"><span class="status-chip-label">Listo</span><span class="status-chip-value">@{{ grouped.listo.length }}</span></span>
     </div>
 
-    <div class="stats">
-      <article><span>Activos</span><strong>@{{ activeCount }}</strong></article>
-      <article><span>Promedio</span><strong>@{{ averageMinutes.toFixed(1) }}m</strong></article>
-      <article><span>Atrasados</span><strong style="color: var(--red)">@{{ delayedCount }}</strong></article>
-    </div>
+    <div class="topbar-right">
+      <div class="controls" aria-label="Acciones rápidas">
+        <button type="button" class="ghost" @click="fetchOrders(false)"><span class="btn-icon">↻</span> Actualizar</button>
+        <button type="button" class="ghost" @click="toggleFullscreen"><span class="btn-icon">⤢</span> Pantalla completa</button>
+      </div>
 
-    <div class="controls">
-      <button class="ghost" @click="soundEnabled = !soundEnabled"><span class="btn-icon">🔉</span> @{{ soundEnabled ? 'Sonido ON' : 'Sonido OFF' }}</button>
-      <button class="ghost" @click="toggleFullscreen"><span class="btn-icon">⤢</span> Pantalla completa</button>
+      <div class="user-panel">
+        @if($user)
+          <span class="user-label">{{ ($user->rol ?? 'usuario') . ': ' . ($user->name ?? $user->usuario ?? 'sin-nombre') }}</span>
+        @endif
+        @if(Route::has('logout'))
+          <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="ghost">Cerrar sesión</button>
+          </form>
+        @endif
+      </div>
     </div>
   </header>
 
