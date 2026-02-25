@@ -561,7 +561,7 @@ body.has-admin-back .kds { padding-top: 64px; }
   @endif
 
   <header class="topbar">
-    <h1 class="topbar-title">KDS Cocina</h1>
+    <h1 class="topbar-title">Cocina</h1>
 
     <div class="status-chips" role="status" aria-live="polite" aria-label="Resumen de estados">
       <span class="status-chip status-chip--pending"><span class="status-chip-label">Pendiente</span><span class="status-chip-value">@{{ grouped.pendiente.length }}</span></span>
