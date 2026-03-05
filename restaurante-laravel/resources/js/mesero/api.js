@@ -2,6 +2,8 @@ import axios from 'axios';
 
 const http = axios.create({
     baseURL: '/api/mesero',
+    withCredentials: true, // ✅ manda cookies de sesión
+
     headers: {
         Accept: 'application/json',
     },
