@@ -33,6 +33,7 @@ defineEmits(['edit', 'delete', 'change-filter']);
 
 const chips = [
   { value: '', label: 'Todos' },
+  { value: 'retenido', label: 'Retenidos (editable)' },
   { value: 'pendiente', label: 'Pendiente' },
   { value: 'preparando', label: 'En preparación' },
   { value: 'listo', label: 'Listo' },

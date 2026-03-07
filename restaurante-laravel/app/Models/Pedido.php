@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Concerns\BelongsToRestaurant;
 use App\Models\Usuario;
+use Illuminate\Database\Eloquent\Builder;
 
 class Pedido extends Model
 {
@@ -15,14 +16,53 @@ class Pedido extends Model
     protected $table = 'pedidos';
     protected $primaryKey = 'id';
 
-    protected $fillable = ['cliente_id', 'restaurant_id', 'mesa', 'estado', 'total'];
+    protected $fillable = ['cliente_id', 'restaurant_id', 'mesa', 'estado', 'hold_expires_at', 'total'];
 
     protected $appends = ['fecha']; // quitar total
 
 
     protected $casts = [
         'created_at' => 'datetime',
+        'hold_expires_at' => 'datetime',
     ];
+
+
+    public const STATUS_RETAINED = 'retenido';
+    public const STATUS_PENDING = 'pendiente';
+
+    public function isInRetentionWindow(): bool
+    {
+        return $this->estado === self::STATUS_RETAINED
+            && $this->hold_expires_at
+            && now()->lt($this->hold_expires_at);
+    }
+
+    public function hasRetentionExpired(): bool
+    {
+        return $this->estado === self::STATUS_RETAINED
+            && $this->hold_expires_at
+            && now()->greaterThanOrEqualTo($this->hold_expires_at);
+    }
+
+    public static function releaseExpiredRetentionWindow(): int
+    {
+        return static::query()
+            ->where('estado', self::STATUS_RETAINED)
+            ->whereNotNull('hold_expires_at')
+            ->where('hold_expires_at', '<=', now())
+            ->update([
+                'estado' => self::STATUS_PENDING,
+                'updated_at' => now(),
+            ]);
+    }
+
+    public function scopeEditableByWaiter(Builder $query): Builder
+    {
+        return $query
+            ->where('estado', self::STATUS_RETAINED)
+            ->whereNotNull('hold_expires_at')
+            ->where('hold_expires_at', '>', now());
+    }
 
     public function detalle()
 {

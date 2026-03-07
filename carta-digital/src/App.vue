@@ -20,6 +20,8 @@ const pedidosCliente = ref([])
 const loadingPedidos = ref(false)
 const errorPedidos = ref("")
 let pedidosInterval = null
+const nowTick = ref(Date.now())
+let holdCountdownInterval = null
 
 // =========================
 // 🔙 VOLVER AL ADMIN (SOLO SI VIENE DESDE ADMIN)
@@ -76,9 +78,10 @@ function showToast(message, type = "success") {
 /* =====================================================
    🔥 TIMELINE
 ===================================================== */
-const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
+const timelineSteps = ['retenido', 'pendiente', 'preparando', 'listo', 'entregado']
 
 const stepLabels = {
+  retenido: 'En ventana de cambios',
   pendiente: 'Pendiente',
   preparando: 'En cocina',
   listo: 'Listo',
@@ -295,6 +298,9 @@ watch(
 ===================================================== */
 onMounted(() => {
   detectAdminEntry()
+  holdCountdownInterval = setInterval(() => {
+    nowTick.value = Date.now()
+  }, 1000)
 
   const handler = () => {
     cartButton.value?.classList.remove("cart-bounce")
@@ -308,6 +314,7 @@ onMounted(() => {
   onUnmounted(() => {
     window.removeEventListener("cart-updated", handler)
     window.removeEventListener('keydown', handleNoteEditorEsc)
+    clearInterval(holdCountdownInterval)
   })
 })
 
@@ -321,6 +328,37 @@ const currentStepIndex = computed(() => {
   const estado = (pedidoActual.value.estado || '').toLowerCase()
   return timelineSteps.indexOf(estado)
 })
+
+const progressPercentage = computed(() => {
+  const total = timelineSteps.length
+  const activeIndex = Math.max(0, currentStepIndex.value)
+  return `${((activeIndex + 1) / total) * 100}%`
+})
+
+const currentStatusLabel = computed(() => {
+  const status = pedidoActual.value?.estado || ''
+  return stepLabels[status] || 'Sin estado'
+})
+
+
+const holdSecondsRemaining = computed(() => {
+  if (!pedidoActual.value?.hold_expires_at) return 0
+  const expiresAt = new Date(pedidoActual.value.hold_expires_at).getTime()
+  const seconds = Math.ceil((expiresAt - nowTick.value) / 1000)
+  return Math.max(0, seconds)
+})
+
+const holdCountdownLabel = computed(() => {
+  const total = holdSecondsRemaining.value
+  const minutes = Math.floor(total / 60)
+  const seconds = total % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+})
+
+const isPedidoRetenido = computed(() => pedidoActual.value?.estado === 'retenido')
+
+const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedidoRetenido.value && holdSecondsRemaining.value === 0)
+
 </script>
 
 
@@ -371,9 +409,9 @@ const currentStepIndex = computed(() => {
 
   <div class="order-header-pro">
 
-    <div>
+    <div class="order-header-copy">
       <h3 class="title">📦 Estado de tu pedido</h3>
-      <p class="subtitle">Seguimiento en tiempo real</p>
+      <p class="subtitle">Seguimiento en tiempo real antes de cocina</p>
     </div>
 
     <button
@@ -393,34 +431,50 @@ const currentStepIndex = computed(() => {
   </div>
 
 
-  <div v-else class="timeline-pro">
+  <div v-else class="order-body-pro">
 
-    <!-- BARRA PROGRESO -->
-    <div
-      class="progress-bar"
-      :style="{ width: ((currentStepIndex+1)/timelineSteps.length*100)+'%' }"
-    ></div>
+    <div v-if="isPedidoRetenido" class="hold-banner">
+      <div class="hold-banner__icon" aria-hidden="true">⏱</div>
+      <div class="hold-banner__content">
+        <p>Tienes <strong>{{ holdCountdownLabel }}</strong> para llamar a un mesero y modificar tu pedido.</p>
+        <small>Durante este tiempo aún no se envía a cocina.</small>
+      </div>
+      <span class="hold-banner__time">{{ holdCountdownLabel }}</span>
+    </div>
 
-    <div
-      v-for="(step, index) in timelineSteps"
-      :key="step"
-      class="step-pro"
-      :class="{
-        completed: index < currentStepIndex,
-        active: index === currentStepIndex
-      }"
-    >
-      <div class="circle"></div>
-      <span>{{ stepLabels[step] }}</span>
+    <div v-else-if="holdWindowFinished" class="hold-banner hold-banner--done">
+      <div class="hold-banner__icon" aria-hidden="true">✅</div>
+      <strong>Tu pedido ya fue enviado a cocina.</strong>
+    </div>
+
+    <div class="timeline-pro">
+      <!-- BARRA PROGRESO -->
+      <div
+        class="progress-bar"
+        :style="{ width: progressPercentage }"
+      ></div>
+
+      <div
+        v-for="(step, index) in timelineSteps"
+        :key="step"
+        class="step-pro"
+        :class="{
+          completed: index < currentStepIndex,
+          active: index === currentStepIndex
+        }"
+      >
+        <div class="circle"></div>
+        <span>{{ stepLabels[step] }}</span>
+      </div>
     </div>
 
   </div>
 
 
   <div v-if="pedidoActual" class="status-now">
-    Estado actual:
-    <strong>
-      {{ stepLabels[timelineSteps[currentStepIndex]] }}
+    <span class="status-now__label">Estado actual</span>
+    <strong class="status-now__value">
+      {{ currentStatusLabel }}
     </strong>
   </div>
 
@@ -433,7 +487,9 @@ const currentStepIndex = computed(() => {
     <!-- ================= CONTENEDOR SCROLL ================= -->
 <div class="cart-scroll">
 
-  <div v-if="cart.length === 0">
+  <h4 class="cart-section-title">Carrito</h4>
+
+  <div v-if="cart.length === 0" class="cart-empty-state">
     Carrito vacío
   </div>
 
@@ -509,7 +565,7 @@ const currentStepIndex = computed(() => {
   :disabled="sendingOrder"
 >
   <span v-if="sendingOrder" class="spinner"></span>
-  {{ sendingOrder ? 'Enviando...' : 'Enviar a cocina' }}
+  {{ sendingOrder ? 'Enviando...' : 'Confirmar pedido' }}
 </button>
 
 
@@ -1083,16 +1139,16 @@ const currentStepIndex = computed(() => {
 ===================================================== */
 
 .order-status-card-pro{
-  background: linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  border: 1px solid rgba(255,255,255,.14);
   backdrop-filter: blur(18px);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 18px;
+  padding: 16px;
   display:flex;
   flex-direction:column;
-  gap:18px;
+  gap:14px;
   box-shadow:
-    0 8px 28px rgba(0,0,0,.55),
+    0 8px 24px rgba(0,0,0,.45),
     inset 0 1px 0 rgba(255,255,255,.08);
 }
 
@@ -1100,19 +1156,25 @@ const currentStepIndex = computed(() => {
 .order-header-pro{
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  align-items:flex-start;
+  gap: 12px;
+}
+
+.order-header-copy {
+  min-width: 0;
 }
 
 .title{
-  font-size:17px;
-  font-weight:600;
+  font-size:16px;
+  font-weight:700;
   margin:0;
 }
 
 .subtitle{
   font-size:12px;
-  opacity:.65;
-  margin:2px 0 0;
+  opacity:.76;
+  margin:4px 0 0;
+  line-height: 1.35;
 }
 
 /* BOTÓN REFRESH PRO */
@@ -1120,14 +1182,15 @@ const currentStepIndex = computed(() => {
   display:flex;
   align-items:center;
   gap:6px;
-  background:rgba(255,255,255,.08);
+  background:rgba(255,255,255,.09);
   border:1px solid rgba(255,255,255,.18);
   color:#fff;
-  padding:7px 12px;
+  padding:8px 11px;
   border-radius:12px;
   cursor:pointer;
   font-size:12px;
   transition:.25s;
+  flex-shrink: 0;
 }
 
 .refresh-pro:hover{
@@ -1145,19 +1208,27 @@ const currentStepIndex = computed(() => {
 }
 
 /* TIMELINE PRO */
+.order-body-pro {
+  display: grid;
+  gap: 12px;
+}
+
 .timeline-pro{
   position:relative;
   display:flex;
   justify-content:space-between;
-  align-items:center;
-  padding:20px 6px 0;
+  align-items:flex-start;
+  padding:16px 2px 0;
+  overflow-x: auto;
+  gap: 6px;
+  scrollbar-width: thin;
 }
 
 /* línea base */
 .timeline-pro::before{
   content:"";
   position:absolute;
-  top:26px;
+  top:22px;
   left:0;
   right:0;
   height:2px;
@@ -1167,7 +1238,7 @@ const currentStepIndex = computed(() => {
 /* barra progreso animada */
 .progress-bar{
   position:absolute;
-  top:26px;
+  top:22px;
   left:0;
   height:2px;
   background:linear-gradient(90deg,#2ecc71,#ffd7aa);
@@ -1181,14 +1252,15 @@ const currentStepIndex = computed(() => {
   align-items:center;
   font-size:11px;
   text-align:center;
-  gap:8px;
+  gap:7px;
   z-index:2;
+  min-width: 66px;
 }
 
 /* círculo */
 .circle{
-  width:14px;
-  height:14px;
+  width:13px;
+  height:13px;
   border-radius:50%;
   background:rgba(255,255,255,.15);
   border:2px solid rgba(255,255,255,.25);
@@ -1212,29 +1284,58 @@ const currentStepIndex = computed(() => {
 
 /* estado actual */
 .status-now{
-  text-align:center;
-  font-size:13px;
-  background:rgba(255,255,255,.06);
-  padding:8px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.12);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  font-size:12px;
+  background:rgba(255,255,255,.08);
+  padding:7px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
 }
 
-.status-now strong{
+.status-now__label {
+  opacity: 0.75;
+}
+
+.status-now__value{
   color:#ffd7aa;
+  font-size: 12.5px;
 }
 
 /* vacío */
 .empty-pro{
-  opacity:.7;
+  opacity:.75;
   font-size:13px;
   text-align:center;
+  padding: 10px 0;
 }
 /* SOLO la lista scrollea */
 .cart-scroll {
   flex: 1;
   overflow-y: auto;
   padding-right: 4px;
+  margin-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.09);
+  padding-top: 14px;
+}
+
+.cart-section-title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  opacity: .72;
+}
+
+.cart-empty-state {
+  color: rgba(255,255,255,.72);
+  font-size: 14px;
+  padding: 12px;
+  border: 1px dashed rgba(255,255,255,.2);
+  border-radius: 12px;
+  text-align: center;
 }
 
 /* footer siempre visible */
@@ -1546,6 +1647,128 @@ const currentStepIndex = computed(() => {
 /* derecha vacía para balance visual */
 .admin-right{
   width: 140px; /* similar al ancho del botón para centrar el título */
+}
+
+
+
+.hold-banner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(126, 203, 255, 0.14), rgba(126, 203, 255, 0.06));
+  border: 1px solid rgba(126, 203, 255, 0.36);
+}
+
+.hold-banner__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.12);
+  font-size: 15px;
+}
+
+.hold-banner__content {
+  min-width: 0;
+}
+
+.hold-banner__content p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.hold-banner__content small {
+  display: block;
+  margin-top: 2px;
+  opacity: .8;
+  font-size: 11px;
+}
+
+.hold-banner__time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: .03em;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(7, 19, 34, .42);
+  border: 1px solid rgba(255,255,255,.14);
+}
+.hold-banner--done {
+  grid-template-columns: auto 1fr;
+  background: linear-gradient(135deg, rgba(110, 247, 176, 0.14), rgba(110, 247, 176, 0.06));
+  border-color: rgba(110, 247, 176, 0.35);
+}
+
+@media (max-width: 640px) {
+  .cart-panel {
+    width: min(100vw, 430px);
+    padding: 16px 14px 18px;
+  }
+
+  .order-status-card-pro {
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .order-header-pro {
+    align-items: center;
+  }
+
+  .title {
+    font-size: 15px;
+  }
+
+  .subtitle {
+    font-size: 11px;
+  }
+
+  .refresh-pro {
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+
+  .timeline-pro {
+    padding-top: 14px;
+  }
+
+  .timeline-pro::before,
+  .progress-bar {
+    top: 20px;
+  }
+
+  .step-pro {
+    min-width: 62px;
+  }
+
+  .step-pro span {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .hold-banner {
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    padding: 9px 10px;
+  }
+
+  .hold-banner__time {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin-left: 38px;
+    font-size: 12px;
+  }
+
+  .status-now {
+    width: 100%;
+    justify-content: space-between;
+    box-sizing: border-box;
+  }
 }
 
 </style>
