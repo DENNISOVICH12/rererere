@@ -11,7 +11,7 @@ class PedidoUpdateRequest extends FormRequest
     {
         return [
             'mesa'   => 'sometimes|nullable|string|max:50',
-            'estado' => 'sometimes|in:pendiente,en_entrega,listo,entregado,cancelado',
+            'estado' => 'sometimes|in:retenido,pendiente,en_entrega,preparando,listo,entregado,cancelado',
         ];
     }
 }

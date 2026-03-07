@@ -20,6 +20,8 @@ const pedidosCliente = ref([])
 const loadingPedidos = ref(false)
 const errorPedidos = ref("")
 let pedidosInterval = null
+const nowTick = ref(Date.now())
+let holdCountdownInterval = null
 
 // =========================
 // 🔙 VOLVER AL ADMIN (SOLO SI VIENE DESDE ADMIN)
@@ -76,9 +78,10 @@ function showToast(message, type = "success") {
 /* =====================================================
    🔥 TIMELINE
 ===================================================== */
-const timelineSteps = ['pendiente', 'preparando', 'listo', 'entregado']
+const timelineSteps = ['retenido', 'pendiente', 'preparando', 'listo', 'entregado']
 
 const stepLabels = {
+  retenido: 'En ventana de cambios',
   pendiente: 'Pendiente',
   preparando: 'En cocina',
   listo: 'Listo',
@@ -295,6 +298,9 @@ watch(
 ===================================================== */
 onMounted(() => {
   detectAdminEntry()
+  holdCountdownInterval = setInterval(() => {
+    nowTick.value = Date.now()
+  }, 1000)
 
   const handler = () => {
     cartButton.value?.classList.remove("cart-bounce")
@@ -308,6 +314,7 @@ onMounted(() => {
   onUnmounted(() => {
     window.removeEventListener("cart-updated", handler)
     window.removeEventListener('keydown', handleNoteEditorEsc)
+    clearInterval(holdCountdownInterval)
   })
 })
 
@@ -321,6 +328,26 @@ const currentStepIndex = computed(() => {
   const estado = (pedidoActual.value.estado || '').toLowerCase()
   return timelineSteps.indexOf(estado)
 })
+
+
+const holdSecondsRemaining = computed(() => {
+  if (!pedidoActual.value?.hold_expires_at) return 0
+  const expiresAt = new Date(pedidoActual.value.hold_expires_at).getTime()
+  const seconds = Math.ceil((expiresAt - nowTick.value) / 1000)
+  return Math.max(0, seconds)
+})
+
+const holdCountdownLabel = computed(() => {
+  const total = holdSecondsRemaining.value
+  const minutes = Math.floor(total / 60)
+  const seconds = total % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+})
+
+const isPedidoRetenido = computed(() => pedidoActual.value?.estado === 'retenido')
+
+const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedidoRetenido.value && holdSecondsRemaining.value === 0)
+
 </script>
 
 
@@ -394,6 +421,15 @@ const currentStepIndex = computed(() => {
 
 
   <div v-else class="timeline-pro">
+
+    <div v-if="isPedidoRetenido" class="hold-banner">
+      <strong>Tienes {{ holdCountdownLabel }} para llamar a un mesero y modificar tu pedido.</strong>
+      <p>Durante este tiempo aún no se envía a cocina.</p>
+    </div>
+
+    <div v-else-if="holdWindowFinished" class="hold-banner hold-banner--done">
+      <strong>Tu pedido ya fue enviado a cocina.</strong>
+    </div>
 
     <!-- BARRA PROGRESO -->
     <div
@@ -509,7 +545,7 @@ const currentStepIndex = computed(() => {
   :disabled="sendingOrder"
 >
   <span v-if="sendingOrder" class="spinner"></span>
-  {{ sendingOrder ? 'Enviando...' : 'Enviar a cocina' }}
+  {{ sendingOrder ? 'Enviando...' : 'Confirmar pedido' }}
 </button>
 
 
@@ -1548,4 +1584,24 @@ const currentStepIndex = computed(() => {
   width: 140px; /* similar al ancho del botón para centrar el título */
 }
 
+
+
+.hold-banner {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(126, 203, 255, 0.12);
+  border: 1px solid rgba(126, 203, 255, 0.45);
+}
+.hold-banner p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+.hold-banner--done {
+  background: rgba(110, 247, 176, 0.12);
+  border-color: rgba(110, 247, 176, 0.45);
+}
+
 </style>
+
