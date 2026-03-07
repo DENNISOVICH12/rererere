@@ -341,6 +341,7 @@ const currentStatusLabel = computed(() => {
 })
 
 
+
 const holdSecondsRemaining = computed(() => {
   if (!pedidoActual.value?.hold_expires_at) return 0
   const expiresAt = new Date(pedidoActual.value.hold_expires_at).getTime()
@@ -441,6 +442,7 @@ const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedi
       </div>
       <span class="hold-banner__time">{{ holdCountdownLabel }}</span>
     </div>
+
 
     <div v-else-if="holdWindowFinished" class="hold-banner hold-banner--done">
       <div class="hold-banner__icon" aria-hidden="true">✅</div>
@@ -1769,6 +1771,8 @@ const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedi
     justify-content: space-between;
     box-sizing: border-box;
   }
+
 }
 
 </style>
+
