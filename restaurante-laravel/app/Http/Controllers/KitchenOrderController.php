@@ -14,8 +14,11 @@ class KitchenOrderController extends Controller
         $since = $this->parseSince($request->query('since'));
         $activeOnly = $request->boolean('active_only', true);
 
+        Pedido::releaseExpiredRetentionWindow();
+
         $orders = Pedido::query()
-            ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id'])
+            ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id', 'hold_expires_at'])
+            ->where('estado', '!=', Pedido::STATUS_RETAINED)
             ->when($activeOnly, function ($query) {
                 $query->where(function ($stateQuery) {
                     $stateQuery->whereIn('estado', ['pendiente', 'preparando', 'listo'])
@@ -70,6 +73,15 @@ class KitchenOrderController extends Controller
 
     private function updateStatus(Pedido $order, string $status): JsonResponse
     {
+        Pedido::releaseExpiredRetentionWindow();
+        $order->refresh();
+
+        if ($order->estado === Pedido::STATUS_RETAINED) {
+            return response()->json([
+                'message' => 'El pedido sigue en ventana de edición y aún no llega a cocina.',
+            ], 409);
+        }
+
         if ($order->estado === $status) {
             return response()->json([
                 'data' => $this->transformStatusPayload($order),
@@ -137,6 +149,7 @@ class KitchenOrderController extends Controller
             'id' => $pedido->id,
             'estado' => $pedido->estado,
             'created_at' => optional($pedido->created_at)->toIso8601String(),
+            'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
             'mesa' => $pedido->mesa,
             'cliente' => [
                 'id' => $pedido->cliente?->id,
