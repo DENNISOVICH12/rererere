@@ -7,6 +7,7 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\MenuItemController ;
 use Illuminate\Support\Facades\URL;
+use App\Http\Controllers\MeseroOrderController;
 
 
 /*
@@ -87,8 +88,19 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:web', 'role:mesero'])->group(function () {
+
+    // Vista
     Route::view('/mesero', 'mesero')->name('mesero.panel');
     Route::redirect('/meseros', '/mesero');
+
+    // ✅ "API interna" del mesero (pero por WEB middleware = sesión estable)
+    Route::prefix('api/mesero')->group(function () {
+        Route::get('/orders', [MeseroOrderController::class, 'index']);
+        Route::get('/orders/{pedido}', [MeseroOrderController::class, 'show']);
+        Route::put('/orders/{pedido}', [MeseroOrderController::class, 'update']);
+        Route::delete('/orders/{pedido}', [MeseroOrderController::class, 'destroy']);
+        Route::get('/menu-items', [MeseroOrderController::class, 'menuItems']);
+    });
 });
 
 /*

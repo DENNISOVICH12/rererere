@@ -699,6 +699,20 @@ function pickFirstNum(obj, paths, fallback = 1) {
   }
   return fallback;
 }
+function normalizeAndDedupeOrders(list) {
+  const map = new Map();
+
+  for (const raw of (Array.isArray(list) ? list : [])) {
+    const idNum = Number(raw?.id);
+    if (!Number.isFinite(idNum)) continue;
+
+    // normaliza ID siempre a number
+    const normalized = { ...raw, id: idNum };
+    map.set(idNum, normalized);
+  }
+
+  return [...map.values()];
+}
 function normalizeOrderItems(order) {
   const source =
     order?.items ||
@@ -1364,6 +1378,10 @@ Vue.createApp({
       this.orders = this.orders.map((o) => o.id === payload.orderId ? { ...o, estado: payload.nextStatus } : o);
     },
     mergeIncomingOrders(incomingOrders, isInitial = false) {
+      // ✅ Asegura que lo que ya está en memoria también tenga id numérico
+      this.orders = this.orders
+      .map(o => ({ ...o, id: Number(o.id) }))
+      .filter(o => Number.isFinite(o.id));
       const beforeIds = new Set(this.orders.map((o) => o.id));
       if (isInitial) {
         this.orders = incomingOrders;
@@ -1410,7 +1428,10 @@ Vue.createApp({
         const payload = await response.json();
         const incoming = payload?.data ?? payload ?? [];
         const items = Array.isArray(incoming) ? incoming : [];
-        this.mergeIncomingOrders(items, isInitial || !this.lastSyncAt);
+
+        const cleanItems = normalizeAndDedupeOrders(items);
+
+        this.mergeIncomingOrders(cleanItems, isInitial || !this.lastSyncAt);
         this.lastSyncAt = payload?.meta?.server_time || new Date().toISOString();
         this.error = '';
       } catch (e) {

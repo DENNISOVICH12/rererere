@@ -16,13 +16,13 @@ export default defineConfig({
   ],
 
   server: {
-    host: '0.0.0.0',
-    port: 5180,
-    strictPort: true,
-    cors: true,
-    hmr: {
-      host: 'localhost',
-      port: 5180,
-    },
+  host: '0.0.0.0',
+  port: 5180,
+  strictPort: true,
+  cors: true,
+  hmr: {
+    host: '172.18.112.36',
+    port: Number(process.env.VITE_PORT_HOST || 5180),
   },
+},  
 });
