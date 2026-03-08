@@ -18,6 +18,7 @@ class Pedido extends Model
 
     protected $fillable = [
 
+
         'cliente_id',
         'restaurant_id',
         'mesa',
