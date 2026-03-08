@@ -7,9 +7,11 @@
     <p class="timer">{{ elapsedText }}</p>
     <p class="meta">{{ order.items_count }} ítems · Mesa {{ order.mesa || '-' }}</p>
     <p class="meta">Cliente: {{ order.cliente?.nombre || 'Sin cliente' }}</p>
+    <p v-if="order.hold_expires_at" class="meta">Editable hasta: {{ new Date(order.hold_expires_at).toLocaleTimeString() }}</p>
+    <p v-if="!order.can_be_edited" class="locked">Ya fue enviado a cocina.</p>
     <div class="actions">
-      <button :disabled="busy" @click="$emit('edit', order)">Editar</button>
-      <button class="danger" :disabled="busy" @click="$emit('delete', order)">Cancelar</button>
+      <button :disabled="busy || !order.can_be_edited" @click="$emit('edit', order)">Editar</button>
+      <button class="danger" :disabled="busy || !order.can_be_edited" @click="$emit('delete', order)">Cancelar</button>
     </div>
   </article>
 </template>
@@ -31,6 +33,7 @@ defineEmits(['edit', 'delete']);
 .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .timer { margin: 0; color: #7ecbff; font-weight: 600; }
 .meta { margin: 0; color: #a8b4ce; font-size: 13px; }
+.locked { margin: 0; color: #ffb4a1; font-size: 12px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
 button { background: #2b8cff; color: #061124; border: 0; border-radius: 10px; padding: 12px; font-weight: 600; }
 button.danger { background: #ff6f7c; }

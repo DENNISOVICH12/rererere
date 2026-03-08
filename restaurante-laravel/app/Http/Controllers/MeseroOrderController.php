@@ -13,15 +13,16 @@ use Symfony\Component\HttpFoundation\Response;
 class MeseroOrderController extends Controller
 {
     private const BLOCKED_STATE = 'entregado';
-    private const STRONG_CONFIRMATION_STATES = ['preparando', 'listo'];
 
     public function index(Request $request): JsonResponse
     {
+        Pedido::releaseExpiredRetentionWindow();
+
         $status = $request->query('status');
 
         $query = Pedido::query()
-            ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id'])
-            ->whereIn('estado', ['pendiente', 'preparando', 'listo'])
+            ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id', 'hold_expires_at'])
+            ->whereIn('estado', [Pedido::STATUS_RETAINED, 'pendiente', 'preparando', 'listo'])
             ->with([
                 'cliente:id,nombre',
                 'detalle' => fn ($detalleQuery) => $detalleQuery
@@ -41,6 +42,9 @@ class MeseroOrderController extends Controller
 
     public function show(Pedido $pedido): JsonResponse
     {
+        Pedido::releaseExpiredRetentionWindow();
+        $pedido->refresh();
+
         $pedido->loadMissing([
             'cliente:id,nombre',
             'detalle.menuItem:id,nombre,categoria,precio',
@@ -53,19 +57,19 @@ class MeseroOrderController extends Controller
 
     public function update(Request $request, Pedido $pedido): JsonResponse
     {
+        Pedido::releaseExpiredRetentionWindow();
+        $pedido->refresh();
+
         if ($pedido->estado === self::BLOCKED_STATE) {
             return response()->json([
                 'message' => 'El pedido entregado no se puede editar.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $force = $request->boolean('force_confirmation');
-
-        if (in_array($pedido->estado, self::STRONG_CONFIRMATION_STATES, true) && !$force) {
+        if (!$pedido->isInRetentionWindow()) {
             return response()->json([
-                'message' => 'Este pedido ya está en preparación o listo. Confirma nuevamente para editarlo.',
-                'requires_confirmation' => true,
-            ], Response::HTTP_CONFLICT);
+                'message' => 'Este pedido ya fue enviado a cocina y no puede modificarse.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $validated = $request->validate([
@@ -124,18 +128,19 @@ class MeseroOrderController extends Controller
 
     public function destroy(Request $request, Pedido $pedido): JsonResponse
     {
+        Pedido::releaseExpiredRetentionWindow();
+        $pedido->refresh();
+
         if ($pedido->estado === self::BLOCKED_STATE) {
             return response()->json([
                 'message' => 'El pedido entregado no se puede cancelar.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $force = $request->boolean('force_confirmation');
-        if (in_array($pedido->estado, self::STRONG_CONFIRMATION_STATES, true) && !$force) {
+        if (!$pedido->isInRetentionWindow()) {
             return response()->json([
-                'message' => 'Este pedido ya está en preparación o listo. Confirma nuevamente para cancelarlo.',
-                'requires_confirmation' => true,
-            ], Response::HTTP_CONFLICT);
+                'message' => 'Este pedido ya fue enviado a cocina y no puede cancelarse con el flujo normal.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $pedido->delete();
@@ -186,6 +191,8 @@ class MeseroOrderController extends Controller
             'estado' => $pedido->estado,
             'created_at' => optional($pedido->created_at)->toIso8601String(),
             'updated_at' => optional($pedido->updated_at)->toIso8601String(),
+            'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
+            'can_be_edited' => $pedido->isInRetentionWindow(),
             'mesa' => $pedido->mesa,
             'cliente' => [
                 'id' => $pedido->cliente?->id,
