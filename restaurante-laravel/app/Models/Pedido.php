@@ -17,6 +17,7 @@ class Pedido extends Model
     protected $primaryKey = 'id';
 
     protected $fillable = [
+
         'cliente_id',
         'restaurant_id',
         'mesa',
@@ -30,6 +31,7 @@ class Pedido extends Model
         'change_request_count',
         'total',
     ];
+
 
     protected $appends = ['fecha'];
 
@@ -86,11 +88,13 @@ class Pedido extends Model
         return $this->estado === self::STATUS_CHANGE_REQUESTED
             && $this->change_requested_at
             && now()->greaterThan($this->change_requested_at->copy()->addSeconds(self::changeRequestSlaSeconds()));
+
     }
 
     public function releaseToKitchen(string $trigger): bool
     {
         if (!in_array($this->estado, [self::STATUS_RETAINED, self::STATUS_CHANGE_REQUESTED], true)) {
+
             return false;
         }
 
@@ -118,6 +122,7 @@ class Pedido extends Model
         return $this->save();
     }
 
+
     public static function releaseExpiredRetentionWindow(): int
     {
         $now = now();
@@ -143,6 +148,7 @@ class Pedido extends Model
                     ->where('hold_expires_at', '>', now());
             })->orWhere('estado', self::STATUS_CHANGE_REQUESTED);
         });
+
     }
 
     public function detalle()

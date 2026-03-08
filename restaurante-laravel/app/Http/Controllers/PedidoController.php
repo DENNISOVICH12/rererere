@@ -14,6 +14,7 @@ class PedidoController extends Controller
         // ✅ Retornar pedidos en JSON para la vista de cocina
         $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
             ->whereNotIn('estado', [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED])
+
             ->orderBy('created_at', 'desc')
             ->get();
 

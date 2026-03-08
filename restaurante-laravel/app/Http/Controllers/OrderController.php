@@ -8,8 +8,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+
 class OrderController extends Controller
 {
+    private const HOLD_SECONDS = 60;
+
     /**
      * Crear un nuevo pedido desde la Carta Digital
      */
@@ -19,6 +22,7 @@ class OrderController extends Controller
         $items = $request->items;
 
         $total = collect($items)->sum(fn ($item) => $item['precio_unitario'] * $item['cantidad']);
+
 
         $order = Pedido::create([
             'cliente_id' => $request->cliente_id,
@@ -48,6 +52,7 @@ class OrderController extends Controller
                 'hold_window_seconds' => Pedido::holdWindowSeconds(),
             ],
         ], Response::HTTP_CREATED);
+
     }
 
     /**
@@ -68,6 +73,7 @@ class OrderController extends Controller
         if (!$order->isInRetentionWindow()) {
             return response()->json([
                 'message' => 'Este pedido ya no está en ventana de cambios y no puede enviarse con confirmación anticipada.',
+
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -103,6 +109,7 @@ class OrderController extends Controller
             ->get()
             ->map(fn (Pedido $pedido) => $this->transformCustomerOrderPayload($pedido));
 
+
         return response()->json([
             'data' => $pedidos,
             'meta' => [
@@ -112,6 +119,7 @@ class OrderController extends Controller
     }
 
     public function updateStatus(Request $request, Pedido $order): JsonResponse
+
     {
         $order->update(['estado' => $request->estado]);
 
@@ -128,6 +136,7 @@ class OrderController extends Controller
             'can_be_edited' => $pedido->canBeEditedByWaiter(),
             'can_send_now' => $pedido->isInRetentionWindow(),
             'change_request_overdue' => $pedido->isChangeRequestOverdue(),
+
         ];
     }
 }

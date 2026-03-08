@@ -26,6 +26,7 @@ const holdWindowSeconds = ref(300)
 const showSendNowConfirm = ref(false)
 const sendingNowToKitchen = ref(false)
 
+
 // =========================
 // 🔙 VOLVER AL ADMIN (SOLO SI VIENE DESDE ADMIN)
 // =========================
@@ -86,6 +87,7 @@ const timelineSteps = ['retenido', 'modificacion_solicitada', 'pendiente', 'prep
 const stepLabels = {
   retenido: 'En ventana de cambios',
   modificacion_solicitada: 'Modificación solicitada',
+
   pendiente: 'Pendiente',
   preparando: 'En cocina',
   listo: 'Listo',
@@ -370,6 +372,7 @@ const currentStatusLabel = computed(() => {
 })
 
 
+
 const holdSecondsRemaining = computed(() => {
   if (!pedidoActual.value?.hold_expires_at) return 0
   const expiresAt = new Date(pedidoActual.value.hold_expires_at).getTime()
@@ -390,10 +393,12 @@ const isChangeRequested = computed(() => pedidoActual.value?.estado === 'modific
 
 const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedidoRetenido.value && !isChangeRequested.value)
 
+
 const wasSentEarly = computed(() => pedidoActual.value?.release_trigger === 'early_confirmation')
 
 const postReleaseMessage = computed(() => {
   if (!pedidoActual.value || isPedidoRetenido.value || isChangeRequested.value) return ''
+
   if (wasSentEarly.value) {
     return 'Tu pedido fue enviado a cocina por confirmación anticipada. Ya no es posible realizar cambios.'
   }
@@ -405,6 +410,7 @@ const changeRequestedMessage = computed(() => {
   if (!isChangeRequested.value) return ''
   return 'Tu solicitud de cambio fue registrada. Un mesero atenderá tu mesa para actualizar el pedido. Mientras tanto, tu pedido no se enviará a cocina.'
 })
+
 
 </script>
 
@@ -496,12 +502,14 @@ const changeRequestedMessage = computed(() => {
     <div v-else-if="isChangeRequested" class="hold-banner hold-banner--change-requested">
       <div class="hold-banner__icon" aria-hidden="true">📝</div>
       <strong>{{ changeRequestedMessage }}</strong>
+
     </div>
 
     <div v-else-if="holdWindowFinished" class="hold-banner hold-banner--done">
       <div class="hold-banner__icon" aria-hidden="true">✅</div>
       <strong>{{ postReleaseMessage }}</strong>
     </div>
+
 
     <div class="timeline-pro">
       <!-- BARRA PROGRESO -->
@@ -622,6 +630,7 @@ const changeRequestedMessage = computed(() => {
 >
   <span v-if="sendingOrder" class="spinner"></span>
   {{ sendingOrder ? 'Enviando...' : 'Confirmar pedido (ventana de cambios)' }}
+
 </button>
 
 
@@ -1374,6 +1383,7 @@ const changeRequestedMessage = computed(() => {
   opacity: 0.75;
 }
 
+
 .status-now__value{
   color:#ffd7aa;
   font-size: 12.5px;
@@ -1791,6 +1801,7 @@ const changeRequestedMessage = computed(() => {
   cursor: not-allowed;
 }
 
+
 .send-now-modal p {
   margin: 8px 0 0;
   color: rgba(255,255,255,.8);
@@ -1809,6 +1820,7 @@ const changeRequestedMessage = computed(() => {
   flex: 1;
 }
 
+
 .hold-banner__time {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -1824,6 +1836,7 @@ const changeRequestedMessage = computed(() => {
   background: linear-gradient(135deg, rgba(255, 211, 123, 0.14), rgba(255, 211, 123, 0.05));
   border-color: rgba(255, 211, 123, 0.35);
 }
+
 
 .hold-banner--done {
   grid-template-columns: auto 1fr;
@@ -1902,6 +1915,8 @@ const changeRequestedMessage = computed(() => {
     justify-content: space-between;
     box-sizing: border-box;
   }
+
 }
 
 </style>
+

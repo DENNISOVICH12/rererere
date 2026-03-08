@@ -36,6 +36,7 @@ const chips = [
   { value: '', label: 'Todos' },
   { value: 'retenido', label: 'Ventana de cambios' },
   { value: 'modificacion_solicitada', label: 'Modificación solicitada' },
+
   { value: 'pendiente', label: 'Pendiente' },
   { value: 'preparando', label: 'En preparación' },
   { value: 'listo', label: 'Listo' },

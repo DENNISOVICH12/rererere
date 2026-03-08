@@ -42,6 +42,7 @@ class MeseroOrderController extends Controller
                 'preparando',
                 'listo',
             ])
+
             ->with([
                 'cliente:id,nombre',
                 'changeRequestedByUser:id,nombre',
@@ -142,6 +143,7 @@ class MeseroOrderController extends Controller
         }
 
         if (!$pedido->canBeEditedByWaiter()) {
+
             return response()->json([
                 'message' => 'Este pedido ya fue enviado a cocina y no puede modificarse.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -213,6 +215,7 @@ class MeseroOrderController extends Controller
         }
 
         if (!$pedido->canBeEditedByWaiter()) {
+
             return response()->json([
                 'message' => 'Este pedido ya fue enviado a cocina y no puede cancelarse con el flujo normal.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -275,6 +278,7 @@ class MeseroOrderController extends Controller
             'can_be_edited' => $pedido->canBeEditedByWaiter(),
             'can_request_change' => $pedido->canRequestChange(),
             'can_send_to_kitchen' => $pedido->canBeEditedByWaiter(),
+
             'mesa' => $pedido->mesa,
             'cliente' => [
                 'id' => $pedido->cliente?->id,

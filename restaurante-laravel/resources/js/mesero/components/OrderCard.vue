@@ -19,6 +19,7 @@
       >
         Marcar cambio solicitado
       </button>
+
       <button class="danger" :disabled="busy || !order.can_be_edited" @click="$emit('delete', order)">Cancelar</button>
     </div>
   </article>
@@ -47,6 +48,7 @@ defineEmits(['edit', 'delete', 'request-change']);
 .actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 4px; }
 button { background: #2b8cff; color: #061124; border: 0; border-radius: 10px; padding: 10px; font-weight: 600; }
 button.warn { background: #ffd37b; color: #382800; }
+
 button.danger { background: #ff6f7c; }
 button:disabled { opacity: .5; }
 </style>

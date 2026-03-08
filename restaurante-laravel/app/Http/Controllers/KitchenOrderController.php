@@ -19,6 +19,7 @@ class KitchenOrderController extends Controller
         $orders = Pedido::query()
             ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id', 'hold_expires_at'])
             ->whereNotIn('estado', [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED])
+
             ->when($activeOnly, function ($query) {
                 $query->where(function ($stateQuery) {
                     $stateQuery->whereIn('estado', ['pendiente', 'preparando', 'listo'])
@@ -79,6 +80,7 @@ class KitchenOrderController extends Controller
         if (in_array($order->estado, [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED], true)) {
             return response()->json([
                 'message' => 'El pedido aún no está liberado para cocina.',
+
             ], 409);
         }
 
