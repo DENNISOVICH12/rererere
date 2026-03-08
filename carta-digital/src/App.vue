@@ -22,6 +22,10 @@ const errorPedidos = ref("")
 let pedidosInterval = null
 const nowTick = ref(Date.now())
 let holdCountdownInterval = null
+const holdWindowSeconds = ref(300)
+const showSendNowConfirm = ref(false)
+const sendingNowToKitchen = ref(false)
+
 
 // =========================
 // 🔙 VOLVER AL ADMIN (SOLO SI VIENE DESDE ADMIN)
@@ -226,7 +230,7 @@ async function sendOrder() {
 
     clearCart()
 
-    showToast("Pedido enviado correctamente ✅", "success")
+    showToast("Pedido registrado. Tienes una ventana de cambios antes de cocina ✅", "success")
 
     loadPedidosCliente(true)
 
@@ -257,6 +261,7 @@ async function loadPedidosCliente(silent = false) {
   try {
     const res = await axios.get(`${API_BASE}/clientes/${clienteActual.id}/pedidos`)
     pedidosCliente.value = res.data.data ?? res.data
+    holdWindowSeconds.value = Number(res.data?.meta?.hold_window_seconds || holdWindowSeconds.value)
   } catch (error) {
     errorPedidos.value = "No pudimos cargar el estado del pedido."
   } finally {
@@ -264,6 +269,30 @@ async function loadPedidosCliente(silent = false) {
   }
 }
 
+
+
+async function confirmAndSendNowToKitchen() {
+  if (!pedidoActual.value || sendingNowToKitchen.value) return
+
+  const clienteActual = getCliente()
+
+  try {
+    sendingNowToKitchen.value = true
+    await axios.post(`${API_BASE}/orders/${pedidoActual.value.id}/send-now`, {
+      cliente_id: clienteActual?.id ?? null,
+    })
+
+    showSendNowConfirm.value = false
+    showToast('Pedido enviado inmediatamente a cocina ✅', 'success')
+    await loadPedidosCliente(true)
+  } catch (error) {
+    showToast(error?.response?.data?.message || 'No pudimos enviar el pedido a cocina.', 'error')
+  } finally {
+    sendingNowToKitchen.value = false
+  }
+}
+
+const holdWindowMinutes = computed(() => Math.max(1, Math.round(holdWindowSeconds.value / 60)))
 
 /* =====================================================
    🔥 POLLING SILENCIOSO
@@ -358,7 +387,18 @@ const holdCountdownLabel = computed(() => {
 
 const isPedidoRetenido = computed(() => pedidoActual.value?.estado === 'retenido')
 
-const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedidoRetenido.value && holdSecondsRemaining.value === 0)
+const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedidoRetenido.value)
+
+const wasSentEarly = computed(() => pedidoActual.value?.release_trigger === 'early_confirmation')
+
+const postReleaseMessage = computed(() => {
+  if (!pedidoActual.value || isPedidoRetenido.value) return ''
+  if (wasSentEarly.value) {
+    return 'Tu pedido fue enviado a cocina por confirmación anticipada. Ya no es posible realizar cambios.'
+  }
+  return 'Tu pedido ya fue enviado a cocina. Ya no es posible realizar cambios.'
+})
+
 
 </script>
 
@@ -438,16 +478,20 @@ const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedi
       <div class="hold-banner__icon" aria-hidden="true">⏱</div>
       <div class="hold-banner__content">
         <p>Tienes <strong>{{ holdCountdownLabel }}</strong> para llamar a un mesero y modificar tu pedido.</p>
-        <small>Durante este tiempo aún no se envía a cocina.</small>
+        <small>Puedes modificar tu pedido durante los próximos {{ holdWindowMinutes }} minutos.</small>
+        <small class="hold-banner__warning">Si decides enviarlo ahora, ya no podrás realizar cambios.</small>
       </div>
       <span class="hold-banner__time">{{ holdCountdownLabel }}</span>
+      <button class="send-now-btn" type="button" @click="showSendNowConfirm = true">
+        Confirmar pedido y enviar a cocina
+      </button>
     </div>
-
 
     <div v-else-if="holdWindowFinished" class="hold-banner hold-banner--done">
       <div class="hold-banner__icon" aria-hidden="true">✅</div>
-      <strong>Tu pedido ya fue enviado a cocina.</strong>
+      <strong>{{ postReleaseMessage }}</strong>
     </div>
+
 
     <div class="timeline-pro">
       <!-- BARRA PROGRESO -->
@@ -567,7 +611,8 @@ const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedi
   :disabled="sendingOrder"
 >
   <span v-if="sendingOrder" class="spinner"></span>
-  {{ sendingOrder ? 'Enviando...' : 'Confirmar pedido' }}
+  {{ sendingOrder ? 'Enviando...' : 'Confirmar pedido (ventana de cambios)' }}
+
 </button>
 
 
@@ -604,6 +649,25 @@ const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedi
       <div class="note-actions">
         <button type="button" class="note-cancel" @click="cancelNote">Cancelar</button>
         <button type="button" class="note-save" @click="saveNote">Guardar</button>
+      </div>
+    </div>
+  </div>
+</transition>
+
+<transition name="note-modal">
+  <div
+    v-if="showSendNowConfirm"
+    class="note-modal-backdrop"
+    @click.self="showSendNowConfirm = false"
+  >
+    <div class="note-modal send-now-modal" role="dialog" aria-modal="true" aria-label="Confirmar envío a cocina">
+      <h3>¿Deseas enviar tu pedido ahora a cocina?</h3>
+      <p>Una vez enviado, ya no podrás realizar cambios en el pedido.</p>
+      <div class="send-now-modal__actions">
+        <button type="button" class="note-cancel" @click="showSendNowConfirm = false" :disabled="sendingNowToKitchen">Cancelar</button>
+        <button type="button" class="note-save" @click="confirmAndSendNowToKitchen" :disabled="sendingNowToKitchen">
+          {{ sendingNowToKitchen ? 'Enviando...' : 'Enviar ahora' }}
+        </button>
       </div>
     </div>
   </div>
@@ -1690,6 +1754,47 @@ const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedi
   opacity: .8;
   font-size: 11px;
 }
+.hold-banner__warning {
+  color: #ffd7aa;
+  opacity: 1;
+}
+
+.send-now-btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-left: 40px;
+  margin-top: 2px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.send-now-btn:hover {
+  background: rgba(156, 32, 48, .45);
+}
+
+.send-now-modal p {
+  margin: 8px 0 0;
+  color: rgba(255,255,255,.8);
+  line-height: 1.4;
+}
+
+.send-now-modal__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.send-now-modal__actions .note-cancel,
+.send-now-modal__actions .note-save {
+  margin-top: 0;
+  flex: 1;
+}
+
 
 .hold-banner__time {
   font-variant-numeric: tabular-nums;
@@ -1766,6 +1871,12 @@ const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedi
     font-size: 12px;
   }
 
+  .send-now-btn {
+    margin-left: 38px;
+    width: calc(100% - 38px);
+    box-sizing: border-box;
+    text-align: center;
+  }
   .status-now {
     width: 100%;
     justify-content: space-between;
