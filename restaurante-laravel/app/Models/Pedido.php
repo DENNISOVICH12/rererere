@@ -16,7 +16,8 @@ class Pedido extends Model
     protected $table = 'pedidos';
     protected $primaryKey = 'id';
 
-    protected $fillable = [
++
+  protected $fillable = [
         'cliente_id',
         'restaurant_id',
         'mesa',
@@ -26,6 +27,7 @@ class Pedido extends Model
         'release_trigger',
         'total',
     ];
+
 
     protected $appends = ['fecha'];
 
@@ -37,6 +39,7 @@ class Pedido extends Model
 
     public const STATUS_RETAINED = 'retenido';
     public const STATUS_PENDING = 'pendiente';
+
 
     public const RELEASE_TRIGGER_TIMER = 'timer';
     public const RELEASE_TRIGGER_EARLY_CONFIRMATION = 'early_confirmation';

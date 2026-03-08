@@ -8,17 +8,22 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+
 class OrderController extends Controller
 {
+    private const HOLD_SECONDS = 60;
+
     /**
      * Crear un nuevo pedido desde la Carta Digital
      */
     public function store(Request $request): JsonResponse
+
     {
         $restaurantId = $request->restaurant_id;
         $items = $request->items;
 
         $total = collect($items)->sum(fn ($item) => $item['precio_unitario'] * $item['cantidad']);
+
 
         $order = Pedido::create([
             'cliente_id' => $request->cliente_id,
@@ -26,6 +31,7 @@ class OrderController extends Controller
             'mesa' => $request->mesa,
             'estado' => Pedido::STATUS_RETAINED,
             'hold_expires_at' => now()->addSeconds(Pedido::holdWindowSeconds()),
+
             'total' => $total,
         ]);
 
@@ -48,6 +54,7 @@ class OrderController extends Controller
                 'hold_window_seconds' => Pedido::holdWindowSeconds(),
             ],
         ], Response::HTTP_CREATED);
+
     }
 
     /**
@@ -103,6 +110,7 @@ class OrderController extends Controller
             ->get()
             ->map(fn (Pedido $pedido) => $this->transformCustomerOrderPayload($pedido));
 
+
         return response()->json([
             'data' => $pedidos,
             'meta' => [
@@ -112,6 +120,7 @@ class OrderController extends Controller
     }
 
     public function updateStatus(Request $request, Pedido $order): JsonResponse
+
     {
         $order->update(['estado' => $request->estado]);
 

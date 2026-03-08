@@ -26,6 +26,7 @@ const holdWindowSeconds = ref(300)
 const showSendNowConfirm = ref(false)
 const sendingNowToKitchen = ref(false)
 
+
 // =========================
 // 🔙 VOLVER AL ADMIN (SOLO SI VIENE DESDE ADMIN)
 // =========================
@@ -369,6 +370,7 @@ const currentStatusLabel = computed(() => {
 })
 
 
+
 const holdSecondsRemaining = computed(() => {
   if (!pedidoActual.value?.hold_expires_at) return 0
   const expiresAt = new Date(pedidoActual.value.hold_expires_at).getTime()
@@ -396,6 +398,7 @@ const postReleaseMessage = computed(() => {
   }
   return 'Tu pedido ya fue enviado a cocina. Ya no es posible realizar cambios.'
 })
+
 
 </script>
 
@@ -488,6 +491,7 @@ const postReleaseMessage = computed(() => {
       <div class="hold-banner__icon" aria-hidden="true">✅</div>
       <strong>{{ postReleaseMessage }}</strong>
     </div>
+
 
     <div class="timeline-pro">
       <!-- BARRA PROGRESO -->
@@ -608,6 +612,7 @@ const postReleaseMessage = computed(() => {
 >
   <span v-if="sendingOrder" class="spinner"></span>
   {{ sendingOrder ? 'Enviando...' : 'Confirmar pedido (ventana de cambios)' }}
+
 </button>
 
 
@@ -1790,6 +1795,7 @@ const postReleaseMessage = computed(() => {
   flex: 1;
 }
 
+
 .hold-banner__time {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -1871,12 +1877,13 @@ const postReleaseMessage = computed(() => {
     box-sizing: border-box;
     text-align: center;
   }
-
   .status-now {
     width: 100%;
     justify-content: space-between;
     box-sizing: border-box;
   }
+
 }
 
 </style>
+
