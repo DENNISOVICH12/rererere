@@ -17,7 +17,6 @@ class OrderController extends Controller
      * Crear un nuevo pedido desde la Carta Digital
      */
     public function store(Request $request): JsonResponse
-
     {
         $restaurantId = $request->restaurant_id;
         $items = $request->items;
@@ -31,7 +30,6 @@ class OrderController extends Controller
             'mesa' => $request->mesa,
             'estado' => Pedido::STATUS_RETAINED,
             'hold_expires_at' => now()->addSeconds(Pedido::holdWindowSeconds()),
-
             'total' => $total,
         ]);
 
@@ -74,7 +72,8 @@ class OrderController extends Controller
 
         if (!$order->isInRetentionWindow()) {
             return response()->json([
-                'message' => 'Este pedido ya fue enviado a cocina y no puede modificarse.',
+                'message' => 'Este pedido ya no está en ventana de cambios y no puede enviarse con confirmación anticipada.',
+
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -134,7 +133,10 @@ class OrderController extends Controller
             'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
             'released_to_kitchen_at' => optional($pedido->released_to_kitchen_at)->toIso8601String(),
             'release_trigger' => $pedido->release_trigger,
-            'can_be_edited' => $pedido->isInRetentionWindow(),
+            'can_be_edited' => $pedido->canBeEditedByWaiter(),
+            'can_send_now' => $pedido->isInRetentionWindow(),
+            'change_request_overdue' => $pedido->isChangeRequestOverdue(),
+
         ];
     }
 }

@@ -3,6 +3,12 @@
     <header>
       <h2>Editar pedido #{{ localOrder.id }}</h2>
       <p>Estado actual: <strong>{{ localOrder.estado }}</strong></p>
+      <p v-if="localOrder.estado === 'modificacion_solicitada'" class="state-help">
+        Solicitud de cambio registrada. Este pedido no será enviado a cocina hasta que confirmes cambios.
+      </p>
+      <p v-if="localOrder.change_request_overdue" class="state-alert">
+        Atención prioritaria: la solicitud de cambio superó el tiempo recomendado.
+      </p>
     </header>
 
     <label>Mesa</label>
@@ -35,6 +41,9 @@
     <footer>
       <button class="muted" @click="$emit('cancel')">Volver</button>
       <button :disabled="saving" @click="save">Guardar cambios</button>
+      <button class="confirm" :disabled="saving || sending" @click="sendToKitchen">
+        {{ sending ? 'Enviando...' : 'Guardar cambios y enviar a cocina' }}
+      </button>
     </footer>
   </section>
 </template>
@@ -43,8 +52,8 @@
 import { computed, ref } from 'vue';
 import { searchMenuItems } from '../api';
 
-const props = defineProps({ order: { type: Object, required: true }, saving: Boolean });
-const emit = defineEmits(['save', 'cancel']);
+const props = defineProps({ order: { type: Object, required: true }, saving: Boolean, sending: Boolean });
+const emit = defineEmits(['save', 'send-to-kitchen', 'cancel']);
 
 const localOrder = ref({
   ...props.order,
@@ -91,6 +100,7 @@ const payload = computed(() => ({
 }));
 
 const save = () => emit('save', { id: localOrder.value.id, payload: payload.value });
+const sendToKitchen = () => emit('send-to-kitchen', localOrder.value);
 </script>
 
 <style scoped>
@@ -100,10 +110,13 @@ input,textarea{ width:100%; background:#0e1628; border:1px solid #2a3653; color:
 .item-row{ border:1px solid #26344f; border-radius:12px; padding:10px; display:grid; gap:8px; }
 .qty{ display:flex; align-items:center; gap:12px; }
 .qty button, footer button, .results button, .danger{ border:0; border-radius:10px; padding:10px 12px; }
-.qty button, footer button:last-child{ background:#2b8cff; color:#061124; }
+.qty button, footer button:not(.muted):not(.danger){ background:#2b8cff; color:#061124; }
 .results{ display:grid; gap:6px; }
 .results button{ background:#1c2944; color:#eaf2ff; text-align:left; }
-footer{ display:flex; gap:10px; margin-top:8px; }
+footer{ display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; }
+footer .confirm{ background:#35d39a; color:#07251c; flex:1 1 100%; font-weight:700; }
 .muted{ background:#2a3752; color:#eaf2ff; }
 .danger{ background:#ff6f7c; color:#2f0b12; }
+.state-help { margin: 4px 0 0; color: #9bd8ff; font-size: 13px; }
+.state-alert { margin: 4px 0 0; color: #ffb88f; font-size: 13px; font-weight: 600; }
 </style>

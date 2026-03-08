@@ -1,15 +1,22 @@
 <template>
   <section>
     <button class="back" @click="$emit('back')">← Volver</button>
-    <OrderEditor :order="order" :saving="saving" @save="$emit('save', $event)" @cancel="$emit('back')" />
+    <OrderEditor
+      :order="order"
+      :saving="saving"
+      :sending="sending"
+      @save="$emit('save', $event)"
+      @send-to-kitchen="$emit('send-to-kitchen', $event)"
+      @cancel="$emit('back')"
+    />
   </section>
 </template>
 
 <script setup>
 import OrderEditor from '../components/OrderEditor.vue';
 
-defineProps({ order: Object, saving: Boolean });
-defineEmits(['save', 'back']);
+defineProps({ order: Object, saving: Boolean, sending: Boolean });
+defineEmits(['save', 'send-to-kitchen', 'back']);
 </script>
 
 <style scoped>

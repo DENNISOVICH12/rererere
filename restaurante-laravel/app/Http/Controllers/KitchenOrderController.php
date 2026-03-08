@@ -18,7 +18,8 @@ class KitchenOrderController extends Controller
 
         $orders = Pedido::query()
             ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id', 'hold_expires_at'])
-            ->where('estado', '!=', Pedido::STATUS_RETAINED)
+            ->whereNotIn('estado', [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED])
+
             ->when($activeOnly, function ($query) {
                 $query->where(function ($stateQuery) {
                     $stateQuery->whereIn('estado', ['pendiente', 'preparando', 'listo'])
@@ -76,9 +77,10 @@ class KitchenOrderController extends Controller
         Pedido::releaseExpiredRetentionWindow();
         $order->refresh();
 
-        if ($order->estado === Pedido::STATUS_RETAINED) {
+        if (in_array($order->estado, [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED], true)) {
             return response()->json([
-                'message' => 'El pedido sigue en ventana de edición y aún no llega a cocina.',
+                'message' => 'El pedido aún no está liberado para cocina.',
+
             ], 409);
         }
 

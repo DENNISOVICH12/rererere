@@ -21,10 +21,31 @@ class MeseroOrderController extends Controller
         $status = $request->query('status');
 
         $query = Pedido::query()
-            ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id', 'hold_expires_at'])
-            ->whereIn('estado', [Pedido::STATUS_RETAINED, 'pendiente', 'preparando', 'listo'])
+            ->select([
+                'id',
+                'estado',
+                'created_at',
+                'updated_at',
+                'mesa',
+                'cliente_id',
+                'hold_expires_at',
+                'change_requested_at',
+                'change_requested_by',
+                'change_request_reason',
+                'change_request_count',
+                'release_trigger',
+            ])
+            ->whereIn('estado', [
+                Pedido::STATUS_RETAINED,
+                Pedido::STATUS_CHANGE_REQUESTED,
+                'pendiente',
+                'preparando',
+                'listo',
+            ])
+
             ->with([
                 'cliente:id,nombre',
+                'changeRequestedByUser:id,nombre',
                 'detalle' => fn ($detalleQuery) => $detalleQuery
                     ->select(['id', 'pedido_id', 'menu_item_id', 'cantidad', 'nota'])
                     ->with(['menuItem:id,nombre,categoria,precio']),
@@ -37,6 +58,10 @@ class MeseroOrderController extends Controller
 
         return response()->json([
             'data' => $query->get()->map(fn (Pedido $pedido) => $this->transformOrder($pedido)),
+            'meta' => [
+                'change_request_sla_seconds' => Pedido::changeRequestSlaSeconds(),
+                'change_request_max_per_order' => Pedido::changeRequestMaxPerOrder(),
+            ],
         ]);
     }
 
@@ -47,10 +72,61 @@ class MeseroOrderController extends Controller
 
         $pedido->loadMissing([
             'cliente:id,nombre',
+            'changeRequestedByUser:id,nombre',
             'detalle.menuItem:id,nombre,categoria,precio',
         ]);
 
         return response()->json([
+            'data' => $this->transformOrder($pedido),
+        ]);
+    }
+
+    public function requestChange(Request $request, Pedido $pedido): JsonResponse
+    {
+        Pedido::releaseExpiredRetentionWindow();
+        $pedido->refresh();
+
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($pedido->estado === self::BLOCKED_STATE) {
+            return response()->json([
+                'message' => 'El pedido entregado no puede marcarse para modificación.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if (!$pedido->canRequestChange()) {
+            return response()->json([
+                'message' => 'No se puede registrar solicitud de modificación fuera de la ventana de cambios o por límite alcanzado.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $pedido->markChangeRequested((int) $request->user()->id, $validated['reason'] ?? null);
+        $pedido->load(['cliente:id,nombre', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+
+        return response()->json([
+            'message' => 'Solicitud de cambio registrada. El pedido queda retenido hasta atención del mesero.',
+            'data' => $this->transformOrder($pedido),
+        ]);
+    }
+
+    public function sendToKitchen(Pedido $pedido): JsonResponse
+    {
+        Pedido::releaseExpiredRetentionWindow();
+        $pedido->refresh();
+
+        if (!$pedido->canBeEditedByWaiter()) {
+            return response()->json([
+                'message' => 'Este pedido ya fue enviado a cocina y no puede confirmarse nuevamente.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $pedido->releaseToKitchen(Pedido::RELEASE_TRIGGER_WAITER_CONFIRMATION);
+        $pedido->load(['cliente:id,nombre', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+
+        return response()->json([
+            'message' => 'Cambios confirmados. Pedido enviado a cocina.',
             'data' => $this->transformOrder($pedido),
         ]);
     }
@@ -66,7 +142,8 @@ class MeseroOrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if (!$pedido->isInRetentionWindow()) {
+        if (!$pedido->canBeEditedByWaiter()) {
+
             return response()->json([
                 'message' => 'Este pedido ya fue enviado a cocina y no puede modificarse.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -118,10 +195,10 @@ class MeseroOrderController extends Controller
             $pedido->save();
         });
 
-        $pedido->load(['cliente:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+        $pedido->load(['cliente:id,nombre', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
 
         return response()->json([
-            'message' => 'Pedido actualizado correctamente.',
+            'message' => 'Pedido actualizado correctamente. Usa "Confirmar cambios y enviar a cocina" cuando esté listo.',
             'data' => $this->transformOrder($pedido),
         ]);
     }
@@ -137,7 +214,8 @@ class MeseroOrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if (!$pedido->isInRetentionWindow()) {
+        if (!$pedido->canBeEditedByWaiter()) {
+
             return response()->json([
                 'message' => 'Este pedido ya fue enviado a cocina y no puede cancelarse con el flujo normal.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -192,11 +270,23 @@ class MeseroOrderController extends Controller
             'created_at' => optional($pedido->created_at)->toIso8601String(),
             'updated_at' => optional($pedido->updated_at)->toIso8601String(),
             'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
-            'can_be_edited' => $pedido->isInRetentionWindow(),
+            'change_requested_at' => optional($pedido->change_requested_at)->toIso8601String(),
+            'change_request_reason' => $pedido->change_request_reason,
+            'change_request_count' => (int) ($pedido->change_request_count ?? 0),
+            'change_request_overdue' => $pedido->isChangeRequestOverdue(),
+            'release_trigger' => $pedido->release_trigger,
+            'can_be_edited' => $pedido->canBeEditedByWaiter(),
+            'can_request_change' => $pedido->canRequestChange(),
+            'can_send_to_kitchen' => $pedido->canBeEditedByWaiter(),
+
             'mesa' => $pedido->mesa,
             'cliente' => [
                 'id' => $pedido->cliente?->id,
                 'nombre' => $pedido->cliente?->nombre,
+            ],
+            'change_requested_by_user' => [
+                'id' => $pedido->changeRequestedByUser?->id,
+                'nombre' => $pedido->changeRequestedByUser?->nombre,
             ],
             'items_count' => $items->sum('cantidad'),
             'items' => $items,

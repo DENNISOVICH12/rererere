@@ -44,7 +44,8 @@ class PedidoStoreRequest extends FormRequest
             'cliente_id'          => 'required|integer|exists:clientes,id',
             'restaurant_id'       => 'required|integer|exists:restaurants,id',
             'mesa'                => 'nullable|string|max:50',
-            'estado'              => 'nullable|in:retenido,pendiente,en_entrega,preparando,listo,entregado,cancelado',
+            'estado'              => 'nullable|in:retenido,modificacion_solicitada,pendiente,en_entrega,preparando,listo,entregado,cancelado',
+
             'items'               => 'required|array|min:1',
 
             // opción A: usar menu_item_id

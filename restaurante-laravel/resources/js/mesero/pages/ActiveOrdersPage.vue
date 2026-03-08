@@ -13,6 +13,7 @@
         :busy="Boolean(busyMap[order.id])"
         @edit="$emit('edit', order)"
         @delete="$emit('delete', order)"
+        @request-change="$emit('request-change', order)"
       />
       <p v-if="!orders.length" class="empty">Sin pedidos activos en este filtro.</p>
     </div>
@@ -29,11 +30,13 @@ defineProps({
   busyMap: Object,
 });
 
-defineEmits(['edit', 'delete', 'change-filter']);
+defineEmits(['edit', 'delete', 'request-change', 'change-filter']);
 
 const chips = [
   { value: '', label: 'Todos' },
-  { value: 'retenido', label: 'Retenidos (editable)' },
+  { value: 'retenido', label: 'Ventana de cambios' },
+  { value: 'modificacion_solicitada', label: 'Modificación solicitada' },
+
   { value: 'pendiente', label: 'Pendiente' },
   { value: 'preparando', label: 'En preparación' },
   { value: 'listo', label: 'Listo' },

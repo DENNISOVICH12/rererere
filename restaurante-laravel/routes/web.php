@@ -98,6 +98,8 @@ Route::middleware(['auth:web', 'role:mesero'])->group(function () {
         Route::get('/orders', [MeseroOrderController::class, 'index']);
         Route::get('/orders/{pedido}', [MeseroOrderController::class, 'show']);
         Route::put('/orders/{pedido}', [MeseroOrderController::class, 'update']);
+        Route::post('/orders/{pedido}/request-change', [MeseroOrderController::class, 'requestChange']);
+        Route::post('/orders/{pedido}/send-to-kitchen', [MeseroOrderController::class, 'sendToKitchen']);
         Route::delete('/orders/{pedido}', [MeseroOrderController::class, 'destroy']);
         Route::get('/menu-items', [MeseroOrderController::class, 'menuItems']);
     });

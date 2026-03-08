@@ -82,10 +82,12 @@ function showToast(message, type = "success") {
 /* =====================================================
    🔥 TIMELINE
 ===================================================== */
-const timelineSteps = ['retenido', 'pendiente', 'preparando', 'listo', 'entregado']
+const timelineSteps = ['retenido', 'modificacion_solicitada', 'pendiente', 'preparando', 'listo', 'entregado']
 
 const stepLabels = {
   retenido: 'En ventana de cambios',
+  modificacion_solicitada: 'Modificación solicitada',
+
   pendiente: 'Pendiente',
   preparando: 'En cocina',
   listo: 'Listo',
@@ -387,16 +389,26 @@ const holdCountdownLabel = computed(() => {
 
 const isPedidoRetenido = computed(() => pedidoActual.value?.estado === 'retenido')
 
-const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedidoRetenido.value)
+const isChangeRequested = computed(() => pedidoActual.value?.estado === 'modificacion_solicitada')
+
+const holdWindowFinished = computed(() => Boolean(pedidoActual.value) && !isPedidoRetenido.value && !isChangeRequested.value)
+
 
 const wasSentEarly = computed(() => pedidoActual.value?.release_trigger === 'early_confirmation')
 
 const postReleaseMessage = computed(() => {
-  if (!pedidoActual.value || isPedidoRetenido.value) return ''
+  if (!pedidoActual.value || isPedidoRetenido.value || isChangeRequested.value) return ''
+
   if (wasSentEarly.value) {
     return 'Tu pedido fue enviado a cocina por confirmación anticipada. Ya no es posible realizar cambios.'
   }
   return 'Tu pedido ya fue enviado a cocina. Ya no es posible realizar cambios.'
+})
+
+
+const changeRequestedMessage = computed(() => {
+  if (!isChangeRequested.value) return ''
+  return 'Tu solicitud de cambio fue registrada. Un mesero atenderá tu mesa para actualizar el pedido. Mientras tanto, tu pedido no se enviará a cocina.'
 })
 
 
@@ -478,13 +490,19 @@ const postReleaseMessage = computed(() => {
       <div class="hold-banner__icon" aria-hidden="true">⏱</div>
       <div class="hold-banner__content">
         <p>Tienes <strong>{{ holdCountdownLabel }}</strong> para llamar a un mesero y modificar tu pedido.</p>
-        <small>Puedes modificar tu pedido durante los próximos {{ holdWindowMinutes }} minutos.</small>
+        <small>Puedes solicitar modificaciones durante los próximos {{ holdWindowMinutes }} minutos.</small>
         <small class="hold-banner__warning">Si decides enviarlo ahora, ya no podrás realizar cambios.</small>
       </div>
       <span class="hold-banner__time">{{ holdCountdownLabel }}</span>
-      <button class="send-now-btn" type="button" @click="showSendNowConfirm = true">
+      <button class="send-now-btn" type="button" :disabled="!pedidoActual?.can_send_now" @click="showSendNowConfirm = true">
         Confirmar pedido y enviar a cocina
       </button>
+    </div>
+
+    <div v-else-if="isChangeRequested" class="hold-banner hold-banner--change-requested">
+      <div class="hold-banner__icon" aria-hidden="true">📝</div>
+      <strong>{{ changeRequestedMessage }}</strong>
+
     </div>
 
     <div v-else-if="holdWindowFinished" class="hold-banner hold-banner--done">
@@ -1365,6 +1383,7 @@ const postReleaseMessage = computed(() => {
   opacity: 0.75;
 }
 
+
 .status-now__value{
   color:#ffd7aa;
   font-size: 12.5px;
@@ -1777,6 +1796,12 @@ const postReleaseMessage = computed(() => {
   background: rgba(156, 32, 48, .45);
 }
 
+.send-now-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+
 .send-now-modal p {
   margin: 8px 0 0;
   color: rgba(255,255,255,.8);
@@ -1806,6 +1831,13 @@ const postReleaseMessage = computed(() => {
   background: rgba(7, 19, 34, .42);
   border: 1px solid rgba(255,255,255,.14);
 }
+.hold-banner--change-requested {
+  grid-template-columns: auto 1fr;
+  background: linear-gradient(135deg, rgba(255, 211, 123, 0.14), rgba(255, 211, 123, 0.05));
+  border-color: rgba(255, 211, 123, 0.35);
+}
+
+
 .hold-banner--done {
   grid-template-columns: auto 1fr;
   background: linear-gradient(135deg, rgba(110, 247, 176, 0.14), rgba(110, 247, 176, 0.06));
@@ -1877,6 +1909,7 @@ const postReleaseMessage = computed(() => {
     box-sizing: border-box;
     text-align: center;
   }
+
   .status-now {
     width: 100%;
     justify-content: space-between;

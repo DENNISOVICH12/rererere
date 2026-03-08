@@ -8,6 +8,7 @@
       :busy-map="busyMap"
       @edit="openEditor"
       @delete="requestDelete"
+      @request-change="requestChange"
       @change-filter="changeFilter"
     />
 
@@ -15,8 +16,10 @@
       v-else-if="view === 'edit' && selectedOrder"
       :order="selectedOrder"
       :saving="savingEdit"
+      :sending="sendingToKitchen"
       @back="closeEditor"
       @save="submitEdit"
+      @send-to-kitchen="confirmSendToKitchen"
     />
 
     <ConfirmDialog
@@ -35,7 +38,14 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { deleteOrder, getOrder, listActiveOrders, updateOrder } from './api';
+import {
+  deleteOrder,
+  getOrder,
+  listActiveOrders,
+  requestOrderChange,
+  sendOrderToKitchen,
+  updateOrder,
+} from './api';
 import ActiveOrdersPage from './pages/ActiveOrdersPage.vue';
 import EditOrderPage from './pages/EditOrderPage.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
@@ -47,6 +57,7 @@ const view = ref('list');
 const selectedOrder = ref(null);
 const busyMap = reactive({});
 const savingEdit = ref(false);
+const sendingToKitchen = ref(false);
 const tick = ref(Date.now());
 
 const toast = reactive({ show: false, message: '', type: 'info' });
@@ -89,37 +100,60 @@ const closeEditor = () => {
 };
 
 const submitEdit = async ({ id, payload }) => {
-  const prev = [...orders.value];
-  const index = orders.value.findIndex((o) => o.id === id);
-  if (index >= 0) {
-    orders.value[index] = { ...orders.value[index], ...payload, items_count: payload.items.reduce((acc, i) => acc + i.cantidad, 0) };
-  }
-
   try {
     savingEdit.value = true;
     const updated = await updateOrder(id, payload);
     const patchIndex = orders.value.findIndex((o) => o.id === id);
     if (patchIndex >= 0) orders.value[patchIndex] = updated;
-    showToast('Pedido actualizado', 'success');
-    closeEditor();
+    selectedOrder.value = updated;
+    showToast('Pedido actualizado. Cuando esté listo, confírmalo para cocina.', 'success');
   } catch (error) {
-    orders.value = prev;
-    if (error?.response?.status === 409 && error?.response?.data?.requires_confirmation) {
-      confirm.open = true;
-      confirm.title = 'Confirmación fuerte requerida';
-      confirm.message = error.response.data.message;
-      confirm.confirmText = 'Editar de todos modos';
-      confirm.action = async () => {
-        confirm.loading = true;
-        await submitEdit({ id, payload: { ...payload, force_confirmation: true } });
-        confirm.loading = false;
-        confirm.open = false;
-      };
-      return;
-    }
     showToast(error?.response?.data?.message || 'No se pudo actualizar', 'error');
   } finally {
     savingEdit.value = false;
+  }
+};
+
+const confirmSendToKitchen = (order) => {
+  confirm.open = true;
+  confirm.title = `Enviar pedido #${order.id} a cocina`;
+  confirm.message = 'Una vez enviado a cocina, ya no podrá modificarse con el flujo normal.';
+  confirm.confirmText = 'Confirmar y enviar';
+  confirm.action = () => performSendToKitchen(order.id);
+};
+
+const performSendToKitchen = async (orderId) => {
+  confirm.loading = true;
+  sendingToKitchen.value = true;
+
+  try {
+    const updated = await sendOrderToKitchen(orderId);
+    const patchIndex = orders.value.findIndex((o) => o.id === orderId);
+    if (patchIndex >= 0) orders.value[patchIndex] = updated;
+    selectedOrder.value = updated;
+    showToast('Pedido enviado a cocina correctamente.', 'success');
+    confirm.open = false;
+    closeEditor();
+    await loadOrders();
+  } catch (error) {
+    showToast(error?.response?.data?.message || 'No se pudo enviar a cocina', 'error');
+  } finally {
+    confirm.loading = false;
+    sendingToKitchen.value = false;
+  }
+};
+
+const requestChange = async (order) => {
+  busyMap[order.id] = true;
+
+  try {
+    const updated = await requestOrderChange(order.id, {});
+    orders.value = orders.value.map((item) => (item.id === order.id ? updated : item));
+    showToast('Solicitud de cambio registrada. Pedido retenido hasta atención del mesero.', 'success');
+  } catch (error) {
+    showToast(error?.response?.data?.message || 'No se pudo registrar la solicitud de cambio.', 'error');
+  } finally {
+    busyMap[order.id] = false;
   }
 };
 
@@ -143,13 +177,6 @@ const performDelete = async (order, force) => {
     confirm.open = false;
   } catch (error) {
     orders.value = previous;
-    if (error?.response?.status === 409 && error?.response?.data?.requires_confirmation && !force) {
-      confirm.title = 'Confirmación fuerte requerida';
-      confirm.message = error.response.data.message;
-      confirm.confirmText = 'Cancelar de todos modos';
-      confirm.action = () => performDelete(order, true);
-      return;
-    }
     showToast(error?.response?.data?.message || 'No se pudo cancelar', 'error');
   } finally {
     confirm.loading = false;
