@@ -41,6 +41,7 @@ Route::get('/menu-items', [MenuItemController::class, 'index']);
 Route::post('/orders', [OrderController::class, 'store']);
 Route::get('/orders', [OrderController::class, 'index']);
 Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+Route::post('/orders/{order}/send-now', [OrderController::class, 'sendNowToKitchen']);
 Route::get('/clientes/{cliente}/pedidos', [OrderController::class, 'clientePedidos']);
 
 Route::get('/menu/today', [MenuController::class, 'showToday']);

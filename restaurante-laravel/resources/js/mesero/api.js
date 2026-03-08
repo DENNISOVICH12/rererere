@@ -2,8 +2,7 @@ import axios from 'axios';
 
 const http = axios.create({
     baseURL: '/api/mesero',
-    withCredentials: true, // ✅ manda cookies de sesión
-
+    withCredentials: true,
     headers: {
         Accept: 'application/json',
     },
@@ -17,6 +16,12 @@ export const getOrder = (orderId) =>
 
 export const updateOrder = (orderId, payload) =>
     http.put(`/orders/${orderId}`, payload).then((r) => r.data.data);
+
+export const requestOrderChange = (orderId, payload = {}) =>
+    http.post(`/orders/${orderId}/request-change`, payload).then((r) => r.data.data);
+
+export const sendOrderToKitchen = (orderId) =>
+    http.post(`/orders/${orderId}/send-to-kitchen`).then((r) => r.data.data);
 
 export const deleteOrder = (orderId, payload = {}) =>
     http.delete(`/orders/${orderId}`, { data: payload });

@@ -9,8 +9,11 @@ class PedidoController extends Controller
 {
     public function index()
     {
+        Pedido::releaseExpiredRetentionWindow();
+
         // ✅ Retornar pedidos en JSON para la vista de cocina
         $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
+            ->whereNotIn('estado', [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -19,8 +22,10 @@ class PedidoController extends Controller
 
     public function pedidosPendientes()
     {
+        Pedido::releaseExpiredRetentionWindow();
+
         $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
-            ->where('estado', 'pendiente')
+            ->where('estado', Pedido::STATUS_PENDING)
             ->orderBy('created_at', 'asc')
             ->get();
 
