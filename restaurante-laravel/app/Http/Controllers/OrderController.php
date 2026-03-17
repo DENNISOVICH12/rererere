@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+
 class OrderController extends Controller
 {
     private const HOLD_SECONDS = 60;
@@ -65,19 +66,27 @@ class OrderController extends Controller
         ]);
 
         foreach ($items as $item) {
-            $cantidad = (int) ($item['cantidad'] ?? 0);
-            $precioUnitario = (float) ($item['precio_unitario'] ?? 0);
+    $cantidad = (int) ($item['cantidad'] ?? 0);
+    $precioUnitario = (float) ($item['precio_unitario'] ?? 0);
 
-            PedidoDetalle::create([
-                'restaurant_id' => $restaurantId,
-                'pedido_id' => $order->id,
-                'menu_item_id' => $item['menu_item_id'],
-                'cantidad' => $cantidad,
-                'precio_unitario' => $precioUnitario,
-                'importe' => $precioUnitario * $cantidad,
-                'nota' => $item['nota'] ?? null,
-            ]);
-        }
+    $menuItem = \App\Models\MenuItem::find($item['menu_item_id']);
+
+    $grupoServicio = strtolower($menuItem?->categoria ?? '') === 'bebida'
+        ? 'bebida'
+        : 'plato';
+
+    PedidoDetalle::create([
+        'restaurant_id' => $restaurantId,
+        'pedido_id' => $order->id,
+        'menu_item_id' => $item['menu_item_id'],
+        'cantidad' => $cantidad,
+        'precio_unitario' => $precioUnitario,
+        'importe' => $precioUnitario * $cantidad,
+        'nota' => $item['nota'] ?? null,
+        'grupo_servicio' => $grupoServicio,
+        'estado_servicio' => 'pendiente',
+    ]);
+}
 
         return response()->json([
             'message' => 'Pedido creado exitosamente.',
@@ -233,15 +242,46 @@ class OrderController extends Controller
     }
 
     private function transformCustomerOrderPayload(Pedido $pedido): array
-    {
-        return [
-            ...$pedido->toArray(),
-            'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
-            'released_to_kitchen_at' => optional($pedido->released_to_kitchen_at)->toIso8601String(),
-            'release_trigger' => $pedido->release_trigger,
-            'can_be_edited' => $pedido->canBeEditedByWaiter(),
-            'can_send_now' => $pedido->isInRetentionWindow(),
-            'change_request_overdue' => $pedido->isChangeRequestOverdue(),
-        ];
-    }
+{
+    $grupos = $pedido->detalle
+        ->groupBy('grupo_servicio')
+        ->map(function ($items, $grupo) {
+            return [
+                'grupo' => $grupo,
+                'estado' => $items->pluck('estado_servicio')->unique()->first(),
+                'items' => $items->values(),
+            ];
+        })
+        ->values();
+
+    return [
+        ...$pedido->toArray(),
+        'grupos_servicio' => $grupos,
+
+        'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
+        'released_to_kitchen_at' => optional($pedido->released_to_kitchen_at)->toIso8601String(),
+        'release_trigger' => $pedido->release_trigger,
+        'can_be_edited' => $pedido->canBeEditedByWaiter(),
+        'can_send_now' => $pedido->isInRetentionWindow(),
+        'change_request_overdue' => $pedido->isChangeRequestOverdue(),
+    ];
+}
+
+    public function updateGrupoServicio(Request $request, Pedido $order): JsonResponse
+{
+    $request->validate([
+        'grupo_servicio' => 'required|in:bebida,plato',
+        'estado_servicio' => 'required|in:pendiente,preparando,listo,entregado',
+    ]);
+
+    PedidoDetalle::where('pedido_id', $order->id)
+        ->where('grupo_servicio', $request->grupo_servicio)
+        ->update([
+            'estado_servicio' => $request->estado_servicio
+        ]);
+
+    return response()->json([
+        'message' => "Estado actualizado para {$request->grupo_servicio} ✅"
+    ]);
+}
 }

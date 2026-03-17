@@ -22,6 +22,8 @@ use App\Http\Controllers\{
 Route::get('/ping', [HealthController::class, 'ping']);
 
 
+Route::patch('/orders/{order}/grupo_servicio', [OrderController::class, 'updateGrupoServicio']);
+
 // Kitchen Display System API
 Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
     Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);

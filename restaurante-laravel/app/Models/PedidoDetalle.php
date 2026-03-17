@@ -15,7 +15,9 @@ class PedidoDetalle extends Model
         'precio_unitario',
         'importe',
         'restaurant_id',
-        'nota', // ✅ agregar
+        'nota', // ✅ agregar44
+        'grupo_servicio',
+        'estado_servicio',
     ];
 
     public function pedido()
