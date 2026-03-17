@@ -97,9 +97,23 @@
 
             <div class="details-footer">
               <p class="details-price">${{ Number(activeItem.precio).toLocaleString() }}</p>
-              <button class="details-add-btn" @click="addToCart(activeItem)">
-                Agregar 🛒
-              </button>
+
+              <transition name="add-counter-swap" mode="out-in">
+                <button
+                  v-if="getItemQuantity(activeItem.id) === 0"
+                  key="add"
+                  class="details-add-btn"
+                  @click="addToCart(activeItem)"
+                >
+                  Agregar 🛒
+                </button>
+
+                <div v-else key="counter" class="details-counter" aria-label="Control de cantidad">
+                  <button class="counter-btn" @click="decrease(activeItem)">−</button>
+                  <span class="counter-value">{{ getItemQuantity(activeItem.id) }}</span>
+                  <button class="counter-btn" @click="addToCart(activeItem)">+</button>
+                </div>
+              </transition>
             </div>
           </div>
         </div>
@@ -154,7 +168,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import { API_BASE } from '../api.js'
-import { addToCart } from '../cart.js'
+import { addToCart, cart, removeFromCart, saveCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
 
 const items = ref([])
@@ -224,6 +238,29 @@ function markImageError(itemId) {
 
 function hasItemImage(item) {
   return Boolean(getItemImage(item)) && !imageErrors.value[item.id]
+}
+
+function getItemQuantity(itemId) {
+  return cart.value.find(i => i.id === itemId)?.quantity || 0
+}
+
+function decrease(item) {
+  const existing = cart.value.find(i => i.id === item.id)
+  if (!existing) return
+
+  if (existing.quantity > 1) {
+    existing.quantity--
+  } else {
+    removeFromCart(item.id)
+    return
+  }
+
+  const index = cart.value.findIndex(i => i.id === item.id)
+  if (index > -1) {
+    cart.value[index] = { ...existing }
+  }
+
+  saveCart()
 }
 
 async function login() {
@@ -630,6 +667,54 @@ onMounted(async () => {
 .details-add-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 26px rgba(158, 40, 58, 0.48);
+}
+
+.details-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(18, 18, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+}
+
+.counter-btn {
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #6f1220 0%, #9f2132 55%, #bb3143 100%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.counter-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(158, 40, 58, 0.4);
+}
+
+.counter-value {
+  min-width: 22px;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffd7aa;
+}
+
+.add-counter-swap-enter-active,
+.add-counter-swap-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.add-counter-swap-enter-from,
+.add-counter-swap-leave-to {
+  opacity: 0;
+  transform: translateY(5px) scale(0.97);
 }
 
 .details-fade-enter-active,
