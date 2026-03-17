@@ -1,7 +1,7 @@
 <script setup>
-import KitchenPro from './KitchenPro.vue'
+import KdsView from './KdsView.vue'
 </script>
 
 <template>
-  <KitchenPro />
+  <KdsView />
 </template>

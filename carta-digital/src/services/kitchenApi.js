@@ -25,3 +25,12 @@ export async function deliverKitchenOrder(orderId) {
   const { data } = await kitchenClient.patch(`/kitchen/orders/${orderId}/deliver`)
   return data
 }
+
+export async function updateKitchenGroupStatus(orderId, grupo, estado) {
+  const { data } = await kitchenClient.patch(`/kitchen/orders/${orderId}/groups/status`, {
+    grupo,
+    estado,
+  })
+
+  return data
+}
