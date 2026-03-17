@@ -14,7 +14,8 @@ use App\Http\Controllers\{
     AuthController,
     OrderController,
     KitchenOrderController,
-    MeseroOrderController
+    MeseroOrderController,
+    ClienteAuthController
 };
 
 // Health Check
@@ -35,6 +36,8 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
 Route::post('/login-cliente', [AuthController::class, 'loginCliente']);
 Route::post('/register-cliente', [AuthController::class, 'registerCliente']);
 
+Route::post('/cliente/register', [ClienteAuthController::class, 'register']);
+Route::post('/cliente/login', [ClienteAuthController::class, 'login']);
 
 // Carta Digital (pública)
 Route::get('/menu-items', [MenuItemController::class, 'index']);

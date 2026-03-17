@@ -11,7 +11,7 @@
       </div>
 
       <div v-else class="user-info">
-        <span class="user-name">👤 {{ cliente.nombre }}</span>
+        <span class="user-name">👤 {{ cliente.nombres }}</span>
         <button class="logout-btn" @click="logoutCliente">
           Cerrar sesión
         </button>
@@ -119,7 +119,7 @@
         </div>
 
         <div v-if="modalTab === 'login'">
-          <input class="input" :class="{ error: showErrors && !form.usuario }" placeholder="Usuario" v-model="form.usuario">
+          <input class="input" :class="{ error: showErrors && !form.correo }" type="email" placeholder="Correo" v-model="form.correo">
           <input class="input" :class="{ error: showErrors && !form.password }" type="password" placeholder="Contraseña" v-model="form.password">
 
           <p v-if="loginMessage" class="status-msg">{{ loginMessage }}</p>
@@ -131,11 +131,11 @@
         </div>
 
         <div v-if="modalTab === 'register'">
-          <input class="input" placeholder="Usuario" v-model="register.usuario">
-          <input class="input" placeholder="Nombres" v-model="register.nombres">
-          <input class="input" placeholder="Apellidos" v-model="register.apellidos">
-          <input class="input" type="email" placeholder="Correo" v-model="register.correo">
-          <input class="input" type="password" placeholder="Contraseña" v-model="register.password">
+            <input class="input" placeholder="Nombres" v-model="register.nombres">
+            <input class="input" placeholder="Apellidos" v-model="register.apellidos">
+            <input class="input" type="email" placeholder="Correo" v-model="register.correo">
+            <input class="input" type="password" placeholder="Contraseña" v-model="register.password">
+            <input class="input" placeholder="Teléfono" v-model="register.telefono">
 
           <p v-if="registerMessage" class="status-msg">{{ registerMessage }}</p>
 
@@ -165,9 +165,14 @@ const showLogin = ref(false)
 const modalTab = ref('login')
 const activeItem = ref(null)
 
-const form = ref({ usuario: '', password: '' })
-const register = ref({ usuario: '', nombres: '', apellidos: '', correo: '', password: '' })
-
+const form = ref({ correo: '', password: '' })
+const register = ref({
+  nombres: '',
+  apellidos: '',
+  correo: '',
+  password: '',
+  telefono: ''
+})
 const loadingLogin = ref(false)
 const showErrors = ref(false)
 const loginMessage = ref('')
@@ -225,7 +230,7 @@ async function login() {
   showErrors.value = true
   loginMessage.value = ''
 
-  if (!form.value.usuario || !form.value.password) {
+  if (!form.value.correo || !form.value.password) {
     loginMessage.value = '⚠️ Completa todos los campos.'
     return
   }
@@ -233,14 +238,19 @@ async function login() {
   loadingLogin.value = true
 
   try {
-    const res = await axios.post(`${API_BASE}/login-cliente`, form.value)
+    const res = await axios.post(`${API_BASE}/cliente/login`, {
+      correo: form.value.correo,
+      password: form.value.password
+    })
+
     setCliente(res.data.cliente)
     loginMessage.value = '✅ Sesión iniciada'
+
     setTimeout(() => {
       showLogin.value = false
     }, 800)
   } catch {
-    loginMessage.value = '❌ Usuario o contraseña incorrectos'
+    loginMessage.value = '❌ Correo o contraseña incorrectos'
   } finally {
     loadingLogin.value = false
   }
@@ -250,20 +260,28 @@ async function registerUser() {
   registerMessage.value = ''
 
   try {
-    await axios.post(`${API_BASE}/register-cliente`, register.value)
+    await axios.post(`${API_BASE}/cliente/register`, {
+      nombres: register.value.nombres,
+      apellidos: register.value.apellidos,
+      correo: register.value.correo,
+      password: register.value.password,
+      telefono: register.value.telefono || null,
+      restaurant_id: 1
+    })
 
-    const loginRes = await axios.post(`${API_BASE}/login-cliente`, {
-      usuario: register.value.usuario,
+    const loginRes = await axios.post(`${API_BASE}/cliente/login`, {
+      correo: register.value.correo,
       password: register.value.password
     })
 
     setCliente(loginRes.data.cliente)
     registerMessage.value = '✅ Cuenta creada'
+
     setTimeout(() => {
       showLogin.value = false
     }, 800)
   } catch {
-    registerMessage.value = '❌ Error registrando usuario'
+    registerMessage.value = '❌ Error registrando cliente'
   }
 }
 

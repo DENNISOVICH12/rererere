@@ -204,9 +204,19 @@
                         default       => 'background:#666; color:white;'
                     };
 
-                    $clienteNombre = $p->cliente?->usuario ?? 'Invitado';
-                    $clienteStyle = $p->cliente ? 'color:#a4c6ff;' : 'color:#ccc;';
-                    $clienteIcon  = $p->cliente ? '✨' : '🧾';
+                    $clienteNombre = $p->cliente
+    ? trim(($p->cliente->nombres ?? '') . ' ' . ($p->cliente->apellidos ?? ''))
+    : 'Invitado';
+
+if ($clienteNombre === '') {
+    $clienteNombre = 'Invitado';
+}
+
+$esInvitado = $p->cliente
+    && strtolower(trim(($p->cliente->nombres ?? '') . ' ' . ($p->cliente->apellidos ?? ''))) === 'cliente invitado';
+
+$clienteStyle = $p->cliente ? 'color:#a4c6ff;' : 'color:#ccc;';
+$clienteIcon  = $esInvitado || !$p->cliente ? '🧾' : '✨';
                 @endphp
 
                 <tr style="{{ $estado === 'pendiente' ? 'background:rgba(255,0,0,0.08);' : '' }}">
