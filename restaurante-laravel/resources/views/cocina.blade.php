@@ -548,6 +548,45 @@ body.has-admin-back .kds { padding-top: 64px; }
   padding: 2px 8px;
   border-radius: 999px;
 }
+
+
+/* ===== KDS layout por grupos de servicio ===== */
+.kds-grid { flex: 1; min-height: 0; }
+.kds-grid-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(390px, 1fr));
+  gap: 14px;
+}
+.kds-card {
+  background: linear-gradient(180deg, rgba(15,21,33,.96), rgba(11,16,26,.94));
+  border: 1px solid rgba(186, 201, 227, .22);
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+.kds-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.kds-meta { margin: 5px 0 0; color: #c6d0e2; font-size: .9rem; }
+.service-block {
+  border-radius: 14px;
+  border: 1px solid rgba(186,201,227,.24);
+  background: rgba(20,27,41,.66);
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+.service-block-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.service-block--pendiente { border-color: rgba(234, 72, 72, .65); box-shadow: inset 0 0 0 1px rgba(234,72,72,.22); }
+.service-block--preparando { border-color: rgba(250, 204, 21, .65); box-shadow: inset 0 0 0 1px rgba(250,204,21,.22); }
+.service-block--listo { border-color: rgba(34, 197, 94, .65); box-shadow: inset 0 0 0 1px rgba(34,197,94,.22); }
+.service-block--entregado { border-color: rgba(59, 130, 246, .65); box-shadow: inset 0 0 0 1px rgba(59,130,246,.22); }
+.action-next-pendiente { background: linear-gradient(180deg, #dc2626, #991b1b); color: #fff3f3; }
+.action-next-preparando { background: linear-gradient(180deg, #facc15, #ca8a04); color: #201803; }
+.action-next-listo { background: linear-gradient(180deg, #16a34a, #166534); color: #effff5; }
+@media (max-width: 900px) {
+  .kds-grid-inner { grid-template-columns: 1fr; }
+}
+
 </style>
 </head>
 
@@ -563,10 +602,11 @@ body.has-admin-back .kds { padding-top: 64px; }
   <header class="topbar">
     <h1 class="topbar-title">Cocina</h1>
 
-    <div class="status-chips" role="status" aria-live="polite" aria-label="Resumen de estados">
-      <span class="status-chip status-chip--pending"><span class="status-chip-label">Pendiente</span><span class="status-chip-value">@{{ grouped.pendiente.length }}</span></span>
-      <span class="status-chip status-chip--cooking"><span class="status-chip-label">En cocina</span><span class="status-chip-value">@{{ grouped.preparando.length }}</span></span>
-      <span class="status-chip status-chip--ready"><span class="status-chip-label">Listo</span><span class="status-chip-value">@{{ grouped.listo.length }}</span></span>
+    <div class="status-chips" role="status" aria-live="polite" aria-label="Resumen de grupos de servicio">
+      <span class="status-chip status-chip--pending"><span class="status-chip-label">🍹 Bebidas pendientes</span><span class="status-chip-value">@{{ serviceSummary.bebida.pendiente }}</span></span>
+      <span class="status-chip status-chip--cooking"><span class="status-chip-label">🍽 Platos preparando</span><span class="status-chip-value">@{{ serviceSummary.plato.preparando }}</span></span>
+      <span class="status-chip status-chip--ready"><span class="status-chip-label">✅ Grupos listos</span><span class="status-chip-value">@{{ totalReadyGroups }}</span></span>
+      <span class="status-chip"><span class="status-chip-label">⏱ Atrasados</span><span class="status-chip-value">@{{ delayedCount }}</span></span>
     </div>
 
     <div class="topbar-right">
@@ -591,64 +631,63 @@ body.has-admin-back .kds { padding-top: 64px; }
 
   <p v-if="error" class="error">@{{ error }}</p>
 
-  <div class="board">
-    <section v-for="column in columns" :key="column.key" class="col">
-      <header class="col-head">
-        <strong class="col-title">@{{ column.title }}</strong>
-        <span class="count-chip">@{{ grouped[column.key].length }}</span>
-      </header>
+  <div class="kds-grid">
+    <transition-group name="fade" tag="div" class="kds-grid-inner">
+      <article
+        v-for="order in boardOrders"
+        :key="order.id"
+        :id="`order-${order.id}`"
+        class="kds-card"
+        :class="{
+          'card-new': highlightedIds.has(order.id),
+          'card-critical': order._elapsedMin > 6,
+          'card-selected': selectedOrderId === order.id,
+        }"
+        @click="openOrderDetails(order)"
+      >
+        <header class="kds-card-head">
+          <div>
+            <h2 class="num">Pedido #@{{ order.id }}</h2>
+            <p class="kds-meta">Mesa @{{ order.mesa || '-' }} · @{{ fmtTime(order.created_at) }} · @{{ order.cliente?.nombre || order.cliente_nombre || 'Cliente general' }}</p>
+          </div>
+          <span class="timer" :class="timerClass(order)">@{{ formatElapsed(order._elapsedMs) }}</span>
+        </header>
 
-      <transition-group name="fade" tag="div" class="col-list">
-        <article
-          v-for="order in grouped[column.key]"
-          :key="order.id"
-          :id="`order-${order.id}`"
-          class="card"
-          :class="{
-            'card-new': highlightedIds.has(order.id),
-            'card-critical': order._elapsedMin > 6,
-            'card-selected': selectedOrderId === order.id,
-            'card-saving': processingIds.has(order.id),
-          }"
-          @click="openOrderDetails(order)"
+        <p v-if="order._elapsedMin > 6" class="priority-pill">Atrasado +@{{ Math.floor(order._elapsedMin - 6) }} min</p>
+
+        <section
+          v-for="group in serviceGroupsFor(order)"
+          :key="`${order.id}-${group.key}`"
+          class="service-block"
+          :class="`service-block--${group.status}`"
+          @click.stop
         >
-          <header class="card-head">
-            <span class="num">#@{{ order.id }}</span>
-            <div class="card-head-meta">
-              <span
-                v-if="orderNoteCount(order) > 0"
-                class="note-indicator"
-                role="status"
-                :aria-label="`Pedido con ${orderNoteCount(order)} nota(s)`"
-              >
-                <span class="note-indicator-icon" aria-hidden="true">✎</span>
-                <span>@{{ orderNoteCount(order) }}</span>
-              </span>
-              <span class="timer" :class="timerClass(order)">@{{ formatElapsed(order._elapsedMs) }}</span>
-            </div>
+          <header class="service-block-head">
+            <strong>@{{ group.emoji }} @{{ group.label }}</strong>
+            <span class="badge" :class="serviceBadgeClass(group.status)">@{{ statusLabel(group.status) }}</span>
           </header>
 
           <ul class="items">
-            <li v-for="(item, idx) in getOrderItems(order).slice(0,4)" :key="item._k || item.id || `${order.id}-${idx}`">
+            <li v-for="item in group.items" :key="item._k">
               <span class="qty">@{{ item._qty }}x</span>
               <span class="name">@{{ item._name }}</span>
             </li>
           </ul>
 
-          <p v-if="orderPreviewNote(order)" class="card-note-preview" :title="orderPreviewNote(order)">@{{ orderPreviewNote(order) }}</p>
-
           <button
-            v-if="actionFor(order)"
+            v-if="nextServiceStatus(group.status)"
             class="action"
-            :class="actionFor(order).className"
-            :disabled="processingIds.has(order.id)"
-            @click.stop="actionFor(order).run()"
+            :class="serviceActionClass(group.status)"
+            :disabled="isGroupProcessing(order.id, group.key)"
+            @click.stop="updateGroupStatus(order.id, group.key, nextServiceStatus(group.status))"
           >
-            @{{ processingIds.has(order.id) ? 'Guardando…' : actionFor(order).label }}
+            @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : serviceActionLabel(group.status) }}
           </button>
-        </article>
-      </transition-group>
-    </section>
+        </section>
+
+        <p v-if="orderPreviewNote(order)" class="card-note-preview" :title="orderPreviewNote(order)">@{{ orderPreviewNote(order) }}</p>
+      </article>
+    </transition-group>
   </div>
 
   <order-details-drawer
@@ -773,6 +812,9 @@ function normalizeOrderItems(order) {
       'pivot.extras','pivot.opciones','detalle.extras'
     ]);
 
+    const serviceGroupRaw = pickFirst(merged, ['grupo_servicio','grupoServicio','service_group','serviceGroup']) || 'plato';
+    const serviceStatusRaw = pickFirst(merged, ['estado_servicio','estadoServicio','service_status','serviceStatus']) || order?.estado || 'pendiente';
+
     return {
       ...raw,
       _k: raw?.id || `${order?.id || 'o'}-${idx}`,
@@ -781,6 +823,8 @@ function normalizeOrderItems(order) {
       _category: category,
       _note: note,
       _extras: extras,
+      _serviceGroup: String(serviceGroupRaw).toLowerCase(),
+      _serviceStatus: String(serviceStatusRaw).toLowerCase(),
     };
   });
 }
@@ -1167,6 +1211,7 @@ Vue.createApp({
       soundEnabled: true,
       highlightedIds: new Set(),
       processingIds: new Set(),
+      processingGroupIds: new Set(),
       optimisticSnapshots: {},
       lastSyncAt: null,
       syncInFlight: false,
@@ -1210,6 +1255,7 @@ Vue.createApp({
         return (this.nowTs - order._createdTs) < DELIVERED_HIDE_MS;
       });
     },
+
     grouped() {
       const groups = { pendiente: [], preparando: [], listo: [], entregado: [] };
       this.normalized.forEach((order) => { if (groups[order.estado]) groups[order.estado].push(order); });
@@ -1218,6 +1264,26 @@ Vue.createApp({
       groups.listo.sort((a, b) => b._createdTs - a._createdTs);
       groups.entregado.sort((a, b) => b._createdTs - a._createdTs);
       return groups;
+    },
+    boardOrders() {
+      return [...this.normalized].sort((a, b) => b._urgency - a._urgency || b._createdTs - a._createdTs);
+    },
+    serviceSummary() {
+      const summary = {
+        bebida: { pendiente: 0, preparando: 0, listo: 0, entregado: 0 },
+        plato: { pendiente: 0, preparando: 0, listo: 0, entregado: 0 },
+      };
+      this.normalized.forEach((order) => {
+        this.serviceGroupsFor(order).forEach((group) => {
+          if (summary[group.key] && summary[group.key][group.status] !== undefined) {
+            summary[group.key][group.status] += 1;
+          }
+        });
+      });
+      return summary;
+    },
+    totalReadyGroups() {
+      return this.serviceSummary.bebida.listo + this.serviceSummary.plato.listo;
     },
     selectedOrder() {
       if (!this.selectedOrderId) return null;
@@ -1237,6 +1303,121 @@ Vue.createApp({
       if (!order) return [];
       if (Array.isArray(order._itemsNorm)) return order._itemsNorm;
       return normalizeOrderItems(order);
+    },
+    fmtTime(dateRaw) {
+      if (!dateRaw) return '-';
+      const ts = Date.parse(dateRaw);
+      if (!Number.isFinite(ts)) return '-';
+      return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    },
+    nextServiceStatus(status) {
+      if (status === 'pendiente') return 'preparando';
+      if (status === 'preparando') return 'listo';
+      if (status === 'listo') return 'entregado';
+      return null;
+    },
+    serviceActionLabel(status) {
+      if (status === 'pendiente') return 'Iniciar preparación';
+      if (status === 'preparando') return 'Marcar como listo';
+      if (status === 'listo') return 'Marcar entregado';
+      return 'Finalizado';
+    },
+    serviceActionClass(status) {
+      if (status === 'pendiente') return 'action-next-pendiente';
+      if (status === 'preparando') return 'action-next-preparando';
+      if (status === 'listo') return 'action-next-listo';
+      return '';
+    },
+    serviceBadgeClass(status) {
+      if (!status) return '';
+      return `b-${status}`;
+    },
+    isGroupProcessing(orderId, groupKey) {
+      return this.processingGroupIds.has(`${orderId}:${groupKey}`);
+    },
+    serviceGroupsFor(order) {
+      const labels = {
+        bebida: { label: 'Bebidas', emoji: '🍹' },
+        plato: { label: 'Platos', emoji: '🍽' },
+      };
+      const groups = { bebida: [], plato: [] };
+      this.getOrderItems(order).forEach((item) => {
+        const key = (item._serviceGroup || 'plato').toLowerCase();
+        if (groups[key]) groups[key].push(item);
+      });
+      return ['bebida', 'plato']
+        .filter((key) => groups[key].length)
+        .map((key) => {
+          const statuses = groups[key].map((item) => item._serviceStatus || order.estado || 'pendiente');
+          const status = this.resolveGroupStatus(statuses);
+          return { key, ...labels[key], status, items: groups[key] };
+        });
+    },
+    resolveGroupStatus(statuses) {
+      if (statuses.includes('pendiente')) return 'pendiente';
+      if (statuses.includes('preparando')) return 'preparando';
+      if (statuses.includes('listo')) return 'listo';
+      return 'entregado';
+    },
+    patchOrderGroupStatus(order, groupKey, nextStatus) {
+      const source = this.getOrderItems(order);
+      const patchedItems = source.map((item) => {
+        if ((item._serviceGroup || 'plato') !== groupKey) return item;
+        return { ...item, _serviceStatus: nextStatus, estado_servicio: nextStatus };
+      });
+      return { ...order, _itemsNorm: patchedItems };
+    },
+    async updateGroupStatus(orderId, groupKey, nextStatus) {
+      const processingKey = `${orderId}:${groupKey}`;
+      if (this.processingGroupIds.has(processingKey)) return;
+
+      const idx = this.orders.findIndex((o) => Number(o.id) === Number(orderId));
+      if (idx < 0) return;
+
+      const prevOrder = this.orders[idx];
+      const optimisticOrder = this.patchOrderGroupStatus(prevOrder, groupKey, nextStatus);
+      this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? optimisticOrder : o));
+
+      const nextSet = new Set(this.processingGroupIds);
+      nextSet.add(processingKey);
+      this.processingGroupIds = nextSet;
+
+      const token = document.querySelector('meta[name="csrf-token"]')?.content;
+      const attempts = [
+        { url: `/api/kitchen/orders/${orderId}/service-group/${groupKey}/status`, method: 'PATCH', body: { estado_servicio: nextStatus, grupo_servicio: groupKey } },
+        { url: `/api/kitchen/orders/${orderId}/groups/${groupKey}/status`, method: 'PATCH', body: { estado_servicio: nextStatus, grupo_servicio: groupKey } },
+        { url: `/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', body: { estado_servicio: nextStatus, grupo_servicio: groupKey } },
+      ];
+
+      let saved = false;
+      try {
+        for (const attempt of attempts) {
+          const res = await fetch(attempt.url, {
+            method: attempt.method,
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': token,
+            },
+            body: JSON.stringify(attempt.body),
+          });
+          if (res.ok) {
+            saved = true;
+            break;
+          }
+        }
+        if (!saved) throw new Error('No endpoint accepted service-group update');
+        this.error = '';
+      } catch (err) {
+        this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? prevOrder : o));
+        this.error = 'No se pudo actualizar el estado por grupo de servicio';
+        this.showToast('⚠️ No se pudo guardar el grupo. Revertido.');
+      } finally {
+        const doneSet = new Set(this.processingGroupIds);
+        doneSet.delete(processingKey);
+        this.processingGroupIds = doneSet;
+      }
     },
 
     orderNoteCount(order) {
