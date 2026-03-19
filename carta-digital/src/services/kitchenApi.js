@@ -11,26 +11,7 @@ export async function fetchKitchenOrders() {
   return data?.data ?? data ?? []
 }
 
-export async function startKitchenOrder(orderId) {
-  const { data } = await kitchenClient.patch(`/kitchen/orders/${orderId}/start`)
-  return data
-}
-
-export async function readyKitchenOrder(orderId) {
-  const { data } = await kitchenClient.patch(`/kitchen/orders/${orderId}/ready`)
-  return data
-}
-
-export async function deliverKitchenOrder(orderId) {
-  const { data } = await kitchenClient.patch(`/kitchen/orders/${orderId}/deliver`)
-  return data
-}
-
-export async function updateKitchenGroupStatus(orderId, grupo, estado) {
-  const { data } = await kitchenClient.patch(`/kitchen/orders/${orderId}/groups/status`, {
-    grupo,
-    estado,
-  })
-
+export async function startKitchenService(orderId, grupo) {
+  const { data } = await kitchenClient.put(`/pedidos/${orderId}/servicio/${grupo}`)
   return data
 }

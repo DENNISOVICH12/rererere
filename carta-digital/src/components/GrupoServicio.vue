@@ -18,12 +18,11 @@ const stateConfig = {
   pendiente: { label: 'Pendiente', icon: '🔴', className: 'is-pendiente' },
   preparando: { label: 'Preparando', icon: '🟡', className: 'is-preparando' },
   listo: { label: 'Listo', icon: '🟢', className: 'is-listo' },
-  entregado: { label: 'Entregado', icon: '🔵', className: 'is-entregado' },
 }
 
 const groupConfig = {
-  bebida: { label: 'BEBIDAS', icon: '🍹' },
-  plato: { label: 'PLATOS', icon: '🍽' },
+  bebida: { label: 'BAR', icon: '🍹' },
+  plato: { label: 'COCINA', icon: '🍽' },
 }
 
 const normalizedGroup = computed(() => String(props.group?.grupo || '').toLowerCase())
@@ -31,16 +30,7 @@ const normalizedState = computed(() => String(props.group?.estado || 'pendiente'
 
 const visualGroup = computed(() => groupConfig[normalizedGroup.value] || { label: props.group?.grupo || 'Grupo', icon: '🧩' })
 const visualState = computed(() => stateConfig[normalizedState.value] || stateConfig.pendiente)
-
-const availableActions = computed(() => {
-  if (normalizedState.value === 'entregado') return []
-
-  return [
-    { label: 'Preparar', next: 'preparando' },
-    { label: 'Marcar listo', next: 'listo' },
-    { label: 'Entregar', next: 'entregado' },
-  ]
-})
+const canStartService = computed(() => normalizedState.value === 'pendiente')
 
 function getItemLabel(item) {
   const quantity = item?.cantidad ?? item?.quantity ?? 1
@@ -67,12 +57,11 @@ function getItemLabel(item) {
 
     <div class="grupo__actions">
       <button
-        v-for="action in availableActions"
-        :key="action.next"
-        :disabled="disabled || normalizedState === action.next"
-        @click="emit('change-status', action.next)"
+        v-if="canStartService"
+        :disabled="disabled"
+        @click="emit('change-status', 'preparando')"
       >
-        {{ action.label }}
+        Iniciar preparación
       </button>
     </div>
   </section>
@@ -129,12 +118,6 @@ h3 {
   margin-left: -18px;
 }
 
-.grupo__actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
 .grupo__actions button {
   border: none;
   border-radius: 10px;
@@ -176,14 +159,5 @@ h3 {
 .is-listo .status-badge {
   background: #22c55e;
   color: #062c12;
-}
-
-.is-entregado {
-  border-color: #3b82f6;
-}
-
-.is-entregado .status-badge {
-  background: #3b82f6;
-  color: #dbeafe;
 }
 </style>

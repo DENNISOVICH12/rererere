@@ -3,13 +3,15 @@
   $user = Auth::user();
   $isAdmin = $user && ($user->rol ?? null) === 'admin';
   $adminBackUrl = Route::has('admin.dashboard') ? route('admin.dashboard') : url('/admin');
+  $serviceArea = strtolower($serviceArea ?? 'plato');
+  $serviceAreaLabel = $serviceAreaLabel ?? ($serviceArea === 'bebida' ? 'Bar' : 'Cocina');
 @endphp
 
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KDS Cocina</title>
+<title>KDS {{ $serviceAreaLabel }}</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
 :root {
@@ -600,12 +602,12 @@ body.has-admin-back .kds { padding-top: 64px; }
   @endif
 
   <header class="topbar">
-    <h1 class="topbar-title">Cocina</h1>
+    <h1 class="topbar-title">{{ $serviceAreaLabel }}</h1>
 
-    <div class="status-chips" role="status" aria-live="polite" aria-label="Resumen de grupos de servicio">
-      <span class="status-chip status-chip--pending"><span class="status-chip-label">🍹 Bebidas pendientes</span><span class="status-chip-value">@{{ serviceSummary.bebida.pendiente }}</span></span>
-      <span class="status-chip status-chip--cooking"><span class="status-chip-label">🍽 Platos preparando</span><span class="status-chip-value">@{{ serviceSummary.plato.preparando }}</span></span>
-      <span class="status-chip status-chip--ready"><span class="status-chip-label">✅ Grupos listos</span><span class="status-chip-value">@{{ totalReadyGroups }}</span></span>
+    <div class="status-chips" role="status" aria-live="polite" aria-label="Resumen del grupo de servicio activo">
+      <span class="status-chip status-chip--pending"><span class="status-chip-label">🧾 Pendientes</span><span class="status-chip-value">@{{ activeServiceSummary.pendiente }}</span></span>
+      <span class="status-chip status-chip--cooking"><span class="status-chip-label">👨‍🍳 Preparando</span><span class="status-chip-value">@{{ activeServiceSummary.preparando }}</span></span>
+      <span class="status-chip status-chip--ready"><span class="status-chip-label">✅ Listos</span><span class="status-chip-value">@{{ activeServiceSummary.listo }}</span></span>
       <span class="status-chip"><span class="status-chip-label">⏱ Atrasados</span><span class="status-chip-value">@{{ delayedCount }}</span></span>
     </div>
 
@@ -675,11 +677,11 @@ body.has-admin-back .kds { padding-top: 64px; }
           </ul>
 
           <button
-            v-if="nextServiceStatus(group.status)"
+            v-if="canStartService(group.status)"
             class="action"
             :class="serviceActionClass(group.status)"
             :disabled="isGroupProcessing(order.id, group.key)"
-            @click.stop="updateGroupStatus(order.id, group.key, nextServiceStatus(group.status))"
+            @click.stop="updateGroupStatus(order.id, group.key)"
           >
             @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : serviceActionLabel(group.status) }}
           </button>
@@ -695,8 +697,6 @@ body.has-admin-back .kds { padding-top: 64px; }
     :order="selectedOrder"
     :priority-overrides="priorityOverrides"
     @close="closeOrderDetails"
-    @action-done="handleActionDone"
-    @action-requested="quickAction"
     @toast="showToast"
   />
 
@@ -707,6 +707,8 @@ body.has-admin-back .kds { padding-top: 64px; }
 <script>
 const POLLING_MS = 4000;
 const DELIVERED_HIDE_MS = 15 * 60 * 1000;
+const ACTIVE_SERVICE_AREA = @json($serviceArea);
+const ACTIVE_SERVICE_LABEL = @json($serviceAreaLabel);
 const STATUS_LABELS = {
   pendiente: 'Pendiente',
   preparando: 'En preparación',
@@ -968,13 +970,6 @@ const OrderDetailsDrawer = {
     },
 
     primaryAction() {
-      if (!this.order) return null;
-      if (this.order.estado === 'pendiente')
-        return { label: 'Comenzar', next: 'preparando', className: 'action action-start' };
-      if (this.order.estado === 'preparando')
-        return { label: 'Marcar listo', next: 'listo', className: 'action action-ready' };
-      if (this.order.estado === 'listo')
-        return { label: 'Entregar', next: 'entregado', className: 'action action-deliver' };
       return null;
     },
   },
@@ -1075,13 +1070,6 @@ const OrderDetailsDrawer = {
       const m = String(Math.floor(sec / 60)).padStart(2, '0');
       const s = String(sec % 60).padStart(2, '0');
       return `${m}:${s}`;
-    },
-
-    endpointFor(nextStatus, orderId) {
-      if (nextStatus === 'preparando') return `/api/kitchen/orders/${orderId}/start`;
-      if (nextStatus === 'listo') return `/api/kitchen/orders/${orderId}/ready`;
-      if (nextStatus === 'entregado') return `/api/kitchen/orders/${orderId}/deliver`;
-      return `/pedidos/${orderId}/estado`;
     },
 
     async executePrimaryAction() {
@@ -1230,6 +1218,8 @@ Vue.createApp({
   data() {
     return {
       orders: [],
+      activeServiceArea: String(ACTIVE_SERVICE_AREA || 'plato').toLowerCase(),
+      activeServiceLabel: ACTIVE_SERVICE_LABEL || 'Cocina',
       nowTs: Date.now(),
       error: '',
       soundEnabled: true,
@@ -1261,23 +1251,26 @@ Vue.createApp({
         const ts = Number.isFinite(parsedTs) ? parsedTs : this.nowTs;
 
         const elapsedMs = Math.max(this.nowTs - ts, 0);
-        const status = String(order.estado || '').toLowerCase();
+        const normalizedOrder = {
+          ...order,
+          _itemsNorm: normalizeOrderItems(order),
+        };
+        const activeGroup = this.serviceGroupsFor(normalizedOrder).find((group) => group.key === this.activeServiceArea);
+        if (!activeGroup) {
+          return null;
+        }
+
+        const status = String(activeGroup.status || 'pendiente').toLowerCase();
 
         return {
-          ...order,
+          ...normalizedOrder,
           estado: status,
-          // ✅ items normalizados para TODO el app (tablero + notas)
-          _itemsNorm: normalizeOrderItems(order),
-
           _createdTs: ts,
           _elapsedMs: elapsedMs,
           _elapsedMin: elapsedMs / 60000,
           _urgency: (elapsedMs / 60000) + (status === 'pendiente' ? 2 : 0) + (this.priorityOverrides[order.id] ? 2 : 0),
         };
-      }).filter((order) => {
-        if (order.estado !== 'entregado') return true;
-        return (this.nowTs - order._createdTs) < DELIVERED_HIDE_MS;
-      });
+      }).filter((order) => order && order.estado !== 'listo');
     },
 
     grouped() {
@@ -1298,7 +1291,7 @@ Vue.createApp({
         plato: { pendiente: 0, preparando: 0, listo: 0, entregado: 0 },
       };
       this.normalized.forEach((order) => {
-        this.serviceGroupsFor(order).forEach((group) => {
+        this.serviceGroupsFor(order, { includeAll: true }).forEach((group) => {
           if (summary[group.key] && summary[group.key][group.status] !== undefined) {
             summary[group.key][group.status] += 1;
           }
@@ -1306,8 +1299,8 @@ Vue.createApp({
       });
       return summary;
     },
-    totalReadyGroups() {
-      return this.serviceSummary.bebida.listo + this.serviceSummary.plato.listo;
+    activeServiceSummary() {
+      return this.serviceSummary[this.activeServiceArea] || { pendiente: 0, preparando: 0, listo: 0, entregado: 0 };
     },
     selectedOrder() {
       if (!this.selectedOrderId) return null;
@@ -1316,7 +1309,7 @@ Vue.createApp({
     activeCount() { return this.grouped.pendiente.length + this.grouped.preparando.length + this.grouped.listo.length; },
     delayedCount() { return this.normalized.filter((o) => o.estado !== 'entregado' && o._elapsedMin > 6).length; },
     averageMinutes() {
-      const active = this.normalized.filter((o) => o.estado !== 'entregado');
+      const active = this.normalized.filter((o) => o.estado !== 'listo');
       if (!active.length) return 0;
       return active.reduce((acc, o) => acc + o._elapsedMin, 0) / active.length;
     },
@@ -1369,16 +1362,13 @@ Vue.createApp({
       this.error = message;
       this.showToast('🔐 Inicia sesión nuevamente o usa una ruta web con sesión/cookies en desarrollo.');
     },
-    nextServiceStatus(status) {
-      if (status === 'pendiente') return 'preparando';
-      if (status === 'preparando') return 'listo';
-      if (status === 'listo') return 'entregado';
-      return null;
+    canStartService(status) {
+      return status === 'pendiente';
     },
     serviceActionLabel(status) {
-      if (status === 'pendiente') return 'Iniciar preparación';
-      if (status === 'preparando') return 'Marcar como listo';
-      if (status === 'listo') return 'Marcar entregado';
+      if (status === 'pendiente') return this.activeServiceArea === 'bebida' ? 'Iniciar bar' : 'Iniciar cocina';
+      if (status === 'preparando') return 'En preparación';
+      if (status === 'listo') return 'Listo';
       return 'Finalizado';
     },
     serviceActionClass(status) {
@@ -1394,7 +1384,7 @@ Vue.createApp({
     isGroupProcessing(orderId, groupKey) {
       return this.processingGroupIds.has(`${orderId}:${groupKey}`);
     },
-    serviceGroupsFor(order) {
+    serviceGroupsFor(order, options = {}) {
       const labels = {
         bebida: { label: 'Bebidas', emoji: '🍹' },
         plato: { label: 'Platos', emoji: '🍽' },
@@ -1404,8 +1394,9 @@ Vue.createApp({
         const key = (item._serviceGroup || 'plato').toLowerCase();
         if (groups[key]) groups[key].push(item);
       });
-      return ['bebida', 'plato']
-        .filter((key) => groups[key].length)
+      const allowedGroups = options.includeAll ? ['bebida', 'plato'] : [this.activeServiceArea];
+      return allowedGroups
+        .filter((key) => groups[key]?.length)
         .map((key) => {
           const statuses = groups[key].map((item) => item._serviceStatus || order.estado || 'pendiente');
           const status = this.resolveGroupStatus(statuses);
@@ -1426,7 +1417,7 @@ Vue.createApp({
       });
       return { ...order, _itemsNorm: patchedItems };
     },
-    async updateGroupStatus(orderId, groupKey, nextStatus) {
+    async updateGroupStatus(orderId, groupKey) {
       const processingKey = `${orderId}:${groupKey}`;
       if (this.processingGroupIds.has(processingKey)) return;
 
@@ -1434,6 +1425,7 @@ Vue.createApp({
       if (idx < 0) return;
 
       const prevOrder = this.orders[idx];
+      const nextStatus = 'preparando';
       const optimisticOrder = this.patchOrderGroupStatus(prevOrder, groupKey, nextStatus);
       this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? optimisticOrder : o));
 
@@ -1442,8 +1434,9 @@ Vue.createApp({
       this.processingGroupIds = nextSet;
 
       const attempts = [
-  { url: `/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', body: { estado_servicio: nextStatus, grupo_servicio: groupKey }, source: 'web-service-group' },
-];
+        { url: `/api/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', source: 'api-service-group' },
+      ];
+
 
       try {
         const result = await this.requestFirstOk(attempts);
@@ -1511,68 +1504,7 @@ Vue.createApp({
       if (order._elapsedMin >= 3) return 't-warn';
       return 't-ok';
     },
-    actionFor(order) {
-      if (order.estado === 'pendiente') return { label: 'Comenzar', className: 'action-start', run: () => this.quickAction(order.id, 'preparando') };
-      if (order.estado === 'preparando') return { label: 'Marcar listo', className: 'action-ready', run: () => this.quickAction(order.id, 'listo') };
-      if (order.estado === 'listo') return { label: 'Entregar', className: 'action-deliver', run: () => this.quickAction(order.id, 'entregado') };
-      return null;
-    },
-    async quickAction(orderId, nextStatus) {
-      if (this.processingIds.has(orderId)) return;
 
-      const index = this.orders.findIndex((o) => o.id === orderId);
-      if (index < 0) return;
-
-      const current = this.orders[index];
-      this.optimisticSnapshots = {
-        ...this.optimisticSnapshots,
-        [orderId]: { estado: current.estado, updated_at: current.updated_at },
-      };
-
-      const set = new Set(this.processingIds); set.add(orderId); this.processingIds = set;
-      this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: nextStatus } : o);
-
-      const attempts = [
-  { url: `/pedidos/${orderId}/estado`, method: 'PUT', body: { estado: nextStatus }, source: 'web-status' },
-];
-
-      try {
-        const result = await this.requestFirstOk(attempts);
-        if (!result.ok) {
-          if (result.unauthorized) {
-            this.handleUnauthorized('Sesión no autorizada para actualizar pedidos');
-          }
-          throw new Error('status request failed');
-        }
-
-        const payload = await result.response.json().catch(() => null);
-        const serverData = payload?.data;
-        if (serverData?.id) {
-          this.orders = this.orders.map((o) => o.id === orderId
-            ? { ...o, estado: serverData.estado || nextStatus, updated_at: serverData.updated_at || o.updated_at }
-            : o);
-        }
-
-        const nextSnapshots = { ...this.optimisticSnapshots };
-        delete nextSnapshots[orderId];
-        this.optimisticSnapshots = nextSnapshots;
-        this.error = '';
-      } catch (e) {
-        const snapshot = this.optimisticSnapshots[orderId];
-        if (snapshot) {
-          this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: snapshot.estado, updated_at: snapshot.updated_at } : o);
-        }
-        if (!String(this.error || '').toLowerCase().includes('sesión')) {
-          this.error = 'No se pudo actualizar el estado del pedido';
-        }
-        this.showToast('⚠️ No se pudo guardar. Revertido.');
-      } finally {
-        const done = new Set(this.processingIds); done.delete(orderId); this.processingIds = done;
-        const nextSnapshots = { ...this.optimisticSnapshots };
-        delete nextSnapshots[orderId];
-        this.optimisticSnapshots = nextSnapshots;
-      }
-    },
     openOrderDetails(order) {
       this.selectedOrderId = order.id;
       this.drawerOpen = true;
@@ -1580,9 +1512,6 @@ Vue.createApp({
     closeOrderDetails() {
       this.drawerOpen = false;
       this.selectedOrderId = null;
-    },
-    handleActionDone(payload) {
-      this.orders = this.orders.map((o) => o.id === payload.orderId ? { ...o, estado: payload.nextStatus } : o);
     },
     mergeIncomingOrders(incomingOrders, isInitial = false) {
       // ✅ Asegura que lo que ya está en memoria también tenga id numérico
