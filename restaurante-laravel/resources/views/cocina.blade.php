@@ -707,6 +707,34 @@ body.has-admin-back .kds { padding-top: 64px; }
 <script>
 const POLLING_MS = 4000;
 const DELIVERED_HIDE_MS = 15 * 60 * 1000;
+const STATUS_LABELS = {
+  pendiente: 'Pendiente',
+  preparando: 'En preparación',
+  listo: 'Listo',
+  entregado: 'Entregado',
+};
+const REQUESTED_WITH = 'XMLHttpRequest';
+
+function normalizeStatus(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function statusLabelFor(status) {
+  const normalized = normalizeStatus(status);
+  return STATUS_LABELS[normalized] || (normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : '-');
+}
+
+function buildJsonHeaders(csrfToken = '', includeBody = false) {
+  const headers = {
+    'Accept': 'application/json',
+    'X-Requested-With': REQUESTED_WITH,
+  };
+
+  if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
+  if (includeBody) headers['Content-Type'] = 'application/json';
+
+  return headers;
+}
 
 /* =========================================================
    ✅ HELPERS "DEEP" PARA NOTAS / CANTIDAD / NOMBRE / CATEGORÍA
@@ -1022,13 +1050,9 @@ const OrderDetailsDrawer = {
       return '';
     },
     statusLabel(status) {
-  return {
-    pendiente: 'Pendiente',
-    preparando: 'En preparación',
-    listo: 'Listo',
-    entregado: 'Entregado',
-  }[status] || status;
-},
+      return statusLabelFor(status);
+    },
+
 
     fmtTime(dateRaw) {
       if (!dateRaw) return '-';
@@ -1310,6 +1334,41 @@ Vue.createApp({
       if (!Number.isFinite(ts)) return '-';
       return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
     },
+    statusLabel(status) {
+      return statusLabelFor(status);
+    },
+    apiRequestOptions(method = 'GET', body = null) {
+      const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      const hasBody = body !== null && body !== undefined;
+      return {
+        method,
+        credentials: 'include',
+        headers: buildJsonHeaders(token, hasBody),
+        ...(hasBody ? { body: JSON.stringify(body) } : {}),
+      };
+    },
+    async requestFirstOk(attempts) {
+      const failures = [];
+
+      for (const attempt of attempts) {
+        try {
+          const response = await fetch(attempt.url, this.apiRequestOptions(attempt.method || 'GET', attempt.body));
+          if (response.ok) {
+            return { ok: true, response, source: attempt.source || attempt.url };
+          }
+          failures.push({ status: response.status, url: attempt.url, response });
+        } catch (error) {
+          failures.push({ status: 0, url: attempt.url, error });
+        }
+      }
+
+      const unauthorized = failures.some((failure) => failure.status === 401 || failure.status === 419);
+      return { ok: false, failures, unauthorized };
+    },
+    handleUnauthorized(message = 'Sesión expirada en cocina') {
+      this.error = message;
+      this.showToast('🔐 Inicia sesión nuevamente o usa una ruta web con sesión/cookies en desarrollo.');
+    },
     nextServiceStatus(status) {
       if (status === 'pendiente') return 'preparando';
       if (status === 'preparando') return 'listo';
@@ -1382,36 +1441,26 @@ Vue.createApp({
       nextSet.add(processingKey);
       this.processingGroupIds = nextSet;
 
-      const token = document.querySelector('meta[name="csrf-token"]')?.content;
       const attempts = [
-        { url: `/api/kitchen/orders/${orderId}/service-group/${groupKey}/status`, method: 'PATCH', body: { estado_servicio: nextStatus, grupo_servicio: groupKey } },
-        { url: `/api/kitchen/orders/${orderId}/groups/${groupKey}/status`, method: 'PATCH', body: { estado_servicio: nextStatus, grupo_servicio: groupKey } },
-        { url: `/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', body: { estado_servicio: nextStatus, grupo_servicio: groupKey } },
+        { url: `/api/kitchen/orders/${orderId}/service-group/${groupKey}/status`, method: 'PATCH', body: { estado_servicio: nextStatus, grupo_servicio: groupKey }, source: 'api-service-group' },
+        { url: `/api/kitchen/orders/${orderId}/groups/${groupKey}/status`, method: 'PATCH', body: { estado_servicio: nextStatus, grupo_servicio: groupKey }, source: 'api-groups' },
+        { url: `/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', body: { estado_servicio: nextStatus, grupo_servicio: groupKey }, source: 'web-service-group' },
       ];
 
-      let saved = false;
       try {
-        for (const attempt of attempts) {
-          const res = await fetch(attempt.url, {
-            method: attempt.method,
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'X-CSRF-TOKEN': token,
-            },
-            body: JSON.stringify(attempt.body),
-          });
-          if (res.ok) {
-            saved = true;
-            break;
+        const result = await this.requestFirstOk(attempts);
+        if (!result.ok) {
+          if (result.unauthorized) {
+            this.handleUnauthorized('Sesión no autorizada para actualizar grupos de servicio');
           }
+          throw new Error('No endpoint accepted service-group update');
         }
-        if (!saved) throw new Error('No endpoint accepted service-group update');
         this.error = '';
       } catch (err) {
         this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? prevOrder : o));
-        this.error = 'No se pudo actualizar el estado por grupo de servicio';
+        if (!this.error) {
+          this.error = 'No se pudo actualizar el estado por grupo de servicio';
+        }
         this.showToast('⚠️ No se pudo guardar el grupo. Revertido.');
       } finally {
         const doneSet = new Set(this.processingGroupIds);
@@ -1485,43 +1534,30 @@ Vue.createApp({
       const set = new Set(this.processingIds); set.add(orderId); this.processingIds = set;
       this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: nextStatus } : o);
 
-      const token = document.querySelector('meta[name="csrf-token"]')?.content;
-      let endpoint = '/pedidos/' + orderId + '/estado';
-      let method = 'PUT';
-      let body = JSON.stringify({ estado: nextStatus });
+      const attempts = [
+        { url: `/pedidos/${orderId}/estado`, method: 'PUT', body: { estado: nextStatus }, source: 'web-status' },
+      ];
 
-      if (nextStatus === 'preparando') { endpoint = `/api/kitchen/orders/${orderId}/start`; method = 'PATCH'; body = undefined; }
-      if (nextStatus === 'listo') { endpoint = `/api/kitchen/orders/${orderId}/ready`; method = 'PATCH'; body = undefined; }
-      if (nextStatus === 'entregado') { endpoint = `/api/kitchen/orders/${orderId}/deliver`; method = 'PATCH'; body = undefined; }
+      if (nextStatus === 'preparando') {
+        attempts.unshift({ url: `/api/kitchen/orders/${orderId}/start`, method: 'PATCH', source: 'api-start' });
+      }
+      if (nextStatus === 'listo') {
+        attempts.unshift({ url: `/api/kitchen/orders/${orderId}/ready`, method: 'PATCH', source: 'api-ready' });
+      }
+      if (nextStatus === 'entregado') {
+        attempts.unshift({ url: `/api/kitchen/orders/${orderId}/deliver`, method: 'PATCH', source: 'api-deliver' });
+      }
 
       try {
-        let res = await fetch(endpoint, {
-          method,
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': token,
-          },
-          body,
-        });
-
-        if (!res.ok && endpoint.startsWith('/api/kitchen')) {
-          res = await fetch(`/pedidos/${orderId}/estado`, {
-            method: 'PUT',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'X-CSRF-TOKEN': token,
-            },
-            body: JSON.stringify({ estado: nextStatus }),
-          });
+        const result = await this.requestFirstOk(attempts);
+        if (!result.ok) {
+          if (result.unauthorized) {
+            this.handleUnauthorized('Sesión no autorizada para actualizar pedidos');
+          }
+          throw new Error('status request failed');
         }
 
-        if (!res.ok) throw new Error('status ' + res.status);
-
-        const payload = await res.json().catch(() => null);
+        const payload = await result.response.json().catch(() => null);
         const serverData = payload?.data;
         if (serverData?.id) {
           this.orders = this.orders.map((o) => o.id === orderId
@@ -1538,8 +1574,10 @@ Vue.createApp({
         if (snapshot) {
           this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: snapshot.estado, updated_at: snapshot.updated_at } : o);
         }
+        if (!String(this.error || '').toLowerCase().includes('sesión')) {
+          this.error = 'No se pudo actualizar el estado del pedido';
+        }
         this.showToast('⚠️ No se pudo guardar. Revertido.');
-        this.error = 'No se pudo actualizar el estado del pedido';
       } finally {
         const done = new Set(this.processingIds); done.delete(orderId); this.processingIds = done;
         const nextSnapshots = { ...this.optimisticSnapshots };
@@ -1592,21 +1630,20 @@ Vue.createApp({
         const qs = new URLSearchParams();
         if (!isInitial && this.lastSyncAt) qs.set('since', this.lastSyncAt);
 
-        let response = await fetch(`/api/kitchen/orders${qs.toString() ? `?${qs.toString()}` : ''}`, {
-          credentials: 'include',
-          headers: { 'Accept': 'application/json' },
-        });
+        const result = await this.requestFirstOk([
+          { url: `/api/kitchen/orders${qs.toString() ? `?${qs.toString()}` : ''}`, method: 'GET', source: 'api-orders' },
+          { url: '/pedidos', method: 'GET', source: 'web-orders' },
+        ]);
 
-        if (!response.ok) {
-          response = await fetch('/pedidos', {
-            credentials: 'include',
-            headers: { 'Accept': 'application/json' },
-          });
+        if (!result.ok) {
+          if (result.unauthorized) {
+            this.handleUnauthorized('Sesión no autorizada para consultar la cocina');
+            return;
+          }
+          throw new Error('status sync failed');
         }
 
-        if (!response.ok) throw new Error('status ' + response.status);
-
-        const payload = await response.json();
+        const payload = await result.response.json().catch(() => []);
         const incoming = payload?.data ?? payload ?? [];
         const items = Array.isArray(incoming) ? incoming : [];
 
