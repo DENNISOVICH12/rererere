@@ -1022,13 +1022,13 @@ const OrderDetailsDrawer = {
       return '';
     },
     statusLabel(status) {
-      return {
-        pendiente: 'Pendiente',
-        preparando: 'En preparación',
-        listo: 'Listo',
-        entregado: 'Entregado',
-      }[status] || status;
-    },
+  return {
+    pendiente: 'Pendiente',
+    preparando: 'En preparación',
+    listo: 'Listo',
+    entregado: 'Entregado',
+  }[status] || status;
+},
 
     fmtTime(dateRaw) {
       if (!dateRaw) return '-';
