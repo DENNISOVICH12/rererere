@@ -69,17 +69,15 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
+    Route::view('/cocina', 'cocina', [
+        'serviceArea' => 'plato',
+        'serviceAreaLabel' => 'Cocina',
+    ])->name('cocina.panel');
 
-    Route::view('/cocina', 'cocina')->name('cocina.panel');
-
-    Route::get('/pedidos', [PedidoController::class, 'index'])
-        ->name('cocina.pedidos.todos');
-
-    Route::get('/pedidos-pendientes', [PedidoController::class, 'pedidosPendientes'])
-        ->name('cocina.pedidos');
-
-    Route::put('/pedidos/{id}/estado', [PedidoController::class, 'cambiarEstado'])
-        ->name('cocina.pedido.estado');
+    Route::view('/bar', 'cocina', [
+        'serviceArea' => 'bebida',
+        'serviceAreaLabel' => 'Bar',
+    ])->name('bar.panel');
 });
 
 /*

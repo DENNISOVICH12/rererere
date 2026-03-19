@@ -1,12 +1,25 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import OrderCard from './OrderCard.vue'
-import { fetchKitchenOrders, updateKitchenGroupStatus } from '../services/kitchenApi'
+import { fetchKitchenOrders, startKitchenService } from '../services/kitchenApi'
 
 const props = defineProps({
   pollingMs: {
     type: Number,
     default: 4000,
+  },
+  serviceGroup: {
+    type: String,
+    default: 'plato',
+    validator: (value) => ['plato', 'bebida'].includes(String(value).toLowerCase()),
+  },
+  title: {
+    type: String,
+    default: 'Cocina',
+  },
+  subtitle: {
+    type: String,
+    default: 'Vista en tiempo real del grupo de servicio activo',
   },
 })
 
@@ -20,27 +33,36 @@ const highlighted = ref(new Set())
 let pollingHandle
 let clockHandle
 
-const normalizedOrders = computed(() => {
+const activeGroup = computed(() => String(props.serviceGroup).toLowerCase())
+
+const filteredOrders = computed(() => {
   return orders.value
+    .map((order) => {
+      const matchingGroup = (order.grupos_servicio || []).find(
+        (group) => String(group.grupo || '').toLowerCase() === activeGroup.value,
+      )
+
+      if (!matchingGroup) return null
+
+      return {
+        ...order,
+        grupos_servicio: [matchingGroup],
+      }
+    })
+    .filter(Boolean)
+})
+
+const normalizedOrders = computed(() => {
+  return filteredOrders.value
     .map((order) => {
       const createdTs = new Date(order.created_at).getTime()
       const elapsedMinutes = Math.max((now.value - createdTs) / 60000, 0)
-      const groupStatuses = (order.grupos_servicio || []).map((g) => String(g.estado || 'pendiente').toLowerCase())
-      const hasPending = groupStatuses.includes('pendiente')
-      const hasPreparing = groupStatuses.includes('preparando')
-      const hasReady = groupStatuses.includes('listo')
-      const hasOnlyDelivered = groupStatuses.length > 0 && groupStatuses.every((s) => s === 'entregado')
-
-      let mainStatus = 'pendiente'
-      if (hasOnlyDelivered) mainStatus = 'entregado'
-      else if (hasPending) mainStatus = 'pendiente'
-      else if (hasPreparing) mainStatus = 'preparando'
-      else if (hasReady) mainStatus = 'listo'
+      const activeStatus = String(order.grupos_servicio?.[0]?.estado || 'pendiente').toLowerCase()
 
       return {
         ...order,
         elapsedMinutes,
-        mainStatus,
+        mainStatus: activeStatus,
         isNew: highlighted.value.has(order.id),
       }
     })
@@ -48,7 +70,7 @@ const normalizedOrders = computed(() => {
 })
 
 const stats = computed(() => {
-  const active = normalizedOrders.value.filter((o) => o.mainStatus !== 'entregado')
+  const active = normalizedOrders.value.filter((o) => o.mainStatus !== 'listo')
   return {
     active: active.length,
     delayed: active.filter((o) => o.elapsedMinutes >= 6).length,
@@ -96,13 +118,13 @@ async function loadOrders(initial = false) {
 
     error.value = ''
   } catch (err) {
-    error.value = 'No pudimos cargar pedidos de cocina.'
+    error.value = 'No pudimos cargar pedidos del tablero.'
   } finally {
     if (initial) loading.value = false
   }
 }
 
-async function handleGroupStatusChange({ orderId, group, status }) {
+async function handleGroupStatusChange({ orderId, group }) {
   const key = `${orderId}-${group}`
   if (busyGroupKey.value) return
   busyGroupKey.value = key
@@ -115,14 +137,14 @@ async function handleGroupStatusChange({ orderId, group, status }) {
       ...order,
       grupos_servicio: (order.grupos_servicio || []).map((serviceGroup) =>
         String(serviceGroup.grupo).toLowerCase() === String(group).toLowerCase()
-          ? { ...serviceGroup, estado: status }
+          ? { ...serviceGroup, estado: 'preparando' }
           : serviceGroup,
       ),
     }
   })
 
   try {
-    await updateKitchenGroupStatus(orderId, group, status)
+    await startKitchenService(orderId, group)
   } catch (err) {
     orders.value = previous
     error.value = 'No se pudo actualizar el grupo de servicio.'
@@ -157,8 +179,8 @@ onUnmounted(() => {
   <main class="kds-view">
     <header class="kds-topbar">
       <div>
-        <h1>ODER EASY · Kitchen Display System</h1>
-        <p>Vista en tiempo real para bebidas y platos</p>
+        <h1>{{ title }}</h1>
+        <p>{{ subtitle }}</p>
       </div>
       <div class="kds-stats">
         <article><span>Activos</span><strong>{{ stats.active }}</strong></article>
@@ -171,7 +193,7 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <p v-if="loading" class="helper">Cargando tablero de cocina...</p>
+    <p v-if="loading" class="helper">Cargando tablero...</p>
     <p v-if="error" class="error">{{ error }}</p>
 
     <section class="orders-grid">
@@ -258,48 +280,42 @@ p {
 
 .orders-grid {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 6px;
 }
 
 .orders-grid__inner {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 12px;
-  align-content: start;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
 }
 
-.helper,
+.helper {
+  color: #94a3b8;
+}
+
 .error {
   margin: 0;
-}
-
-.error {
   color: #fecaca;
 }
 
-.grid-anim-move,
 .grid-anim-enter-active,
-.grid-anim-leave-active {
-  transition: all 0.3s ease;
+.grid-anim-leave-active,
+.grid-anim-move {
+  transition: all 0.28s ease;
 }
 
 .grid-anim-enter-from,
 .grid-anim-leave-to {
   opacity: 0;
-  transform: scale(0.96);
+  transform: translateY(8px);
 }
 
-@media (min-width: 1800px) {
-  .orders-grid__inner {
-    grid-template-columns: repeat(5, minmax(280px, 1fr));
-  }
-}
-
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
   .kds-topbar {
     grid-template-columns: 1fr;
+  }
+
+  .kds-actions {
+    justify-content: flex-start;
   }
 }
 </style>

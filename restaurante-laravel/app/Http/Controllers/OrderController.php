@@ -138,7 +138,7 @@ class OrderController extends Controller
         Pedido::releaseExpiredRetentionWindow();
 
         return Pedido::where('estado', Pedido::STATUS_PENDING)
-            ->with('detalles.menuItem')
+            ->with('detalle.menuItem')
             ->orderBy('id', 'asc')
             ->get();
     }
@@ -265,23 +265,5 @@ class OrderController extends Controller
         'can_send_now' => $pedido->isInRetentionWindow(),
         'change_request_overdue' => $pedido->isChangeRequestOverdue(),
     ];
-}
-
-    public function updateGrupoServicio(Request $request, Pedido $order): JsonResponse
-{
-    $request->validate([
-        'grupo_servicio' => 'required|in:bebida,plato',
-        'estado_servicio' => 'required|in:pendiente,preparando,listo,entregado',
-    ]);
-
-    PedidoDetalle::where('pedido_id', $order->id)
-        ->where('grupo_servicio', $request->grupo_servicio)
-        ->update([
-            'estado_servicio' => $request->estado_servicio
-        ]);
-
-    return response()->json([
-        'message' => "Estado actualizado para {$request->grupo_servicio} ✅"
-    ]);
 }
 }

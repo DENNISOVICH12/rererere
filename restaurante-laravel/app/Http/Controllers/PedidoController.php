@@ -3,25 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pedido;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PedidoController extends Controller
 {
-    public function index()
+    public function index(): JsonResponse
     {
         Pedido::releaseExpiredRetentionWindow();
 
-        // ✅ Retornar pedidos en JSON para la vista de cocina
         $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
             ->whereNotIn('estado', [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED])
-
             ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json($pedidos);
     }
 
-    public function pedidosPendientes()
+    public function pedidosPendientes(): JsonResponse
     {
         Pedido::releaseExpiredRetentionWindow();
 
@@ -33,10 +32,14 @@ class PedidoController extends Controller
         return response()->json($pedidos);
     }
 
-    public function cambiarEstado(Request $request, $id)
+    public function cambiarEstado(Request $request, $id): JsonResponse
     {
+        $validated = $request->validate([
+            'estado' => 'required|string',
+        ]);
+
         $pedido = Pedido::findOrFail($id);
-        $pedido->estado = $request->estado;
+        $pedido->estado = $validated['estado'];
         $pedido->save();
 
         return response()->json(['ok' => true]);

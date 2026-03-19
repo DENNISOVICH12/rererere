@@ -19,7 +19,6 @@ class KitchenOrderController extends Controller
         $orders = Pedido::query()
             ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id', 'hold_expires_at'])
             ->whereNotIn('estado', [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED])
-
             ->when($activeOnly, function ($query) {
                 $query->where(function ($stateQuery) {
                     $stateQuery->whereIn('estado', ['pendiente', 'preparando', 'listo'])
@@ -33,7 +32,15 @@ class KitchenOrderController extends Controller
             ->with([
                 'cliente:id,nombre',
                 'detalle' => fn ($query) => $query
-                    ->select(['id', 'pedido_id', 'menu_item_id', 'cantidad', 'extras', 'nota'])
+                    ->select([
+                        'id',
+                        'pedido_id',
+                        'menu_item_id',
+                        'cantidad',
+                        'nota',
+                        'grupo_servicio',
+                        'estado_servicio',
+                    ])
                     ->with(['menuItem:id,nombre,categoria']),
             ])
             ->orderByDesc('created_at')
@@ -57,47 +64,6 @@ class KitchenOrderController extends Controller
         ]);
     }
 
-    public function start(Pedido $order): JsonResponse
-    {
-        return $this->updateStatus($order, 'preparando');
-    }
-
-    public function ready(Pedido $order): JsonResponse
-    {
-        return $this->updateStatus($order, 'listo');
-    }
-
-    public function deliver(Pedido $order): JsonResponse
-    {
-        return $this->updateStatus($order, 'entregado');
-    }
-
-    private function updateStatus(Pedido $order, string $status): JsonResponse
-    {
-        Pedido::releaseExpiredRetentionWindow();
-        $order->refresh();
-
-        if (in_array($order->estado, [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED], true)) {
-            return response()->json([
-                'message' => 'El pedido aún no está liberado para cocina.',
-
-            ], 409);
-        }
-
-        if ($order->estado === $status) {
-            return response()->json([
-                'data' => $this->transformStatusPayload($order),
-            ]);
-        }
-
-        $order->estado = $status;
-        $order->save();
-
-        return response()->json([
-            'data' => $this->transformStatusPayload($order),
-        ]);
-    }
-
     private function parseSince(?string $raw): ?CarbonImmutable
     {
         if (!$raw) {
@@ -109,15 +75,6 @@ class KitchenOrderController extends Controller
         } catch (\Throwable) {
             return null;
         }
-    }
-
-    private function transformStatusPayload(Pedido $pedido): array
-    {
-        return [
-            'id' => $pedido->id,
-            'estado' => $pedido->estado,
-            'updated_at' => optional($pedido->updated_at)->toIso8601String(),
-        ];
     }
 
     private function transformOrder(Pedido $pedido): array
@@ -141,11 +98,62 @@ class KitchenOrderController extends Controller
                     'categoria' => $menuItem?->categoria,
                 ],
                 'categoria' => $menuItem?->categoria,
-                'extras' => $detalle->extras ?? null,
                 'nota' => $detalle->nota ?? null,
                 'notas' => $detalle->nota ?? null,
+                'grupo_servicio' => $detalle->grupo_servicio,
+                'estado_servicio' => $detalle->estado_servicio,
             ];
         })->values();
+
+        $grupos = $pedido->detalle
+            ->groupBy(fn ($detalle) => strtolower((string) $detalle->grupo_servicio))
+            ->map(function ($groupItems, $grupo) {
+                $normalizedStatuses = $groupItems
+                    ->map(fn ($item) => strtolower((string) ($item->estado_servicio ?: 'pendiente')))
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $estado = 'pendiente';
+                if (in_array('pendiente', $normalizedStatuses, true)) {
+                    $estado = 'pendiente';
+                } elseif (in_array('preparando', $normalizedStatuses, true)) {
+                    $estado = 'preparando';
+                } elseif (in_array('listo', $normalizedStatuses, true)) {
+                    $estado = 'listo';
+                }
+
+                return [
+                    'grupo' => $grupo,
+                    'estado' => $estado,
+                    'items' => $groupItems->map(function ($detalle) {
+                        $menuItem = $detalle->menuItem;
+
+                        return [
+                            'id' => $detalle->id,
+                            'cantidad' => (int) ($detalle->cantidad ?? 1),
+                            'quantity' => (int) ($detalle->cantidad ?? 1),
+                            'nombre' => $menuItem?->nombre,
+                            'menu_item' => [
+                                'id' => $menuItem?->id,
+                                'nombre' => $menuItem?->nombre,
+                                'categoria' => $menuItem?->categoria,
+                            ],
+                            'menuItem' => [
+                                'id' => $menuItem?->id,
+                                'nombre' => $menuItem?->nombre,
+                                'categoria' => $menuItem?->categoria,
+                            ],
+                            'categoria' => $menuItem?->categoria,
+                            'nota' => $detalle->nota ?? null,
+                            'notas' => $detalle->nota ?? null,
+                            'grupo_servicio' => $detalle->grupo_servicio,
+                            'estado_servicio' => $detalle->estado_servicio,
+                        ];
+                    })->values(),
+                ];
+            })
+            ->values();
 
         return [
             'id' => $pedido->id,
@@ -158,11 +166,11 @@ class KitchenOrderController extends Controller
                 'nombre' => $pedido->cliente?->nombre,
             ],
             'cliente_nombre' => $pedido->cliente?->nombre,
-            'notas' => $pedido->notas ?? null,
             'items' => $items,
             'detalle' => $items,
             'detalles' => $items,
             'pedido_detalles' => $items,
+            'grupos_servicio' => $grupos,
         ];
     }
 }
