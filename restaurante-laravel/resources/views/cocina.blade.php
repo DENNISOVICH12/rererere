@@ -1442,10 +1442,8 @@ Vue.createApp({
       this.processingGroupIds = nextSet;
 
       const attempts = [
-        { url: `/api/kitchen/orders/${orderId}/service-group/${groupKey}/status`, method: 'PATCH', body: { estado_servicio: nextStatus, grupo_servicio: groupKey }, source: 'api-service-group' },
-        { url: `/api/kitchen/orders/${orderId}/groups/${groupKey}/status`, method: 'PATCH', body: { estado_servicio: nextStatus, grupo_servicio: groupKey }, source: 'api-groups' },
-        { url: `/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', body: { estado_servicio: nextStatus, grupo_servicio: groupKey }, source: 'web-service-group' },
-      ];
+  { url: `/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', body: { estado_servicio: nextStatus, grupo_servicio: groupKey }, source: 'web-service-group' },
+];
 
       try {
         const result = await this.requestFirstOk(attempts);
@@ -1535,18 +1533,8 @@ Vue.createApp({
       this.orders = this.orders.map((o) => o.id === orderId ? { ...o, estado: nextStatus } : o);
 
       const attempts = [
-        { url: `/pedidos/${orderId}/estado`, method: 'PUT', body: { estado: nextStatus }, source: 'web-status' },
-      ];
-
-      if (nextStatus === 'preparando') {
-        attempts.unshift({ url: `/api/kitchen/orders/${orderId}/start`, method: 'PATCH', source: 'api-start' });
-      }
-      if (nextStatus === 'listo') {
-        attempts.unshift({ url: `/api/kitchen/orders/${orderId}/ready`, method: 'PATCH', source: 'api-ready' });
-      }
-      if (nextStatus === 'entregado') {
-        attempts.unshift({ url: `/api/kitchen/orders/${orderId}/deliver`, method: 'PATCH', source: 'api-deliver' });
-      }
+  { url: `/pedidos/${orderId}/estado`, method: 'PUT', body: { estado: nextStatus }, source: 'web-status' },
+];
 
       try {
         const result = await this.requestFirstOk(attempts);
@@ -1631,9 +1619,8 @@ Vue.createApp({
         if (!isInitial && this.lastSyncAt) qs.set('since', this.lastSyncAt);
 
         const result = await this.requestFirstOk([
-          { url: `/api/kitchen/orders${qs.toString() ? `?${qs.toString()}` : ''}`, method: 'GET', source: 'api-orders' },
-          { url: '/pedidos', method: 'GET', source: 'web-orders' },
-        ]);
+  { url: '/pedidos', method: 'GET', source: 'web-orders' },
+]);
 
         if (!result.ok) {
           if (result.unauthorized) {

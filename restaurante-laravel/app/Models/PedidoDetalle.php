@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class PedidoDetalle extends Model
 {
@@ -29,4 +30,52 @@ class PedidoDetalle extends Model
     {
         return $this->belongsTo(MenuItem::class, 'menu_item_id');
     }
+    public function iniciarPlatos($id)
+{
+    try {
+        Log::info('Iniciar platos para pedido: ' . $id);
+
+        $updated = \App\Models\PedidoDetalle::where('pedido_id', $id)
+            ->where('grupo_servicio', 'plato')
+            ->update([
+                'estado_servicio' => 'preparando'
+            ]);
+
+        return response()->json([
+            'ok' => true,
+            'updated' => $updated
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
+        ], 500);
+    }
+}
+public function iniciarBebidas($id)
+{
+    try {
+        Log::info('Iniciar bebidas para pedido: ' . $id);
+
+        $updated = \App\Models\PedidoDetalle::where('pedido_id', $id)
+            ->where('grupo_servicio', 'bebida')
+            ->update([
+                'estado_servicio' => 'preparando'
+            ]);
+
+        return response()->json([
+            'ok' => true,
+            'updated' => $updated
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
+        ], 500);
+    }
+}
 }

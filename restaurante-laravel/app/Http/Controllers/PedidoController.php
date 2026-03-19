@@ -34,7 +34,7 @@ class PedidoController extends Controller
     }
 
     public function cambiarEstado(Request $request, $id)
-    {
+{
         $pedido = Pedido::findOrFail($id);
         $pedido->estado = $request->estado;
         $pedido->save();

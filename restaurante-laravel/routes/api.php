@@ -25,12 +25,15 @@ Route::get('/ping', [HealthController::class, 'ping']);
 Route::patch('/orders/{order}/grupo_servicio', [OrderController::class, 'updateGrupoServicio']);
 
 // Kitchen Display System API
-Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
+Route::middleware(['role:admin,cocinero'])->group(function () {
     Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
     Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
     Route::patch('/kitchen/orders/{order}/start', [KitchenOrderController::class, 'start']);
     Route::patch('/kitchen/orders/{order}/ready', [KitchenOrderController::class, 'ready']);
     Route::patch('/kitchen/orders/{order}/deliver', [KitchenOrderController::class, 'deliver']);
+    Route::put('/pedidos/{id}/servicio/plato', [PedidoController::class, 'iniciarPlatos']);
+    Route::put('/pedidos/{id}/servicio/bebida', [PedidoController::class, 'iniciarBebidas']);
+
 });
 
 

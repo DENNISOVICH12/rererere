@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\MenuItemController ;
 use Illuminate\Support\Facades\URL;
 use App\Http\Controllers\MeseroOrderController;
+use App\Http\Controllers\KitchenOrderController;
 
 
 /*
@@ -80,6 +81,13 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
 
     Route::put('/pedidos/{id}/estado', [PedidoController::class, 'cambiarEstado'])
         ->name('cocina.pedido.estado');
+
+    Route::put('/pedidos/{id}/servicio/{grupo}', [PedidoController::class, 'cambiarEstadoServicio'])
+        ->name('cocina.pedido.servicio');
+    
+    Route::patch('/orders/{order}/service-group/{group}/status', [KitchenOrderController::class, 'updateGroupStatus']);
+    
+
 });
 
 /*
