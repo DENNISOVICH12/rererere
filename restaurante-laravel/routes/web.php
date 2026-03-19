@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\MenuItemController ;
 use Illuminate\Support\Facades\URL;
 use App\Http\Controllers\MeseroOrderController;
+use App\Http\Controllers\KitchenOrderController;
 
 
 /*
@@ -78,6 +79,7 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
         'serviceArea' => 'bebida',
         'serviceAreaLabel' => 'Bar',
     ])->name('bar.panel');
+
 });
 
 /*

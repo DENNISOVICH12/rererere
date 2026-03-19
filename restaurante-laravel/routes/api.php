@@ -24,6 +24,7 @@ Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
 Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
 Route::put('/pedidos/{id}/servicio/{grupo}', [PedidoDetalleController::class, 'updateServiceStatus']);
 
+
 // Registro cliente desde la carta digital
 Route::post('/login-cliente', [AuthController::class, 'loginCliente']);
 Route::post('/register-cliente', [AuthController::class, 'registerCliente']);

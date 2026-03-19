@@ -38,6 +38,7 @@ class PedidoController extends Controller
             'estado' => 'required|string',
         ]);
 
+
         $pedido = Pedido::findOrFail($id);
         $pedido->estado = $validated['estado'];
         $pedido->save();

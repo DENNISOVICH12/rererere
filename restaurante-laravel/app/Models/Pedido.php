@@ -31,6 +31,9 @@ class Pedido extends Model
         'change_request_reason',
         'change_request_count',
         'total',
+        'pedido_id',
+        'grupo_servicio',
+        'estado_servicio'
     ];
 
 

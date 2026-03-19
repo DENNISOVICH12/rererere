@@ -1437,6 +1437,7 @@ Vue.createApp({
         { url: `/api/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', source: 'api-service-group' },
       ];
 
+
       try {
         const result = await this.requestFirstOk(attempts);
         if (!result.ok) {
@@ -1503,6 +1504,7 @@ Vue.createApp({
       if (order._elapsedMin >= 3) return 't-warn';
       return 't-ok';
     },
+
     openOrderDetails(order) {
       this.selectedOrderId = order.id;
       this.drawerOpen = true;
@@ -1546,9 +1548,8 @@ Vue.createApp({
         if (!isInitial && this.lastSyncAt) qs.set('since', this.lastSyncAt);
 
         const result = await this.requestFirstOk([
-          { url: `/api/kitchen/orders${qs.toString() ? `?${qs.toString()}` : ''}`, method: 'GET', source: 'api-orders' },
-          { url: '/pedidos', method: 'GET', source: 'web-orders' },
-        ]);
+  { url: '/pedidos', method: 'GET', source: 'web-orders' },
+]);
 
         if (!result.ok) {
           if (result.unauthorized) {
