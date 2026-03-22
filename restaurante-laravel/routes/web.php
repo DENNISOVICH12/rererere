@@ -79,6 +79,9 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
         'serviceArea' => 'bebida',
         'serviceAreaLabel' => 'Bar',
     ])->name('bar.panel');
+    Route::get('/pedidos', [PedidoController::class, 'index']);
+    Route::put('/pedidos/{id}/servicio/plato', [PedidoController::class, 'iniciarPlatos']);
+    Route::put('/pedidos/{id}/servicio/bebida', [PedidoController::class, 'iniciarBebidas']);
 
 });
 
