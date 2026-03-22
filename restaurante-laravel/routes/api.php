@@ -20,17 +20,11 @@ use App\Http\Controllers\{
 // Health Check
 Route::get('/ping', [HealthController::class, 'ping']);
 
+// Kitchen + Bar API (stateless, no auth:web / no CSRF)
+Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
+Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
+Route::put('/pedidos/{pedido}/servicio/{grupo}', [PedidoController::class, 'updateServicioGrupo']);
 
-Route::patch('/orders/{order}/grupo_servicio', [OrderController::class, 'updateGrupoServicio']);
-
-// Kitchen Display System API
-Route::middleware(['role:admin,cocinero'])->group(function () {
-    Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
-    Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
-    Route::patch('/kitchen/orders/{order}/start', [KitchenOrderController::class, 'start']);
-    Route::patch('/kitchen/orders/{order}/ready', [KitchenOrderController::class, 'ready']);
-    Route::patch('/kitchen/orders/{order}/deliver', [KitchenOrderController::class, 'deliver']);
-});
 
 
 // Registro cliente desde la carta digital

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Pedido;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
 use Illuminate\Support\Facades\Log;
 
 class PedidoController extends Controller
@@ -39,77 +41,99 @@ class PedidoController extends Controller
             'estado' => 'required|string',
         ]);
 
-
         $pedido = Pedido::findOrFail($id);
         $pedido->estado = $validated['estado'];
         $pedido->save();
 
         return response()->json(['ok' => true]);
     }
-     public function iniciarPlatos($id)
-{
-    try {
-        Log::info("Iniciando platos para pedido: " . $id);
 
-        $pedido = Pedido::with('detalles')->findOrFail($id);
-
-        foreach ($pedido->detalles as $detalle) {
-            if ($detalle->grupo_servicio === 'plato') {
-                $detalle->estado_servicio = 'preparando';
-                $detalle->save();
-            }
-        }
-
-        return response()->json([
-            'ok' => true,
-            'message' => 'Platos en preparación'
+    public function updateServicioGrupo(int $pedidoId, string $grupo): JsonResponse
+    {
+        Log::info('Actualizando grupo servicio', [
+            'pedido_id' => $pedidoId,
+            'grupo' => $grupo,
         ]);
 
-    } catch (\Exception $e) {
-        Log::error("Error iniciarPlatos: " . $e->getMessage());
+        $grupo = strtolower(trim($grupo));
 
-        return response()->json([
-            'error' => true,
-            'message' => $e->getMessage()
-        ], 500);
-
-        // Verificar si TODOS los platos ya están en preparación
-$todosPreparando = $pedido->detalles
-    ->where('grupo_servicio', 'plato')
-    ->every(fn($d) => $d->estado_servicio === 'preparando');
-
-if ($todosPreparando) {
-    $pedido->estado = 'preparando';
-    $pedido->save();
-}
-    }
-}
-public function iniciarBebidas($id)
-{
-    try {
-        Log::info("Iniciando bebidas para pedido: " . $id);
-
-        $pedido = Pedido::with('detalles')->findOrFail($id);
-
-        foreach ($pedido->detalles as $detalle) {
-            if ($detalle->grupo_servicio === 'bebida') {
-                $detalle->estado_servicio = 'preparando';
-                $detalle->save();
-            }
+        if (!in_array($grupo, ['plato', 'bebida'], true)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Grupo de servicio inválido.',
+            ], 422);
         }
 
-        return response()->json([
-            'ok' => true,
-            'message' => 'Bebidas en preparación'
-        ]);
+        try {
+            $pedido = Pedido::with(['detalle.menuItem', 'cliente'])->find($pedidoId);
 
-    } catch (\Exception $e) {
-        Log::error("Error iniciarBebidas: " . $e->getMessage());
+            if (!$pedido) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Pedido no encontrado.',
+                ], 404);
+            }
 
-        return response()->json([
-            'error' => true,
-            'message' => $e->getMessage()
-        ], 500);
+            $updatedItems = DB::transaction(function () use ($pedido, $grupo) {
+                $items = $pedido->detalle()
+                    ->whereRaw('LOWER(COALESCE(grupo_servicio, ?)) = ?', ['plato', $grupo])
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($items->isEmpty()) {
+                    return collect();
+                }
+
+                $updated = collect();
+
+                foreach ($items as $item) {
+                    $currentStatus = strtolower((string) ($item->estado_servicio ?: 'pendiente'));
+                    $nextStatus = match ($currentStatus) {
+                        'pendiente' => 'preparando',
+                        'preparando' => 'listo',
+                        default => null,
+                    };
+
+                    if ($nextStatus === null) {
+                        continue;
+                    }
+
+                    $item->estado_servicio = $nextStatus;
+                    $item->save();
+                    $updated->push($item->fresh(['menuItem']));
+                }
+
+                return $updated;
+            });
+
+            if ($updatedItems->isEmpty()) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'No hay ítems actualizables para el grupo solicitado.',
+                    'grupo' => $grupo,
+                    'updated_items' => [],
+                ], 422);
+            }
+
+            $pedido->refresh()->load(['detalle.menuItem', 'cliente']);
+
+            return response()->json([
+                'ok' => true,
+                'pedido' => $pedido,
+                'grupo' => $grupo,
+                'updated_items' => $updatedItems->values(),
+            ]);
+        } catch (\Throwable $exception) {
+            Log::error('Error actualizando grupo servicio', [
+                'pedido_id' => $pedidoId,
+                'grupo' => $grupo,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'No se pudo actualizar el grupo de servicio.',
+            ], 500);
+        }
     }
-}
 }

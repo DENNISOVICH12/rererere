@@ -683,7 +683,7 @@ body.has-admin-back .kds { padding-top: 64px; }
             :disabled="isGroupProcessing(order.id, group.key)"
             @click.stop="updateGroupStatus(order.id, group.key)"
           >
-            @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : serviceActionLabel(group.status) }}
+            @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : serviceActionLabel(group.status, group.key) }}
           </button>
         </section>
 
@@ -1363,14 +1363,23 @@ Vue.createApp({
       this.showToast('🔐 Inicia sesión nuevamente o usa una ruta web con sesión/cookies en desarrollo.');
     },
     canStartService(status) {
-  return status === 'pendiente' || status === 'preparando';
-},
-    serviceActionLabel(status) {
-  if (status === 'pendiente') return 'Iniciar cocina';
-  if (status === 'preparando') return 'Marcar listo';
-  if (status === 'listo') return 'Finalizado';
-  return 'Finalizado';
-},
+      return status === 'pendiente' || status === 'preparando';
+    },
+    nextServiceStatus(status) {
+      if (status === 'pendiente') return 'preparando';
+      if (status === 'preparando') return 'listo';
+      return status;
+    },
+    serviceActionLabel(status, groupKey = null) {
+      if (status === 'pendiente') {
+        if ((groupKey || this.activeServiceArea) === 'bebida') return 'Iniciar bar';
+        return 'Iniciar cocina';
+      }
+      if (status === 'preparando') return 'Marcar listo';
+      if (status === 'listo') return 'Listo';
+      return 'Finalizado';
+    },
+
     serviceActionClass(status) {
       if (status === 'pendiente') return 'action-next-pendiente';
       if (status === 'preparando') return 'action-next-preparando';
@@ -1425,16 +1434,13 @@ Vue.createApp({
       if (idx < 0) return;
 
       const prevOrder = this.orders[idx];
-      const currentStatus = this.serviceGroupsFor(prevOrder)
-  .find(g => g.key === groupKey)?.status;
+      const currentGroup = this.serviceGroupsFor(prevOrder, { includeAll: true }).find((group) => group.key === groupKey);
+      const currentStatus = currentGroup?.status || 'pendiente';
+      const nextStatus = this.nextServiceStatus(currentStatus);
 
-let nextStatus = 'preparando';
+      if (nextStatus === currentStatus) return;
 
-if (currentStatus === 'pendiente') {
-  nextStatus = 'preparando';
-} else if (currentStatus === 'preparando') {
-  nextStatus = 'listo';
-}
+
       const optimisticOrder = this.patchOrderGroupStatus(prevOrder, groupKey, nextStatus);
       this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? optimisticOrder : o));
 
