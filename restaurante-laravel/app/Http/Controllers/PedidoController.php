@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Pedido;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PedidoController extends Controller
 {
@@ -38,11 +40,99 @@ class PedidoController extends Controller
             'estado' => 'required|string',
         ]);
 
-
         $pedido = Pedido::findOrFail($id);
         $pedido->estado = $validated['estado'];
         $pedido->save();
 
         return response()->json(['ok' => true]);
+    }
+
+    public function updateServicioGrupo(int $pedidoId, string $grupo): JsonResponse
+    {
+        Log::info('Actualizando grupo servicio', [
+            'pedido_id' => $pedidoId,
+            'grupo' => $grupo,
+        ]);
+
+        $grupo = strtolower(trim($grupo));
+
+        if (!in_array($grupo, ['plato', 'bebida'], true)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Grupo de servicio inválido.',
+            ], 422);
+        }
+
+        try {
+            $pedido = Pedido::with(['detalle.menuItem', 'cliente'])->find($pedidoId);
+
+            if (!$pedido) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Pedido no encontrado.',
+                ], 404);
+            }
+
+            $updatedItems = DB::transaction(function () use ($pedido, $grupo) {
+                $items = $pedido->detalle()
+                    ->whereRaw('LOWER(COALESCE(grupo_servicio, ?)) = ?', ['plato', $grupo])
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($items->isEmpty()) {
+                    return collect();
+                }
+
+                $updated = collect();
+
+                foreach ($items as $item) {
+                    $currentStatus = strtolower((string) ($item->estado_servicio ?: 'pendiente'));
+                    $nextStatus = match ($currentStatus) {
+                        'pendiente' => 'preparando',
+                        'preparando' => 'listo',
+                        default => null,
+                    };
+
+                    if ($nextStatus === null) {
+                        continue;
+                    }
+
+                    $item->estado_servicio = $nextStatus;
+                    $item->save();
+                    $updated->push($item->fresh(['menuItem']));
+                }
+
+                return $updated;
+            });
+
+            if ($updatedItems->isEmpty()) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'No hay ítems actualizables para el grupo solicitado.',
+                    'grupo' => $grupo,
+                    'updated_items' => [],
+                ], 422);
+            }
+
+            $pedido->refresh()->load(['detalle.menuItem', 'cliente']);
+
+            return response()->json([
+                'ok' => true,
+                'pedido' => $pedido,
+                'grupo' => $grupo,
+                'updated_items' => $updatedItems->values(),
+            ]);
+        } catch (\Throwable $exception) {
+            Log::error('Error actualizando grupo servicio', [
+                'pedido_id' => $pedidoId,
+                'grupo' => $grupo,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'No se pudo actualizar el grupo de servicio.',
+            ], 500);
+        }
     }
 }

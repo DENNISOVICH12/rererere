@@ -22,7 +22,7 @@ Route::get('/ping', [HealthController::class, 'ping']);
 // Kitchen + Bar API (stateless, no auth:web / no CSRF)
 Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
 Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
-Route::put('/pedidos/{id}/servicio/{grupo}', [PedidoDetalleController::class, 'updateServiceStatus']);
+Route::put('/pedidos/{pedido}/servicio/{grupo}', [PedidoController::class, 'updateServicioGrupo']);
 
 
 // Registro cliente desde la carta digital

@@ -683,7 +683,7 @@ body.has-admin-back .kds { padding-top: 64px; }
             :disabled="isGroupProcessing(order.id, group.key)"
             @click.stop="updateGroupStatus(order.id, group.key)"
           >
-            @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : serviceActionLabel(group.status) }}
+            @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : serviceActionLabel(group.status, group.key) }}
           </button>
         </section>
 
@@ -1363,11 +1363,19 @@ Vue.createApp({
       this.showToast('🔐 Inicia sesión nuevamente o usa una ruta web con sesión/cookies en desarrollo.');
     },
     canStartService(status) {
-      return status === 'pendiente';
+      return status === 'pendiente' || status === 'preparando';
     },
-    serviceActionLabel(status) {
-      if (status === 'pendiente') return this.activeServiceArea === 'bebida' ? 'Iniciar bar' : 'Iniciar cocina';
-      if (status === 'preparando') return 'En preparación';
+    nextServiceStatus(status) {
+      if (status === 'pendiente') return 'preparando';
+      if (status === 'preparando') return 'listo';
+      return status;
+    },
+    serviceActionLabel(status, groupKey = null) {
+      if (status === 'pendiente') {
+        if ((groupKey || this.activeServiceArea) === 'bebida') return 'Iniciar bar';
+        return 'Iniciar cocina';
+      }
+      if (status === 'preparando') return 'Marcar listo';
       if (status === 'listo') return 'Listo';
       return 'Finalizado';
     },
@@ -1425,7 +1433,12 @@ Vue.createApp({
       if (idx < 0) return;
 
       const prevOrder = this.orders[idx];
-      const nextStatus = 'preparando';
+      const currentGroup = this.serviceGroupsFor(prevOrder, { includeAll: true }).find((group) => group.key === groupKey);
+      const currentStatus = currentGroup?.status || 'pendiente';
+      const nextStatus = this.nextServiceStatus(currentStatus);
+
+      if (nextStatus === currentStatus) return;
+
       const optimisticOrder = this.patchOrderGroupStatus(prevOrder, groupKey, nextStatus);
       this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? optimisticOrder : o));
 

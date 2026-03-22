@@ -18,6 +18,9 @@ class DetallePedido extends Model
         'importe',
         'restaurant_id',
         'pedido_id',
+        'nota',
+        'grupo_servicio',
+        'estado_servicio',
     ];
     
 
