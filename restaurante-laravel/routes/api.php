@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
     HealthController,
-    ClienteController,
     MenuItemController,
     PedidoController,
     UsuarioController,
@@ -14,20 +13,30 @@ use App\Http\Controllers\{
     AuthController,
     OrderController,
     KitchenOrderController,
+    MeseroOrderController,
     ClienteAuthController
 };
 
+// Health Check
 Route::get('/ping', [HealthController::class, 'ping']);
 
-// Kitchen + Bar API (stateless, no auth:web / no CSRF)
-Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
-Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
-Route::put('/pedidos/{id}/servicio/{grupo}', [PedidoDetalleController::class, 'updateServiceStatus']);
+
+Route::patch('/orders/{order}/grupo_servicio', [OrderController::class, 'updateGrupoServicio']);
+
+// Kitchen Display System API
+Route::middleware(['role:admin,cocinero'])->group(function () {
+    Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
+    Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
+    Route::patch('/kitchen/orders/{order}/start', [KitchenOrderController::class, 'start']);
+    Route::patch('/kitchen/orders/{order}/ready', [KitchenOrderController::class, 'ready']);
+    Route::patch('/kitchen/orders/{order}/deliver', [KitchenOrderController::class, 'deliver']);
+});
 
 
 // Registro cliente desde la carta digital
 Route::post('/login-cliente', [AuthController::class, 'loginCliente']);
 Route::post('/register-cliente', [AuthController::class, 'registerCliente']);
+
 Route::post('/cliente/register', [ClienteAuthController::class, 'register']);
 Route::post('/cliente/login', [ClienteAuthController::class, 'login']);
 
@@ -42,3 +51,42 @@ Route::get('/clientes/{cliente}/pedidos', [OrderController::class, 'clientePedid
 Route::get('/menu/today', [MenuController::class, 'showToday']);
 Route::get('/platos-fisicos', [PlatoTableController::class, 'index']);
 Route::get('/bebidas-fisicas', [BebidaTableController::class, 'index']);
+
+Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->group(function () {
+
+    // ✅ Solo administración general puede ver todos los pedidos desde acá
+    // (Mesero y cocinero tendrán sus propias rutas filtradas)
+    // Route::get('/pedidos', [PedidoController::class, 'index']); // ❌ QUITAMOS ESTA LINEA DE AQUÍ
+
+    Route::middleware('rol:admin')->group(function () {
+        Route::post('/crear-usuario', [AuthController::class, 'crearUsuario']);
+        Route::apiResource('usuarios', UsuarioController::class);
+        Route::post('/menu-items', [MenuItemController::class, 'store']);
+        Route::put('/menu-items/{id}', [MenuItemController::class, 'update']);
+        Route::delete('/menu-items/{id}', [MenuItemController::class, 'destroy']);
+    });
+
+    Route::middleware('rol:mesero')->group(function () {
+        Route::post('/pedidos', [PedidoController::class, 'store']);
+        Route::post('/pedido-detalles', [PedidoDetalleController::class, 'store']);
+        Route::put('/pedidos/{id}/cerrar', [PedidoController::class, 'cerrar']);
+        Route::put('/pedidos/{id}/estado', [PedidoController::class, 'cambiarEstado']);
+    });
+
+    Route::middleware('rol:cocinero')->group(function () {
+
+        Route::get('/cocina', function () {
+            return view('cocina');
+        })->name('cocina');
+
+        // ✅ AHORA SÍ — Cocina puede ver todos los pedidos
+
+        // Lista solo pendientes (para compatibilidad previa)
+        Route::get('/pedidos-pendientes', [PedidoController::class, 'pedidosPendientes']);
+
+        // Cambiar estado desde cocina
+        Route::put('/pedidos/{id}/estado', [PedidoController::class, 'cambiarEstado']);
+    });
+});
+
+    

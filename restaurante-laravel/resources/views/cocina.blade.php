@@ -1363,14 +1363,14 @@ Vue.createApp({
       this.showToast('🔐 Inicia sesión nuevamente o usa una ruta web con sesión/cookies en desarrollo.');
     },
     canStartService(status) {
-      return status === 'pendiente';
-    },
+  return status === 'pendiente' || status === 'preparando';
+},
     serviceActionLabel(status) {
-      if (status === 'pendiente') return this.activeServiceArea === 'bebida' ? 'Iniciar bar' : 'Iniciar cocina';
-      if (status === 'preparando') return 'En preparación';
-      if (status === 'listo') return 'Listo';
-      return 'Finalizado';
-    },
+  if (status === 'pendiente') return 'Iniciar cocina';
+  if (status === 'preparando') return 'Marcar listo';
+  if (status === 'listo') return 'Finalizado';
+  return 'Finalizado';
+},
     serviceActionClass(status) {
       if (status === 'pendiente') return 'action-next-pendiente';
       if (status === 'preparando') return 'action-next-preparando';
@@ -1425,7 +1425,16 @@ Vue.createApp({
       if (idx < 0) return;
 
       const prevOrder = this.orders[idx];
-      const nextStatus = 'preparando';
+      const currentStatus = this.serviceGroupsFor(prevOrder)
+  .find(g => g.key === groupKey)?.status;
+
+let nextStatus = 'preparando';
+
+if (currentStatus === 'pendiente') {
+  nextStatus = 'preparando';
+} else if (currentStatus === 'preparando') {
+  nextStatus = 'listo';
+}
       const optimisticOrder = this.patchOrderGroupStatus(prevOrder, groupKey, nextStatus);
       this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? optimisticOrder : o));
 
@@ -1434,7 +1443,7 @@ Vue.createApp({
       this.processingGroupIds = nextSet;
 
       const attempts = [
-        { url: `/api/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', source: 'api-service-group' },
+        { url: `/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', source: 'api-service-group' },
       ];
 
 
@@ -1548,7 +1557,7 @@ Vue.createApp({
         if (!isInitial && this.lastSyncAt) qs.set('since', this.lastSyncAt);
 
         const result = await this.requestFirstOk([
-  { url: '/pedidos', method: 'GET', source: 'web-orders' },
+  { url: '/pedidos', method: 'GET', source: 'api-orders' },
 ]);
 
         if (!result.ok) {

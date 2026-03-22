@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pedido;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PedidoController extends Controller
 {
@@ -45,4 +46,70 @@ class PedidoController extends Controller
 
         return response()->json(['ok' => true]);
     }
+     public function iniciarPlatos($id)
+{
+    try {
+        Log::info("Iniciando platos para pedido: " . $id);
+
+        $pedido = Pedido::with('detalles')->findOrFail($id);
+
+        foreach ($pedido->detalles as $detalle) {
+            if ($detalle->grupo_servicio === 'plato') {
+                $detalle->estado_servicio = 'preparando';
+                $detalle->save();
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Platos en preparación'
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error("Error iniciarPlatos: " . $e->getMessage());
+
+        return response()->json([
+            'error' => true,
+            'message' => $e->getMessage()
+        ], 500);
+
+        // Verificar si TODOS los platos ya están en preparación
+$todosPreparando = $pedido->detalles
+    ->where('grupo_servicio', 'plato')
+    ->every(fn($d) => $d->estado_servicio === 'preparando');
+
+if ($todosPreparando) {
+    $pedido->estado = 'preparando';
+    $pedido->save();
+}
+    }
+}
+public function iniciarBebidas($id)
+{
+    try {
+        Log::info("Iniciando bebidas para pedido: " . $id);
+
+        $pedido = Pedido::with('detalles')->findOrFail($id);
+
+        foreach ($pedido->detalles as $detalle) {
+            if ($detalle->grupo_servicio === 'bebida') {
+                $detalle->estado_servicio = 'preparando';
+                $detalle->save();
+            }
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Bebidas en preparación'
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error("Error iniciarBebidas: " . $e->getMessage());
+
+        return response()->json([
+            'error' => true,
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
 }

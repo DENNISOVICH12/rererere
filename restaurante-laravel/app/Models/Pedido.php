@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Concerns\BelongsToRestaurant;
 use App\Models\Usuario;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
 
 class Pedido extends Model
 {
@@ -197,4 +198,5 @@ class Pedido extends Model
     {
         return $this->created_at ? $this->created_at->format('Y-m-d') : null;
     }
+   
 }
