@@ -75,10 +75,9 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
         'serviceAreaLabel' => 'Cocina',
     ])->name('cocina.panel');
 
-    Route::view('/bar', 'cocina', [
-        'serviceArea' => 'bebida',
-        'serviceAreaLabel' => 'Bar',
-    ])->name('bar.panel');
+    Route::view('/bar', 'barra')->name('bar.panel');
+
+    Route::view('/barra', 'barra')->name('barra.panel');
     Route::get('/pedidos', [PedidoController::class, 'index']);
     Route::put('/pedidos/{id}/servicio/{grupo}', [PedidoController::class, 'updateServicioGrupo']);
     Route::get('/cocina/pedidos', function () {
