@@ -38,6 +38,7 @@ class UsuarioController extends Controller
             'mesero'   => 'Mesero',
             'cocinero' => 'Cocinero',
             'cliente'  => 'Cliente',
+            'barra'    => 'Barra',
         ];
 
         return view('usuarios', [
@@ -92,7 +93,7 @@ class UsuarioController extends Controller
             'usuario'  => 'required|string|max:50|unique:usuarios,usuario',
             'correo'   => 'required|email|max:180|unique:usuarios,correo',
             'password' => 'required|min:6',
-            'rol'      => 'required|in:admin,mesero,cocinero,cliente',
+            'rol'      => 'required|in:admin,cocinero,mesero,barra',
             'nombre'   => 'nullable|string|max:120',
             'apellido' => 'nullable|string|max:120',
             'activo'   => 'nullable|boolean',
@@ -157,7 +158,7 @@ class UsuarioController extends Controller
             'nombre'        => ['sometimes', 'nullable', 'string', 'max:120'],
             'apellido'      => ['sometimes', 'nullable', 'string', 'max:120'],
             'correo'        => ['sometimes', 'email', 'max:180', Rule::unique('usuarios', 'correo')->ignore($u->id)],
-            'rol'           => ['sometimes', 'string', 'in:admin,mesero,cocinero,cliente'],
+            'rol'           => ['sometimes', 'string', 'in:admin,cocinero,mesero,barra'],
             'activo'        => ['sometimes', 'boolean'],
             'restaurant_id' => ['sometimes', 'integer'],
         ]);
