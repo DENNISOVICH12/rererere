@@ -39,6 +39,7 @@ class AuthController extends Controller
             'admin'    => redirect('/admin'),
             'cocinero' => redirect('/cocina'),
             'mesero'   => redirect('/mesero'),
+            'barra'    => redirect()->route('barra.panel'),
             default    => redirect('/dashboard'),
         };
     }
@@ -113,7 +114,7 @@ public function loginCliente(Request $request)
             'usuario' => 'required|unique:usuarios,usuario',
             'correo' => 'required|email|unique:usuarios,correo',
             'password' => 'required|min:6',
-            'rol' => 'required|in:admin,mesero,cocinero',
+            'rol' => 'required|in:admin,cocinero,mesero,barra',
             'nombre' => 'required|string',
             'apellido' => 'required|string',
             'restaurant_id' => 'required|integer|exists:restaurants,id'

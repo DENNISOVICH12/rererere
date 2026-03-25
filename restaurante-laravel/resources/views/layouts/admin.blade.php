@@ -123,6 +123,8 @@
 
         <a href="{{ route('cocina.panel') }}" class="nav-link">Cocina</a>
 
+        <a href="{{ route('barra.panel') }}" class="nav-link">Ir a Barra</a>
+
         <a href="{{ route('cocina.pedidos.todos') }}" class="nav-link">Pedidos / Mesas</a>
 
         <a href="{{ route('carta.digital') }}" class="nav-link">Carta Digital</a>
