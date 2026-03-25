@@ -59,7 +59,13 @@ body {
   font-size: .82rem;
   color: #e5edf8;
   min-height: 30px;
+  cursor: pointer;
+  transition: all .2s ease;
 }
+.status-chip:hover { border-color: #6f819f; transform: translateY(-1px); }
+.status-chip.active { background: #3a465c; border-color: #8aa2ca; color: #ffffff; box-shadow: 0 6px 16px rgba(0,0,0,.22); }
+.status-chip:not(.active) { background: transparent; }
+.status-chip[type="button"] { appearance: none; -webkit-appearance: none; font: inherit; }
 .status-chip-label { color: #bec8da; font-weight: 600; }
 .status-chip-value { font-weight: 800; }
 .status-chip--pending { border-color: rgba(107,114,128,.85); }
@@ -104,13 +110,38 @@ body {
   display: grid;
   gap: 8px;
   cursor: pointer;
-  transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+  transition: all .2s ease;
 }
-.kds-card:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(0,0,0,.18); }
+.kds-card:hover { transform: scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
 .card-selected { border-color: #8194b3; }
 .card-new { animation: glowPremium 1.6s ease; }
 .card-critical { border: 2px solid var(--danger); box-shadow: 0 0 0 2px rgba(255,77,77,.12); }
 .kds-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.kds-card-head-main { display: grid; gap: 4px; }
+.card-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #445169;
+  color: #cdd9ed;
+  font-size: 1.1rem;
+  background: rgba(116, 138, 170, .12);
+}
+.card-footer-hint {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+  color: #b9c6dc;
+  font-size: .78rem;
+  border: 1px dashed rgba(143, 162, 189, .45);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
 .num { font-weight: 900; font-size: 1.42rem; margin: 0; line-height: 1.1; }
 .kds-meta { margin: 2px 0 0; color: var(--muted); font-size: .78rem; }
 .timer { border-radius: 999px; padding: 3px 8px; font-size: .72rem; font-weight: 800; border: 1px solid #3a4558; background: #242d3a; color: #dbe5f6; }
@@ -264,11 +295,11 @@ body.has-admin-back .kds { padding-top: 64px; }
   <header class="topbar">
     <h1 class="topbar-title">{{ $serviceAreaLabel }}</h1>
 
-    <div class="status-chips" role="status" aria-live="polite" aria-label="Resumen del grupo de servicio activo">
-      <span class="status-chip status-chip--pending"><span class="status-chip-label">🧾 Pendientes</span><span class="status-chip-value">@{{ activeServiceSummary.pendiente }}</span></span>
-      <span class="status-chip status-chip--cooking"><span class="status-chip-label">👨‍🍳 Preparando</span><span class="status-chip-value">@{{ activeServiceSummary.preparando }}</span></span>
-      <span class="status-chip status-chip--ready"><span class="status-chip-label">✅ Listos</span><span class="status-chip-value">@{{ activeServiceSummary.listo }}</span></span>
-      <span class="status-chip"><span class="status-chip-label">⏱ Atrasados</span><span class="status-chip-value">@{{ delayedCount }}</span></span>
+    <div class="status-chips" role="tablist" aria-live="polite" aria-label="Filtro por estado">
+      <button type="button" class="status-chip status-chip--pending" role="tab" :aria-selected="activeFilter === 'pendiente'" :class="{ active: activeFilter === 'pendiente' }" @click="activeFilter = 'pendiente'"><span class="status-chip-label">🧾 Pendientes</span><span class="status-chip-value">@{{ activeServiceSummary.pendiente }}</span></button>
+      <button type="button" class="status-chip status-chip--cooking" role="tab" :aria-selected="activeFilter === 'preparando'" :class="{ active: activeFilter === 'preparando' }" @click="activeFilter = 'preparando'"><span class="status-chip-label">👨‍🍳 Preparando</span><span class="status-chip-value">@{{ activeServiceSummary.preparando }}</span></button>
+      <button type="button" class="status-chip status-chip--ready" role="tab" :aria-selected="activeFilter === 'listo'" :class="{ active: activeFilter === 'listo' }" @click="activeFilter = 'listo'"><span class="status-chip-label">✅ Listos</span><span class="status-chip-value">@{{ activeServiceSummary.listo }}</span></button>
+      <button type="button" class="status-chip" role="tab" :aria-selected="activeFilter === 'atrasados'" :class="{ active: activeFilter === 'atrasados' }" @click="activeFilter = 'atrasados'"><span class="status-chip-label">⏱ Atrasados</span><span class="status-chip-value">@{{ delayedCount }}</span></button>
     </div>
 
     <div class="topbar-right">
@@ -296,7 +327,7 @@ body.has-admin-back .kds { padding-top: 64px; }
   <div class="kds-grid">
     <transition-group name="fade" tag="div" class="kds-grid-inner">
       <article
-        v-for="order in boardOrders"
+        v-for="order in filteredOrders"
         :key="order.id"
         :id="`order-${order.id}`"
         class="kds-card"
@@ -308,10 +339,11 @@ body.has-admin-back .kds { padding-top: 64px; }
         @click="openOrderDetails(order)"
       >
         <header class="kds-card-head">
-          <div>
+          <div class="kds-card-head-main">
             <h2 class="num">Pedido #@{{ order.id }}</h2>
             <p class="kds-meta">Mesa @{{ order.mesa || '-' }} · @{{ fmtTime(order.created_at) }}</p>
           </div>
+          <span class="card-action-icon" aria-hidden="true">›</span>
           <span class="timer" :class="timerClass(order)">@{{ formatElapsed(order._elapsedMs) }}</span>
         </header>
 
@@ -347,6 +379,7 @@ body.has-admin-back .kds { padding-top: 64px; }
         </section>
 
         <p v-if="orderPreviewNote(order)" class="card-note-preview" :title="orderPreviewNote(order)">@{{ orderPreviewNote(order) }}</p>
+        <p class="card-footer-hint">👁 Ver detalles</p>
       </article>
     </transition-group>
   </div>
@@ -889,6 +922,7 @@ Vue.createApp({
       lastSyncAt: null,
       syncInFlight: false,
       selectedOrderId: null,
+      activeFilter: 'pendiente',
       drawerOpen: false,
       priorityOverrides: {},
       toastMessage: '',
@@ -929,7 +963,7 @@ Vue.createApp({
           _elapsedMin: elapsedMs / 60000,
           _urgency: (elapsedMs / 60000) + (status === 'pendiente' ? 2 : 0) + (this.priorityOverrides[order.id] ? 2 : 0),
         };
-      }).filter((order) => order && order.estado !== 'listo');
+      }).filter((order) => order);
     },
 
     grouped() {
@@ -943,6 +977,12 @@ Vue.createApp({
     },
     boardOrders() {
       return [...this.normalized].sort((a, b) => b._urgency - a._urgency || b._createdTs - a._createdTs);
+    },
+    filteredOrders() {
+      if (this.activeFilter === 'atrasados') {
+        return this.boardOrders.filter((order) => order.estado !== 'entregado' && order._elapsedMin > 6);
+      }
+      return this.boardOrders.filter((order) => order.estado === this.activeFilter);
     },
     serviceSummary() {
       const summary = {
