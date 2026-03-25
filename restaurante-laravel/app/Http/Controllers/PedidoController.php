@@ -87,21 +87,32 @@ class PedidoController extends Controller
                 $updated = collect();
 
                 foreach ($items as $item) {
-                    $currentStatus = strtolower((string) ($item->estado_servicio ?: 'pendiente'));
-                    $nextStatus = match ($currentStatus) {
-                        'pendiente' => 'preparando',
-                        'preparando' => 'listo',
-                        default => null,
-                    };
+    $currentStatus = strtolower((string) ($item->estado_servicio ?: 'pendiente'));
 
-                    if ($nextStatus === null) {
-                        continue;
-                    }
+    $nextStatus = match ($currentStatus) {
+        'pendiente' => 'preparando',
+        'preparando' => 'listo',
+        default => null,
+    };
 
-                    $item->estado_servicio = $nextStatus;
-                    $item->save();
-                    $updated->push($item->fresh(['menuItem']));
-                }
+    if ($nextStatus === null) {
+        continue;
+    }
+
+    // 🔥 DETECTAR CUANDO PASA A LISTO
+    if ($currentStatus === 'preparando' && $nextStatus === 'listo') {
+        Log::info('Pedido listo para mesero', [
+            'pedido_id' => $pedido->id,
+            'grupo' => $grupo,
+            'item_id' => $item->id,
+        ]);
+    }
+
+    $item->estado_servicio = $nextStatus;
+    $item->save();
+
+    $updated->push($item->fresh(['menuItem']));
+}
 
                 return $updated;
             });
@@ -116,6 +127,23 @@ class PedidoController extends Controller
             }
 
             $pedido->refresh()->load(['detalle.menuItem', 'cliente']);
+
+            // 🔥 Verificar si todos los items ya están listos
+$allItems = $pedido->detalle;
+
+// 🔥 Si AL MENOS un item está listo, el pedido aparece al mesero
+$hasAnyReady = $allItems->contains(function ($item) {
+    return strtolower($item->estado_servicio) === 'listo';
+});
+
+if ($hasAnyReady) {
+    $pedido->estado = 'listo';
+    $pedido->save();
+
+    Log::info('Pedido listo (parcial o completo) para mesero', [
+        'pedido_id' => $pedido->id,
+    ]);
+}
 
             return response()->json([
                 'ok' => true,

@@ -10,6 +10,7 @@
       @delete="requestDelete"
       @request-change="requestChange"
       @change-filter="changeFilter"
+      @deliver="deliverOrder"
     />
 
     <EditOrderPage
@@ -51,6 +52,8 @@ import EditOrderPage from './pages/EditOrderPage.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import Toast from './components/Toast.vue';
 
+const previousOrders = ref([]);
+const notifiedReadyIds = new Set();
 const orders = ref([]);
 const filter = ref('');
 const view = ref('list');
@@ -71,6 +74,21 @@ const showToast = (message, type = 'info') => {
   toast.type = type;
   setTimeout(() => (toast.show = false), 2400);
 };
+const deliverOrder = async (order) => {
+  try {
+    const updated = await updateOrder(order.id, {
+      estado: 'entregado'
+    });
+
+    orders.value = orders.value.map(o =>
+      o.id === order.id ? updated : o
+    );
+
+    showToast(`✅ Pedido #${order.id} entregado`, 'success');
+  } catch (error) {
+    showToast('❌ Error al entregar pedido', 'error');
+  }
+};
 
 const formatElapsed = (createdAt) => {
   const totalSeconds = Math.max(0, Math.floor((tick.value - new Date(createdAt).getTime()) / 1000));
@@ -81,8 +99,48 @@ const formatElapsed = (createdAt) => {
 };
 
 const loadOrders = async () => {
-  orders.value = await listActiveOrders(filter.value);
+  const newOrders = await listActiveOrders(filter.value);
+
+  // 🔍 Detectar cambios a "listo"
+  newOrders.forEach((newOrder) => {
+    const prev = previousOrders.value.find(o => o.id === newOrder.id);
+
+    if (
+      newOrder.estado === 'listo' &&
+      (!prev || prev.estado !== 'listo') &&
+      !notifiedReadyIds.has(newOrder.id)
+    ) {
+      showToast(`🍽 Pedido #${newOrder.id} listo para entregar`, 'success');
+
+      playSound();
+
+      notifiedReadyIds.add(newOrder.id);
+    }
+  });
+
+  // Guardar estado anterior
+  previousOrders.value = newOrders.map(o => ({ ...o }));
+
+  orders.value = newOrders;
 };
+
+const playSound = () => {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.frequency.value = 800;
+  gain.gain.value = 0.05;
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start();
+  setTimeout(() => {
+    osc.stop();
+    ctx.close();
+  }, 150);
+};  
 
 const changeFilter = async (value) => {
   filter.value = value;

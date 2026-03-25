@@ -80,9 +80,13 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
         'serviceAreaLabel' => 'Bar',
     ])->name('bar.panel');
     Route::get('/pedidos', [PedidoController::class, 'index']);
-    Route::put('/pedidos/{id}/servicio/plato', [PedidoController::class, 'iniciarPlatos']);
-    Route::put('/pedidos/{id}/servicio/bebida', [PedidoController::class, 'iniciarBebidas']);
-
+    Route::put('/pedidos/{id}/servicio/{grupo}', [PedidoController::class, 'updateServicioGrupo']);
+    Route::get('/cocina/pedidos', function () {
+    return view('cocina', [
+        'serviceArea' => 'plato',
+        'serviceAreaLabel' => 'Cocina',
+    ]);
+})->name('cocina.pedidos.todos');
 });
 
 /*

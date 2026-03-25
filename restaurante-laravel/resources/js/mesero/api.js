@@ -15,7 +15,12 @@ export const getOrder = (orderId) =>
     http.get(`/orders/${orderId}`).then((r) => r.data.data);
 
 export const updateOrder = (orderId, payload) =>
-    http.put(`/orders/${orderId}`, payload).then((r) => r.data.data);
+    axios.put(`/api/pedidos/${orderId}`, payload, {
+        withCredentials: true,
+        headers: {
+            Accept: 'application/json',
+        },
+    }).then((r) => r.data);
 
 export const requestOrderChange = (orderId, payload = {}) =>
     http.post(`/orders/${orderId}/request-change`, payload).then((r) => r.data.data);

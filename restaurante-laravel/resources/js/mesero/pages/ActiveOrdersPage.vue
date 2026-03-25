@@ -14,6 +14,7 @@
         @edit="$emit('edit', order)"
         @delete="$emit('delete', order)"
         @request-change="$emit('request-change', order)"
+        @deliver="$emit('deliver', order)"
       />
       <p v-if="!orders.length" class="empty">Sin pedidos activos en este filtro.</p>
     </div>

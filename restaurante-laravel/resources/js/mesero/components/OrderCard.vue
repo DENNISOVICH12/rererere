@@ -21,6 +21,14 @@
       </button>
 
       <button class="danger" :disabled="busy || !order.can_be_edited" @click="$emit('delete', order)">Cancelar</button>
+      <button
+  v-if="order.estado === 'listo'"
+  class="success"
+  :disabled="busy"
+  @click="$emit('deliver', order)"
+>
+  Entregar pedido
+</button>
     </div>
   </article>
 </template>
@@ -34,7 +42,7 @@ defineProps({
   busy: { type: Boolean, default: false },
 });
 
-defineEmits(['edit', 'delete', 'request-change']);
+defineEmits(['edit', 'delete', 'request-change', 'deliver']);
 </script>
 
 <style scoped>
@@ -51,4 +59,8 @@ button.warn { background: #ffd37b; color: #382800; }
 
 button.danger { background: #ff6f7c; }
 button:disabled { opacity: .5; }
+button.success {
+  background: linear-gradient(180deg, #22c55e, #15803d);
+  color: white;
+}
 </style>
