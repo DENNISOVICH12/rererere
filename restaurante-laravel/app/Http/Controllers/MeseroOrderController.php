@@ -253,6 +253,9 @@ class MeseroOrderController extends Controller
     private function transformOrder(Pedido $pedido): array
     {
         $items = $pedido->detalle->map(function ($detalle) {
+            $grupoServicio = strtolower((string) ($detalle->grupo_servicio ?: ($detalle->menuItem?->categoria === 'bebida' ? 'bebida' : 'plato')));
+            $estadoServicio = strtolower((string) ($detalle->estado_servicio ?: 'pendiente'));
+
             return [
                 'id' => $detalle->id,
                 'menu_item_id' => $detalle->menu_item_id,
@@ -261,8 +264,35 @@ class MeseroOrderController extends Controller
                 'nombre' => $detalle->menuItem?->nombre,
                 'categoria' => $detalle->menuItem?->categoria,
                 'precio' => (float) ($detalle->menuItem?->precio ?? $detalle->precio_unitario ?? 0),
+                'grupo_servicio' => $grupoServicio,
+                'estado_servicio' => $estadoServicio,
             ];
         })->values();
+
+        $serviceGroups = $items
+            ->groupBy('grupo_servicio')
+            ->map(function ($groupItems, $group) {
+                $statuses = $groupItems->pluck('estado_servicio')->map(fn ($status) => strtolower((string) $status));
+                $currentStatus = 'pendiente';
+
+                if ($statuses->every(fn ($status) => $status === 'entregado')) {
+                    $currentStatus = 'entregado';
+                } elseif ($statuses->contains('preparando')) {
+                    $currentStatus = 'preparando';
+                } elseif ($statuses->contains('pendiente')) {
+                    $currentStatus = 'pendiente';
+                } elseif ($statuses->contains('listo')) {
+                    $currentStatus = 'listo';
+                }
+
+                return [
+                    'grupo' => $group,
+                    'estado' => $currentStatus,
+                    'items' => $groupItems->values()->all(),
+                ];
+            })
+            ->values()
+            ->all();
 
         return [
             'id' => $pedido->id,
@@ -290,6 +320,7 @@ class MeseroOrderController extends Controller
             ],
             'items_count' => $items->sum('cantidad'),
             'items' => $items,
+            'grupos_servicio' => $serviceGroups,
         ];
     }
 }
