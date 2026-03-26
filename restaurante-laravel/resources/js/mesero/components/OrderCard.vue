@@ -4,6 +4,7 @@
       <strong>Pedido #{{ order.id }}</strong>
       <OrderStatusBadge :status="order.estado" />
     </header>
+    <ServiceStatusTracker :order="order" />
     <p class="timer">{{ elapsedText }}</p>
     <p class="meta">{{ order.items_count }} ítems · Mesa {{ order.mesa || '-' }}</p>
     <p class="meta">Cliente: {{ order.cliente?.nombre || 'Sin cliente' }}</p>
@@ -35,6 +36,7 @@
 
 <script setup>
 import OrderStatusBadge from './OrderStatusBadge.vue';
+import ServiceStatusTracker from './ServiceStatusTracker.vue';
 
 defineProps({
   order: { type: Object, required: true },
