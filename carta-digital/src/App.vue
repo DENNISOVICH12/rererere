@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import CartaDigital from './components/CartaDigital.vue'
+import OrderServiceStatus from './components/OrderServiceStatus.vue'
 import { cart, removeFromCart, clearCart, openLoginModal, saveCart } from './cart.js'
 import axios from 'axios'
 import { API_BASE } from './api.js'
@@ -78,22 +79,6 @@ function showToast(message, type = "success") {
     toast.value.show = false
   }, 2500)
 }
-
-/* =====================================================
-   🔥 TIMELINE
-===================================================== */
-const timelineSteps = ['retenido', 'modificacion_solicitada', 'pendiente', 'preparando', 'listo', 'entregado']
-
-const stepLabels = {
-  retenido: 'En ventana de cambios',
-  modificacion_solicitada: 'Modificación solicitada',
-
-  pendiente: 'Pendiente',
-  preparando: 'En cocina',
-  listo: 'Listo',
-  entregado: 'Entregado'
-}
-
 
 /* =====================================================
    🔥 LOGOUT
@@ -354,23 +339,6 @@ onMounted(() => {
 ===================================================== */
 const pedidoActual = computed(() => pedidosCliente.value[0] ?? null)
 
-const currentStepIndex = computed(() => {
-  if (!pedidoActual.value) return -1
-  const estado = (pedidoActual.value.estado || '').toLowerCase()
-  return timelineSteps.indexOf(estado)
-})
-
-const progressPercentage = computed(() => {
-  const total = timelineSteps.length
-  const activeIndex = Math.max(0, currentStepIndex.value)
-  return `${((activeIndex + 1) / total) * 100}%`
-})
-
-const currentStatusLabel = computed(() => {
-  const status = pedidoActual.value?.estado || ''
-  return stepLabels[status] || 'Sin estado'
-})
-
 
 
 const holdSecondsRemaining = computed(() => {
@@ -511,35 +479,8 @@ const changeRequestedMessage = computed(() => {
     </div>
 
 
-    <div class="timeline-pro">
-      <!-- BARRA PROGRESO -->
-      <div
-        class="progress-bar"
-        :style="{ width: progressPercentage }"
-      ></div>
+    <OrderServiceStatus v-if="pedidoActual" :order="pedidoActual" />
 
-      <div
-        v-for="(step, index) in timelineSteps"
-        :key="step"
-        class="step-pro"
-        :class="{
-          completed: index < currentStepIndex,
-          active: index === currentStepIndex
-        }"
-      >
-        <div class="circle"></div>
-        <span>{{ stepLabels[step] }}</span>
-      </div>
-    </div>
-
-  </div>
-
-
-  <div v-if="pedidoActual" class="status-now">
-    <span class="status-now__label">Estado actual</span>
-    <strong class="status-now__value">
-      {{ currentStatusLabel }}
-    </strong>
   </div>
 
   <p v-if="errorPedidos" class="order-error">{{ errorPedidos }}</p>
@@ -1291,102 +1232,9 @@ const changeRequestedMessage = computed(() => {
   to{ transform:rotate(360deg) }
 }
 
-/* TIMELINE PRO */
 .order-body-pro {
   display: grid;
   gap: 12px;
-}
-
-.timeline-pro{
-  position:relative;
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  padding:16px 2px 0;
-  overflow-x: auto;
-  gap: 6px;
-  scrollbar-width: thin;
-}
-
-/* línea base */
-.timeline-pro::before{
-  content:"";
-  position:absolute;
-  top:22px;
-  left:0;
-  right:0;
-  height:2px;
-  background:rgba(255,255,255,.15);
-}
-
-/* barra progreso animada */
-.progress-bar{
-  position:absolute;
-  top:22px;
-  left:0;
-  height:2px;
-  background:linear-gradient(90deg,#2ecc71,#ffd7aa);
-  transition:width .6s ease;
-}
-
-/* pasos */
-.step-pro{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  font-size:11px;
-  text-align:center;
-  gap:7px;
-  z-index:2;
-  min-width: 66px;
-}
-
-/* círculo */
-.circle{
-  width:13px;
-  height:13px;
-  border-radius:50%;
-  background:rgba(255,255,255,.15);
-  border:2px solid rgba(255,255,255,.25);
-  transition:.35s;
-}
-
-/* completado */
-.step-pro.completed .circle{
-  background:#2ecc71;
-  border-color:#2ecc71;
-  box-shadow:0 0 10px rgba(46,204,113,.6);
-}
-
-/* activo */
-.step-pro.active .circle{
-  background:#ffd7aa;
-  border-color:#ffd7aa;
-  box-shadow:0 0 12px rgba(255,215,170,.7);
-  transform:scale(1.15);
-}
-
-/* estado actual */
-.status-now{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: fit-content;
-  font-size:12px;
-  background:rgba(255,255,255,.08);
-  padding:7px 12px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.16);
-}
-
-.status-now__label {
-  opacity: 0.75;
-}
-
-
-.status-now__value{
-  color:#ffd7aa;
-  font-size: 12.5px;
 }
 
 /* vacío */
@@ -1872,24 +1720,6 @@ const changeRequestedMessage = computed(() => {
     font-size: 11px;
   }
 
-  .timeline-pro {
-    padding-top: 14px;
-  }
-
-  .timeline-pro::before,
-  .progress-bar {
-    top: 20px;
-  }
-
-  .step-pro {
-    min-width: 62px;
-  }
-
-  .step-pro span {
-    font-size: 10px;
-    line-height: 1.2;
-  }
-
   .hold-banner {
     grid-template-columns: auto 1fr;
     gap: 8px;
@@ -1910,13 +1740,6 @@ const changeRequestedMessage = computed(() => {
     text-align: center;
   }
 
-  .status-now {
-    width: 100%;
-    justify-content: space-between;
-    box-sizing: border-box;
-  }
-
 }
 
 </style>
-
