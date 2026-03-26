@@ -12,17 +12,35 @@ use Illuminate\Support\Facades\Log;
 class PedidoController extends Controller
 {
     public function index(): JsonResponse
-    {
-        Pedido::releaseExpiredRetentionWindow();
+{
+    Pedido::releaseExpiredRetentionWindow();
 
-        $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
-            ->whereNotIn('estado', [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED])
-            ->orderBy('created_at', 'desc')
-            ->get();
+    $pedidos = Pedido::with([
+        'detalle' => function ($q) {
+            $q->select([
+                'id',
+                'pedido_id',
+                'menu_item_id',
+                'cantidad',
+                'precio_unitario',
+                'importe',
+                'nota',
+                'grupo_servicio',
+                'estado_servicio'
+            ]);
+        },
+        'detalle.menuItem',
+        'cliente'
+    ])
+    ->whereNotIn('estado', [
+        Pedido::STATUS_RETAINED,
+        Pedido::STATUS_CHANGE_REQUESTED
+    ])
+    ->orderBy('created_at', 'desc')
+    ->get();
 
-        return response()->json($pedidos);
-    }
-
+    return response()->json($pedidos);
+}
     public function pedidosPendientes(): JsonResponse
     {
         Pedido::releaseExpiredRetentionWindow();

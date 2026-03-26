@@ -69,7 +69,7 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
 | PANEL COCINA (ADMIN + COCINERO)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
+Route::middleware(['auth:web', 'role:admin,cocinero,barra'])->group(function () {
     Route::view('/cocina', 'cocina', [
         'serviceArea' => 'plato',
         'serviceAreaLabel' => 'Cocina',
@@ -88,7 +88,10 @@ Route::middleware(['auth:web', 'role:admin,cocinero'])->group(function () {
 
 Route::middleware(['auth:web', 'role:admin,barra'])->group(function () {
     Route::view('/bar', 'barra')->name('bar.panel');
-    Route::view('/barra', 'barra')->name('barra.panel');
+    Route::view('/barra', 'barra', [
+    'serviceArea' => 'bebida',
+    'serviceAreaLabel' => 'Barra',
+])->name('barra.panel');
 });
 
 /*

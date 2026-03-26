@@ -399,7 +399,7 @@ body.has-admin-back .kds { padding-top: 64px; }
 <script>
 const POLLING_MS = 4000;
 const DELIVERED_HIDE_MS = 15 * 60 * 1000;
-const ACTIVE_SERVICE_AREA = @json($serviceArea);
+const SERVICE_AREA = @json($serviceArea ?? 'plato');
 const ACTIVE_SERVICE_LABEL = @json($serviceAreaLabel);
 const STATUS_LABELS = {
   pendiente: 'Pendiente',
@@ -534,8 +534,13 @@ function normalizeOrderItems(order) {
       'pivot.extras','pivot.opciones','detalle.extras'
     ]);
 
-    const serviceGroupRaw = pickFirst(merged, ['grupo_servicio','grupoServicio','service_group','serviceGroup']) || 'plato';
-    const serviceStatusRaw = pickFirst(merged, ['estado_servicio','estadoServicio','service_status','serviceStatus']) || order?.estado || 'pendiente';
+const serviceGroupRaw =
+  merged.grupo_servicio ||
+  merged.grupoServicio ||
+  merged.service_group ||
+  merged.serviceGroup ||
+  'plato';
+      const serviceStatusRaw = pickFirst(merged, ['estado_servicio','estadoServicio','service_status','serviceStatus']) || order?.estado || 'pendiente';
 
     return {
       ...raw,
@@ -910,7 +915,7 @@ Vue.createApp({
   data() {
     return {
       orders: [],
-      activeServiceArea: String(ACTIVE_SERVICE_AREA || 'plato').toLowerCase(),
+      activeServiceArea: String(SERVICE_AREA || 'plato').toLowerCase(),
       activeServiceLabel: ACTIVE_SERVICE_LABEL || 'Cocina',
       nowTs: Date.now(),
       error: '',
@@ -1324,7 +1329,9 @@ Vue.createApp({
       else document.exitFullscreen?.();
     },
   },
-  mounted() {
+  mounted() {  
+    window.app = this;
+
     this.fetchOrders(true);
     this.pollHandle = setInterval(() => this.fetchOrders(false), POLLING_MS);
     this.tickHandle = setInterval(() => { this.nowTs = Date.now(); }, 1000);

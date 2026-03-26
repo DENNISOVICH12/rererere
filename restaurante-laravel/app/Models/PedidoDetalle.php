@@ -9,17 +9,18 @@ class PedidoDetalle extends Model
 {
     protected $table = 'pedido_detalles';
 
-    protected $fillable = [
-        'pedido_id',
-        'menu_item_id',
-        'cantidad',
-        'precio_unitario',
-        'importe',
-        'restaurant_id',
-        'nota', // ✅ agregar44
-        'grupo_servicio',
-        'estado_servicio',
-    ];
+    protected $visible = [
+    'id',
+    'pedido_id',
+    'menu_item_id',
+    'cantidad',
+    'precio_unitario',
+    'importe',
+    'nota',
+    'grupo_servicio',
+    'estado_servicio',
+    'menuItem'
+];
 
     public function pedido()
     {

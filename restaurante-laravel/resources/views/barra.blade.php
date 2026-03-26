@@ -3,4 +3,7 @@
   $serviceAreaLabel = 'Barra';
 @endphp
 
-@include('cocina')
+@include('cocina', [
+  'serviceArea' => 'bebida',
+  'serviceAreaLabel' => 'Barra'
+])
