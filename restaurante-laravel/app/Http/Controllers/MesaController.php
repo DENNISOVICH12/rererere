@@ -4,61 +4,34 @@ namespace App\Http\Controllers;
 
 use App\Models\ClienteMesa;
 use App\Models\Pedido;
+use App\Models\Mesa; // 🔥 NUEVO
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MesaController extends Controller
 {
-    public function index(Request $request): JsonResponse
-    {
-        $restaurantId = (int) $request->user()->restaurant_id;
+    public function index(Request $request)
+{
+    try {
+        // 🔥 FORZAMOS restaurant_id (temporal mientras no uses login multi-restaurante)
+        $restaurantId = 1;
 
-        $clientesByMesa = ClienteMesa::query()
-            ->where('restaurant_id', $restaurantId)
-            ->where('activo', true)
-            ->get()
-            ->groupBy('mesa');
+        $mesas = \App\Models\Mesa::where('restaurant_id', $restaurantId)->get();
 
-        $pedidos = Pedido::query()
-            ->where('restaurant_id', $restaurantId)
-            ->whereIn('estado', ['retenido', 'modificacion_solicitada', 'pendiente', 'preparando', 'listo'])
-            ->with(['detalle:id,pedido_id,estado_servicio'])
-            ->get();
-
-        $mesas = collect($pedidos)
-            ->pluck('mesa')
-            ->merge($clientesByMesa->keys())
-            ->filter(fn ($mesa) => filled($mesa))
-            ->unique()
-            ->sortBy(fn ($mesa) => (int) preg_replace('/\D+/', '', (string) $mesa))
-            ->values()
-            ->map(function ($mesa) use ($pedidos, $clientesByMesa) {
-                $mesaPedidos = $pedidos->where('mesa', $mesa);
-                $hasPendingService = $mesaPedidos->contains(function (Pedido $pedido) {
-                    return $pedido->detalle->contains(fn ($item) => ($item->estado_servicio ?? 'pendiente') !== 'entregado');
-                });
-
-                $estado = 'libre';
-                if ($mesaPedidos->isNotEmpty() || ($clientesByMesa[$mesa] ?? collect())->isNotEmpty()) {
-                    $estado = $hasPendingService ? 'pendiente' : 'en_uso';
-                }
-
-                return [
-                    'id' => rawurlencode((string) $mesa),
-                    'codigo' => (string) $mesa,
-                    'estado' => $estado,
-                    'clientes_activos' => (int) ($clientesByMesa[$mesa]->count() ?? 0),
-                    'pedidos_activos' => $mesaPedidos->count(),
-                ];
-            });
-
-        return response()->json(['data' => $mesas]);
+        return response()->json([
+            'data' => $mesas
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function show(Request $request, string $id): JsonResponse
     {
         $mesa = rawurldecode($id);
-        $restaurantId = (int) $request->user()->restaurant_id;
+        $restaurantId = 1;
 
         $clientes = ClienteMesa::query()
             ->where('restaurant_id', $restaurantId)

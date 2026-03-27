@@ -59,7 +59,7 @@ class OrderController extends Controller
         $order = Pedido::create([
             'cliente_id' => $resolvedClienteId,
             'restaurant_id' => $restaurantId,
-            'mesa' => $request->mesa,
+            'mesa_id' => $request->mesa,
             'estado' => Pedido::STATUS_RETAINED,
             'hold_expires_at' => now()->addSeconds(Pedido::holdWindowSeconds()),
             'total' => $total,

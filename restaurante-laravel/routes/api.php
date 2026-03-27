@@ -14,7 +14,8 @@ use App\Http\Controllers\{
     OrderController,
     KitchenOrderController,
     MeseroOrderController,
-    ClienteAuthController
+    ClienteAuthController,
+    MesaController
 };
 
 // Health Check
@@ -47,6 +48,8 @@ Route::get('/platos-fisicos', [PlatoTableController::class, 'index']);
 Route::get('/bebidas-fisicas', [BebidaTableController::class, 'index']);
 
 Route::put('/mesero/pedidos/{id}', [PedidoController::class, 'cambiarEstado']);
+
+Route::get('/mesas', [MesaController::class, 'index']);
 
 Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->group(function () {
 
