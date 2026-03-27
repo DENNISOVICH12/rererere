@@ -50,6 +50,7 @@ Route::get('/bebidas-fisicas', [BebidaTableController::class, 'index']);
 Route::put('/mesero/pedidos/{id}', [PedidoController::class, 'cambiarEstado']);
 
 Route::get('/mesas', [MesaController::class, 'index']);
+Route::get('/mesas/{mesa}/pedidos', [MesaController::class, 'pedidos']);
 
 Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->group(function () {
 

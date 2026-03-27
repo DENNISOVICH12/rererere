@@ -56,3 +56,6 @@ export const getClientePedidos = (clienteId) =>
 
 export const facturarCliente = (clienteId) =>
     floorHttp.post(`/clientes/${clienteId}/facturar`).then((r) => r.data);
+
+export const getMesaPedidos = (mesaId) =>
+    floorHttp.get(`/mesas/${mesaId}/pedidos`).then((r) => r.data.data);

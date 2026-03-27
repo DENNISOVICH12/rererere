@@ -157,6 +157,22 @@ class MesaController extends Controller
         ]);
     }
 
+    public function pedidos(Request $request, string $mesaId): JsonResponse
+    {
+        $restaurantId = (int) ($request->user()->restaurant_id ?? 1);
+
+        $pedidos = Pedido::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('mesa', rawurldecode($mesaId))
+            ->with(['detalle.menuItem'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'data' => $pedidos,
+        ]);
+    }
+
     private function transformPedido(Pedido $pedido): array
     {
         return [
