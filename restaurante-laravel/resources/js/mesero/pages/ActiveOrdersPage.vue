@@ -14,7 +14,7 @@
         @edit="$emit('edit', order)"
         @delete="$emit('delete', order)"
         @request-change="$emit('request-change', order)"
-        @deliver="$emit('deliver', order)"
+        @deliver-group="$emit('deliver-group', $event)"
       />
       <p v-if="!orders.length" class="empty">Sin pedidos activos en este filtro.</p>
     </div>
@@ -31,7 +31,7 @@ defineProps({
   busyMap: Object,
 });
 
-defineEmits(['edit', 'delete', 'request-change', 'change-filter']);
+defineEmits(['edit', 'delete', 'request-change', 'change-filter', 'deliver-group']);
 
 const chips = [
   { value: '', label: 'Todos' },

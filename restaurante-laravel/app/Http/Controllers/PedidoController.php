@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pedido;
+use App\Models\PedidoDetalle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -194,5 +195,38 @@ if ($hasAnyReady) {
                 'message' => 'No se pudo actualizar el grupo de servicio.',
             ], 500);
         }
+    }
+
+    public function entregarGrupo(int $pedidoId, string $grupo): JsonResponse
+    {
+        $grupo = strtolower(trim($grupo));
+
+        if (!in_array($grupo, ['plato', 'bebida'], true)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Grupo de servicio inválido. Usa "plato" o "bebida".',
+            ], 422);
+        }
+
+        $pedido = Pedido::with(['detalle.menuItem', 'cliente'])->find($pedidoId);
+
+        if (!$pedido) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Pedido no encontrado.',
+            ], 404);
+        }
+
+        PedidoDetalle::where('pedido_id', $pedidoId)
+            ->whereRaw('LOWER(COALESCE(grupo_servicio, ?)) = ?', ['plato', $grupo])
+            ->update(['estado_servicio' => 'entregado']);
+
+        $pedido->refresh()->load(['detalle.menuItem', 'cliente']);
+
+        return response()->json([
+            'ok' => true,
+            'message' => sprintf('%s marcados como entregados.', $grupo === 'bebida' ? 'Bebidas' : 'Platos'),
+            'data' => $pedido,
+        ]);
     }
 }

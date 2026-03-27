@@ -25,6 +25,9 @@ export const updateOrderStatus = (orderId, payload) =>
         },
     }).then((r) => r.data);
 
+export const deliverOrderGroup = (orderId, group) =>
+    http.put(`/pedidos/${orderId}/entregar-grupo/${group}`).then((r) => r.data.data);
+
 export const requestOrderChange = (orderId, payload = {}) =>
     http.post(`/orders/${orderId}/request-change`, payload).then((r) => r.data.data);
 

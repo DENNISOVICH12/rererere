@@ -114,6 +114,7 @@ Route::middleware(['auth:web', 'role:mesero'])->group(function () {
         Route::post('/orders/{pedido}/send-to-kitchen', [MeseroOrderController::class, 'sendToKitchen']);
         Route::delete('/orders/{pedido}', [MeseroOrderController::class, 'destroy']);
         Route::get('/menu-items', [MeseroOrderController::class, 'menuItems']);
+        Route::put('/pedidos/{id}/entregar-grupo/{grupo}', [PedidoController::class, 'entregarGrupo']);
     });
 });
 
@@ -159,4 +160,3 @@ Route::get('/carta-digital/admin-link', function () {
         'return' => request('return', url('/admin'))
     ]);
 })->middleware('signed')->name('carta.digital.admin');
-

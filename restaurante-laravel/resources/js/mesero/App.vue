@@ -10,7 +10,7 @@
       @delete="requestDelete"
       @request-change="requestChange"
       @change-filter="changeFilter"
-      @deliver="deliverOrder"
+      @deliver-group="deliverGroup"
     />
 
     <EditOrderPage
@@ -41,12 +41,12 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import {
   deleteOrder,
+  deliverOrderGroup,
   getOrder,
   listActiveOrders,
   requestOrderChange,
   sendOrderToKitchen,
   updateOrder,
-  updateOrderStatus,
 } from './api';
 import ActiveOrdersPage from './pages/ActiveOrdersPage.vue';
 import EditOrderPage from './pages/EditOrderPage.vue';
@@ -75,15 +75,19 @@ const showToast = (message, type = 'info') => {
   toast.type = type;
   setTimeout(() => (toast.show = false), 2400);
 };
-const deliverOrder = async (order) => {
+const serviceLabel = (group) => (group === 'bebida' ? 'bebidas' : 'platos');
+
+const deliverGroup = async ({ order, group }) => {
+  if (!order?.id || !group) return;
+
   busyMap[order.id] = true;
 
   try {
-    await updateOrderStatus(order.id, { estado: 'entregado' });
+    await deliverOrderGroup(order.id, group);
     await loadOrders();
-    showToast(`✅ Pedido #${order.id} entregado`, 'success');
+    showToast(`✅ ${serviceLabel(group)} del pedido #${order.id} entregados`, 'success');
   } catch (error) {
-    showToast(error?.response?.data?.message || '❌ Error al entregar pedido', 'error');
+    showToast(error?.response?.data?.message || `❌ Error al entregar ${serviceLabel(group)}`, 'error');
   } finally {
     busyMap[order.id] = false;
   }
