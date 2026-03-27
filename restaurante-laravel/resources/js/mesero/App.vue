@@ -1,7 +1,24 @@
 <template>
   <main class="app">
+    <MesasView
+      v-if="appMode === 'mesas'"
+      :mesas="mesas"
+      @open-mesa="openMesa"
+      @refresh="loadMesas"
+    />
+
+    <MesaDetalleView
+      v-else-if="appMode === 'mesa-detalle'"
+      :mesa="mesaDetalle"
+      :creating="creatingCliente"
+      :facturando-id="facturandoClienteId"
+      @back="goMesas"
+      @add-cliente="addClienteToMesa"
+      @facturar="facturarClienteMesa"
+    />
+
     <ActiveOrdersPage
-      v-if="view === 'list'"
+      v-else-if="view === 'list'"
       :orders="orders"
       :active-filter="filter"
       :elapsed-map="elapsedMap"
@@ -40,18 +57,29 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import {
+  createMesaCliente,
   deleteOrder,
   deliverOrderGroup,
+  facturarCliente,
+  getMesa,
   getOrder,
   listActiveOrders,
+  listMesas,
   requestOrderChange,
   sendOrderToKitchen,
   updateOrder,
 } from './api';
 import ActiveOrdersPage from './pages/ActiveOrdersPage.vue';
 import EditOrderPage from './pages/EditOrderPage.vue';
+import MesasView from './pages/MesasView.vue';
+import MesaDetalleView from './pages/MesaDetalleView.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import Toast from './components/Toast.vue';
+
+const mesas = ref([]);
+const mesaDetalle = ref(null);
+const creatingCliente = ref(false);
+const facturandoClienteId = ref(null);
 
 const previousOrders = ref([]);
 const notifiedReadyIds = new Set();
@@ -67,6 +95,13 @@ const tick = ref(Date.now());
 const toast = reactive({ show: false, message: '', type: 'info' });
 const confirm = reactive({ open: false, title: '', message: '', confirmText: 'Confirmar', loading: false, action: () => {} });
 
+const path = ref(window.location.pathname);
+const appMode = computed(() => {
+  if (path.value.startsWith('/mesero/mesa/')) return 'mesa-detalle';
+  if (path.value === '/mesero') return 'mesas';
+  return 'orders';
+});
+
 const elapsedMap = computed(() => Object.fromEntries(orders.value.map((order) => [order.id, formatElapsed(order.created_at)])));
 
 const showToast = (message, type = 'info') => {
@@ -75,6 +110,61 @@ const showToast = (message, type = 'info') => {
   toast.type = type;
   setTimeout(() => (toast.show = false), 2400);
 };
+
+const loadMesas = async () => {
+  mesas.value = await listMesas();
+};
+
+const loadMesaDetalle = async () => {
+  const mesaId = path.value.split('/').pop();
+  if (!mesaId) return;
+  mesaDetalle.value = await getMesa(mesaId);
+};
+
+const openMesa = (mesa) => {
+  const target = `/mesero/mesa/${mesa.id}`;
+  window.history.pushState({}, '', target);
+  path.value = target;
+  loadMesaDetalle();
+};
+
+const goMesas = async () => {
+  window.history.pushState({}, '', '/mesero');
+  path.value = '/mesero';
+  mesaDetalle.value = null;
+  await loadMesas();
+};
+
+const addClienteToMesa = async (payload) => {
+  if (!mesaDetalle.value?.id) return;
+
+  try {
+    creatingCliente.value = true;
+    await createMesaCliente(mesaDetalle.value.id, payload);
+    showToast('Cliente agregado a la mesa.', 'success');
+    await loadMesaDetalle();
+    await loadMesas();
+  } catch (error) {
+    showToast(error?.response?.data?.message || 'No se pudo agregar el cliente.', 'error');
+  } finally {
+    creatingCliente.value = false;
+  }
+};
+
+const facturarClienteMesa = async (cliente) => {
+  try {
+    facturandoClienteId.value = cliente.id;
+    const response = await facturarCliente(cliente.id);
+    showToast(`Cuenta facturada por $${Number(response?.data?.total_facturado || 0).toFixed(2)}`, 'success');
+    await loadMesaDetalle();
+    await loadMesas();
+  } catch (error) {
+    showToast(error?.response?.data?.message || 'No se pudo facturar el cliente.', 'error');
+  } finally {
+    facturandoClienteId.value = null;
+  }
+};
+
 const serviceLabel = (group) => (group === 'bebida' ? 'bebidas' : 'platos');
 
 const deliverGroup = async ({ order, group }) => {
@@ -104,46 +194,18 @@ const formatElapsed = (createdAt) => {
 const loadOrders = async () => {
   const newOrders = await listActiveOrders(filter.value);
 
-  // 🔍 Detectar cambios a "listo"
   newOrders.forEach((newOrder) => {
-    const prev = previousOrders.value.find(o => o.id === newOrder.id);
+    const prev = previousOrders.value.find((o) => o.id === newOrder.id);
 
-    if (
-      newOrder.estado === 'listo' &&
-      (!prev || prev.estado !== 'listo') &&
-      !notifiedReadyIds.has(newOrder.id)
-    ) {
+    if (newOrder.estado === 'listo' && (!prev || prev.estado !== 'listo') && !notifiedReadyIds.has(newOrder.id)) {
       showToast(`🍽 Pedido #${newOrder.id} listo para entregar`, 'success');
-
-      playSound();
-
       notifiedReadyIds.add(newOrder.id);
     }
   });
 
-  // Guardar estado anterior
-  previousOrders.value = newOrders.map(o => ({ ...o }));
-
+  previousOrders.value = newOrders.map((o) => ({ ...o }));
   orders.value = newOrders;
 };
-
-const playSound = () => {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-
-  osc.frequency.value = 800;
-  gain.gain.value = 0.05;
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc.start();
-  setTimeout(() => {
-    osc.stop();
-    ctx.close();
-  }, 150);
-};  
 
 const changeFilter = async (value) => {
   filter.value = value;
@@ -248,9 +310,21 @@ const performDelete = async (order, force) => {
 let intervalId;
 let pollId;
 onMounted(async () => {
-  await loadOrders();
-  intervalId = setInterval(() => (tick.value = Date.now()), 1000);
-  pollId = setInterval(loadOrders, 7000);
+  if (appMode.value === 'mesas') {
+    await loadMesas();
+  } else if (appMode.value === 'mesa-detalle') {
+    await loadMesaDetalle();
+  } else {
+    await loadOrders();
+    intervalId = setInterval(() => (tick.value = Date.now()), 1000);
+    pollId = setInterval(loadOrders, 7000);
+  }
+
+  window.addEventListener('popstate', async () => {
+    path.value = window.location.pathname;
+    if (appMode.value === 'mesas') await loadMesas();
+    if (appMode.value === 'mesa-detalle') await loadMesaDetalle();
+  });
 });
 
 onUnmounted(() => {
@@ -260,5 +334,5 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.app { min-height: 100vh; background: #0a1220; color: #eaf1ff; max-width: 760px; margin: 0 auto; padding: 14px; font-family: Inter, system-ui, sans-serif; }
+.app { min-height: 100vh; background: #0a1220; color: #eaf1ff; max-width: 1200px; margin: 0 auto; padding: 14px; font-family: Inter, system-ui, sans-serif; }
 </style>

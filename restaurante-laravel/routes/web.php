@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\MenuItemController ;
 use Illuminate\Support\Facades\URL;
 use App\Http\Controllers\MeseroOrderController;
+use App\Http\Controllers\MesaController;
 use App\Http\Controllers\KitchenOrderController;
 
 
@@ -103,9 +104,19 @@ Route::middleware(['auth:web', 'role:mesero'])->group(function () {
 
     // Vista
     Route::view('/mesero', 'mesero')->name('mesero.panel');
+    Route::view('/mesero/mesa/{mesa}', 'mesero')->name('mesero.mesa.detalle');
     Route::redirect('/meseros', '/mesero');
 
     // ✅ "API interna" del mesero (pero por WEB middleware = sesión estable)
+    Route::prefix('api')->group(function () {
+        Route::get('/mesas', [MesaController::class, 'index']);
+        Route::get('/mesas/{id}', [MesaController::class, 'show']);
+        Route::get('/mesas/{id}/clientes', [MesaController::class, 'clientes']);
+        Route::post('/mesas/{id}/clientes', [MesaController::class, 'storeCliente']);
+        Route::get('/clientes/{id}/pedidos', [MesaController::class, 'pedidosCliente']);
+        Route::post('/clientes/{id}/facturar', [MesaController::class, 'facturarCliente']);
+    });
+
     Route::prefix('api/mesero')->group(function () {
         Route::get('/orders', [MeseroOrderController::class, 'index']);
         Route::get('/orders/{pedido}', [MeseroOrderController::class, 'show']);
