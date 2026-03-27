@@ -8,6 +8,19 @@ use Illuminate\Database\Eloquent\Model;
 class PedidoDetalle extends Model
 {
     protected $table = 'pedido_detalles';
+    
+        protected $fillable = [
+        'pedido_id',
+        'menu_item_id',
+        'cantidad',
+        'precio_unitario',
+        'importe',
+        'restaurant_id', // 🔥 ESTE ES EL IMPORTANTE
+        'nota',
+        'grupo_servicio',
+        'estado_servicio',
+    ];
+
 
     protected $visible = [
     'id',
@@ -16,6 +29,7 @@ class PedidoDetalle extends Model
     'cantidad',
     'precio_unitario',
     'importe',
+    
     'nota',
     'grupo_servicio',
     'estado_servicio',
