@@ -23,7 +23,7 @@
   --muted: #a9b3c3;
   --line: #313b4d;
   --pending: #6b7280;
-  --cooking: #f5c451;
+  --cooking: #f97316;
   --ready: #5ac887;
   --danger: #ff4d4d;
 }
@@ -69,7 +69,7 @@ body {
 .status-chip-label { color: #bec8da; font-weight: 600; }
 .status-chip-value { font-weight: 800; }
 .status-chip--pending { border-color: rgba(107,114,128,.85); }
-.status-chip--cooking { border-color: rgba(245,196,81,.85); }
+.status-chip--cooking { border-color: rgba(249,115,22,.85); }
 .status-chip--ready { border-color: rgba(90,200,135,.85); }
 .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .controls { display: flex; gap: 6px; justify-content: flex-end; }
@@ -149,12 +149,12 @@ body {
 .service-block { border-radius: 10px; border: 1px solid var(--line); background: var(--panel-soft); padding: 8px; display: grid; gap: 8px; }
 .service-block-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .service-block--pendiente { border-color: rgba(107,114,128,.9); }
-.service-block--preparando { border-color: rgba(245,196,81,.9); }
+.service-block--preparando { border-color: rgba(249,115,22,.9); }
 .service-block--listo { border-color: rgba(90,200,135,.9); }
 .service-block--entregado { border-color: rgba(89,165,255,.8); }
 .badge { border: 1px solid transparent; border-radius: 999px; font-size: .75rem; font-weight: 700; padding: 3px 8px; }
 .b-pendiente { background: rgba(107,114,128,.2); color: #e2e8f0; border-color: rgba(107,114,128,.45); }
-.b-preparando { background: rgba(245,196,81,.18); color: #ffe8ae; border-color: rgba(245,196,81,.45); }
+.b-preparando { background: rgba(249,115,22,.2); color: #ffd8b5; border-color: rgba(249,115,22,.5); }
 .b-listo { background: rgba(90,200,135,.18); color: #d5ffe7; border-color: rgba(90,200,135,.45); }
 .b-entregado { background: rgba(89,165,255,.18); color: #d6e7ff; border-color: rgba(89,165,255,.45); }
 .items { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -162,23 +162,56 @@ body {
 .qty { min-width: 40px; color: #ffffff; font-weight: 900; font-size: 1.2rem; }
 .name { font-weight: 700; font-size: 1.04rem; color: #eff4ff; text-transform: uppercase; letter-spacing: .01em; }
 .card-note-preview { margin: 0; color: #b9c3d5; font-size: .8rem; line-height: 1.3; }
-.action {
-  width: auto;
-  border: 1px solid #404c62;
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: .82rem;
-  font-weight: 700;
-  cursor: pointer;
-  background: #2a3342;
-  color: #eef4ff;
-  justify-self: end;
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }
-.action:hover { filter: brightness(1.08); }
-.action[disabled] { opacity: .55; cursor: not-allowed; }
-.action-next-pendiente { background: #374151; border-color: #6b7280; color: #f5f7fb; }
-.action-next-preparando { background: #4b3b16; border-color: #f5c451; color: #ffe6a7; }
-.action-next-listo { display: none; }
+.action {
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 10px;
+  padding: 8px 13px;
+  font-size: .84rem;
+  font-weight: 800;
+  letter-spacing: .01em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform .14s ease, box-shadow .14s ease, filter .16s ease, background .2s ease, border-color .2s ease;
+}
+.action:hover { transform: translateY(-1px); filter: brightness(1.03); }
+.action:active { transform: translateY(0); filter: brightness(.97); }
+.action:focus-visible { outline: 2px solid rgba(255, 255, 255, .42); outline-offset: 2px; }
+.action[disabled] { opacity: .62; cursor: not-allowed; transform: none; filter: none; }
+.action-secondary {
+  border-color: rgba(129, 148, 179, .7);
+  background: rgba(39, 48, 63, .45);
+  color: #deebff;
+  box-shadow: inset 0 0 0 1px rgba(129, 148, 179, .1);
+}
+.action-secondary:hover,
+.action-secondary:focus-visible {
+  border-color: rgba(190, 208, 236, .9);
+  background: rgba(58, 72, 94, .62);
+}
+.action-primary {
+  color: #1a1a1a;
+  border: none;
+}
+.action-next-pendiente {
+  background: linear-gradient(135deg, #f5c451, #eab308);
+  box-shadow: 0 6px 18px rgba(245, 196, 81, .35);
+}
+.action-next-preparando {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  box-shadow: 0 6px 18px rgba(249, 115, 22, .32);
+}
+.action-next-listo {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #f3fff8;
+  box-shadow: 0 6px 18px rgba(34, 197, 94, .33);
+}
 .fade-enter-active, .fade-leave-active, .fade-move { transition: all .28s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(8px); }
 .drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .52); display: flex; justify-content: flex-end; z-index: 90; }
@@ -367,19 +400,29 @@ body.has-admin-back .kds { padding-top: 64px; }
             </li>
           </ul>
 
-          <button
-            v-if="canStartService(group.status)"
-            class="action"
-            :class="serviceActionClass(group.status)"
-            :disabled="isGroupProcessing(order.id, group.key)"
-            @click.stop="updateGroupStatus(order.id, group.key)"
-          >
-            @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : (group.status === 'pendiente' ? 'Iniciar' : group.status === 'preparando' ? 'Listo' : serviceActionLabel(group.status, group.key)) }}
-          </button>
+          <div class="card-actions">
+            <button
+              v-if="canStartService(group.status)"
+              class="action action-primary"
+              :class="serviceActionClass(group.status)"
+              :disabled="isGroupProcessing(order.id, group.key)"
+              @click.stop="updateGroupStatus(order.id, group.key)"
+            >
+              @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : (group.status === 'pendiente' ? 'Iniciar' : group.status === 'preparando' ? 'Listo' : serviceActionLabel(group.status, group.key)) }}
+            </button>
+
+            <button
+              type="button"
+              class="action action-secondary"
+              @click.stop="openOrderDetails(order)"
+            >
+              Ver detalles
+            </button>
+          </div>
         </section>
 
         <p v-if="orderPreviewNote(order)" class="card-note-preview" :title="orderPreviewNote(order)">@{{ orderPreviewNote(order) }}</p>
-        <p class="card-footer-hint">👁 Ver detalles</p>
+        <p class="card-footer-hint">👁 Toca la tarjeta para ver resumen completo</p>
       </article>
     </transition-group>
   </div>
@@ -1086,7 +1129,7 @@ Vue.createApp({
 
     serviceActionClass(status) {
       if (status === 'pendiente') return 'action-next-pendiente';
-      if (status === 'preparando') return 'action-next-preparando';
+      if (status === 'preparando') return 'action-next-listo';
       if (status === 'listo') return 'action-next-listo';
       return '';
     },
