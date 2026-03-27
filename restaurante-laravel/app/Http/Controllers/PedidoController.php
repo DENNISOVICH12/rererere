@@ -56,14 +56,27 @@ class PedidoController extends Controller
     public function cambiarEstado(Request $request, $id): JsonResponse
     {
         $validated = $request->validate([
-            'estado' => 'required|string',
+            'estado' => 'required|string|in:pendiente,preparando,listo,entregado',
         ]);
 
-        $pedido = Pedido::findOrFail($id);
-        $pedido->estado = $validated['estado'];
-        $pedido->save();
+        $pedido = Pedido::with(['detalle.menuItem', 'cliente'])->findOrFail($id);
+        $nuevoEstado = strtolower((string) $validated['estado']);
 
-        return response()->json(['ok' => true]);
+        DB::transaction(function () use ($pedido, $nuevoEstado) {
+            $pedido->estado = $nuevoEstado;
+            $pedido->save();
+
+            if ($nuevoEstado === 'entregado') {
+                $pedido->detalle()->update(['estado_servicio' => 'entregado']);
+            }
+        });
+
+        $pedido->refresh()->load(['detalle.menuItem', 'cliente']);
+
+        return response()->json([
+            'ok' => true,
+            'pedido' => $pedido,
+        ]);
     }
 
     public function updateServicioGrupo(int $pedidoId, string $grupo): JsonResponse

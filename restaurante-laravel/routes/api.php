@@ -64,6 +64,7 @@ Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->grou
         Route::post('/pedidos', [PedidoController::class, 'store']);
         Route::post('/pedido-detalles', [PedidoDetalleController::class, 'store']);
         Route::put('/pedidos/{id}/cerrar', [PedidoController::class, 'cerrar']);
+        Route::put('/pedidos/{id}', [PedidoController::class, 'cambiarEstado']);
         Route::put('/pedidos/{id}/estado', [PedidoController::class, 'cambiarEstado']);
     });
 
@@ -79,6 +80,7 @@ Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->grou
         Route::get('/pedidos-pendientes', [PedidoController::class, 'pedidosPendientes']);
 
         // Cambiar estado desde cocina
+        Route::put('/pedidos/{id}', [PedidoController::class, 'cambiarEstado']);
         Route::put('/pedidos/{id}/estado', [PedidoController::class, 'cambiarEstado']);
     });
 });
