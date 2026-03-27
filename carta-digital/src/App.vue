@@ -27,6 +27,8 @@ const holdWindowSeconds = ref(300)
 const showSendNowConfirm = ref(false)
 const sendingNowToKitchen = ref(false)
 
+const SERVICE_STATUS_PRIORITY = ['pendiente', 'preparando', 'listo', 'entregado']
+
 
 // =========================
 // 🔙 VOLVER AL ADMIN (SOLO SI VIENE DESDE ADMIN)
@@ -339,6 +341,59 @@ onMounted(() => {
 ===================================================== */
 const pedidoActual = computed(() => pedidosCliente.value[0] ?? null)
 
+function extractOrderItems(order) {
+  const source = [
+    order?.detalle,
+    order?.detalles,
+    order?.items,
+    order?.order_items,
+  ].find(Array.isArray)
+
+  return source ?? []
+}
+
+function normalizeServiceStatus(rawStatus) {
+  const normalized = String(rawStatus || '').toLowerCase().trim()
+  if (normalized === 'en_preparacion') return 'preparando'
+  return SERVICE_STATUS_PRIORITY.includes(normalized) ? normalized : 'pendiente'
+}
+
+function getStatusRank(status) {
+  return SERVICE_STATUS_PRIORITY.indexOf(normalizeServiceStatus(status))
+}
+
+const pedidoConsolidadoServicio = computed(() => {
+  const mergedByItem = new Map()
+
+  for (const order of pedidosCliente.value) {
+    const orderId = order?.id ?? 'order'
+    const items = extractOrderItems(order)
+
+    items.forEach((item, index) => {
+      const detailId = item?.id ?? item?.pedido_detalle_id ?? item?.detalle_id
+      const menuItemId = item?.menu_item_id ?? item?.menu_item?.id ?? item?.id_menu
+      const uniqueKey = detailId
+        ? `${orderId}:detalle:${detailId}`
+        : `${orderId}:item:${menuItemId ?? 'unknown'}:${index}`
+
+      const incomingStatus = normalizeServiceStatus(item?.estado_servicio || item?.estado)
+      const existing = mergedByItem.get(uniqueKey)
+
+      if (!existing || getStatusRank(incomingStatus) > getStatusRank(existing.estado_servicio)) {
+        mergedByItem.set(uniqueKey, {
+          ...item,
+          estado_servicio: incomingStatus,
+        })
+      }
+    })
+  }
+
+  return {
+    id: 'consolidado-cliente',
+    detalle: Array.from(mergedByItem.values()),
+  }
+})
+
 
 
 const holdSecondsRemaining = computed(() => {
@@ -479,7 +534,7 @@ const changeRequestedMessage = computed(() => {
     </div>
 
 
-    <OrderServiceStatus v-if="pedidoActual" :order="pedidoActual" />
+    <OrderServiceStatus v-if="pedidoConsolidadoServicio.detalle.length" :order="pedidoConsolidadoServicio" />
 
   </div>
 
