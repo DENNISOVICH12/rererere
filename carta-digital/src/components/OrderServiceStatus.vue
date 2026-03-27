@@ -37,12 +37,12 @@ const groupMeta = {
   bebida: {
     key: 'bebida',
     title: 'Bebidas',
-    icon: '🍹',
+    icon: '',
   },
   plato: {
     key: 'plato',
     title: 'Platos',
-    icon: '🍽',
+    icon: '',
   },
 }
 
