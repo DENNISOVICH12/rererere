@@ -46,6 +46,8 @@ Route::get('/menu/today', [MenuController::class, 'showToday']);
 Route::get('/platos-fisicos', [PlatoTableController::class, 'index']);
 Route::get('/bebidas-fisicas', [BebidaTableController::class, 'index']);
 
+Route::put('/mesero/pedidos/{id}', [PedidoController::class, 'cambiarEstado']);
+
 Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->group(function () {
 
     // ✅ Solo administración general puede ver todos los pedidos desde acá

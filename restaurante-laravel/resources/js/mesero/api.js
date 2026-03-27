@@ -18,7 +18,7 @@ export const updateOrder = (orderId, payload) =>
     http.put(`/orders/${orderId}`, payload).then((r) => r.data.data);
 
 export const updateOrderStatus = (orderId, payload) =>
-    axios.put(`/api/pedidos/${orderId}`, payload, {
+    axios.put(`/api/mesero/pedidos/${orderId}`, payload, {
         withCredentials: true,
         headers: {
             Accept: 'application/json',
