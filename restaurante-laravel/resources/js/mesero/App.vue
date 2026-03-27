@@ -46,6 +46,7 @@ import {
   requestOrderChange,
   sendOrderToKitchen,
   updateOrder,
+  updateOrderStatus,
 } from './api';
 import ActiveOrdersPage from './pages/ActiveOrdersPage.vue';
 import EditOrderPage from './pages/EditOrderPage.vue';
@@ -75,18 +76,16 @@ const showToast = (message, type = 'info') => {
   setTimeout(() => (toast.show = false), 2400);
 };
 const deliverOrder = async (order) => {
+  busyMap[order.id] = true;
+
   try {
-    const updated = await updateOrder(order.id, {
-      estado: 'entregado'
-    });
-
-    orders.value = orders.value.map(o =>
-      o.id === order.id ? updated : o
-    );
-
+    await updateOrderStatus(order.id, { estado: 'entregado' });
+    await loadOrders();
     showToast(`✅ Pedido #${order.id} entregado`, 'success');
   } catch (error) {
-    showToast('❌ Error al entregar pedido', 'error');
+    showToast(error?.response?.data?.message || '❌ Error al entregar pedido', 'error');
+  } finally {
+    busyMap[order.id] = false;
   }
 };
 

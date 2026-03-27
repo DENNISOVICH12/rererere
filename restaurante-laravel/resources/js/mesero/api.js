@@ -15,6 +15,9 @@ export const getOrder = (orderId) =>
     http.get(`/orders/${orderId}`).then((r) => r.data.data);
 
 export const updateOrder = (orderId, payload) =>
+    http.put(`/orders/${orderId}`, payload).then((r) => r.data.data);
+
+export const updateOrderStatus = (orderId, payload) =>
     axios.put(`/api/pedidos/${orderId}`, payload, {
         withCredentials: true,
         headers: {
