@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Concerns\BelongsToRestaurant;
 use App\Models\Usuario;
+use App\Models\ClienteMesa;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 
@@ -21,6 +22,7 @@ class Pedido extends Model
 
 
         'cliente_id',
+        'cliente_mesa_id',
         'restaurant_id',
         'mesa',
         'estado',
@@ -174,6 +176,11 @@ class Pedido extends Model
     public function cliente()
     {
         return $this->belongsTo(Usuario::class, 'cliente_id');
+    }
+
+    public function clienteMesa()
+    {
+        return $this->belongsTo(ClienteMesa::class, 'cliente_mesa_id');
     }
 
     public function changeRequestedByUser()
