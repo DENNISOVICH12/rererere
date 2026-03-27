@@ -20,18 +20,30 @@
         </span>
       </header>
 
-      <ol class="progress" role="list">
-        <li
-          v-for="(status, index) in SERVICE_STEPS"
-          :key="status"
-          class="progress__step"
-          :class="stepClass(group.currentStatus, status, index)"
+      <div class="service-group__line-wrap">
+        <ol class="progress" role="list">
+          <li
+            v-for="(status, index) in SERVICE_STEPS"
+            :key="status"
+            class="progress__step"
+            :class="stepClass(group.currentStatus, status, index, group.key)"
+          >
+            <span class="dot" />
+            <span class="label">{{ statusLabel(status) }}</span>
+            <span v-if="index < SERVICE_STEPS.length - 1" class="line" />
+          </li>
+        </ol>
+
+        <button
+          class="deliver-btn"
+          :class="`deliver-btn--${group.key}`"
+          :disabled="busy || !canDeliverGroup(group) || isDeliveringGroup(group.key)"
+          @click="deliverGroup(group.key)"
         >
-          <span class="dot" />
-          <span class="label">{{ statusLabel(status) }}</span>
-          <span v-if="index < SERVICE_STEPS.length - 1" class="line" />
-        </li>
-      </ol>
+          <span v-if="isDeliveringGroup(group.key)" class="spinner" aria-hidden="true" />
+          {{ isDeliveringGroup(group.key) ? 'Entregando...' : 'Entregar' }}
+        </button>
+      </div>
 
       <p class="service-group__message">{{ group.message }}</p>
     </article>
@@ -39,7 +51,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { SERVICE_STEPS, getGroupStatus, normalizeGroupKey, normalizeStatus } from '../utils/serviceStatus';
 
 const props = defineProps({
@@ -47,7 +59,13 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  busy: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(['deliver-group']);
 
 const GROUP_META = {
   bebida: { label: 'Bebidas', icon: '🍹' },
@@ -65,6 +83,14 @@ const statusLabel = (status) => {
 };
 
 const statusIndex = (status) => SERVICE_STEPS.indexOf(normalizeStatus(status));
+const pendingDeliveryGroup = ref(null);
+
+watch(
+  () => props.busy,
+  (isBusy) => {
+    if (!isBusy) pendingDeliveryGroup.value = null;
+  },
+);
 
 const fallbackItems = computed(() => {
   const items = Array.isArray(props.order?.items) ? props.order.items : [];
@@ -125,6 +151,15 @@ const allDelivered = computed(
   () => serviceGroups.value.length > 0 && serviceGroups.value.every((group) => group.currentStatus === 'entregado'),
 );
 
+const canDeliverGroup = (group) => group.currentStatus === 'listo';
+const isDeliveringGroup = (groupKey) => props.busy && pendingDeliveryGroup.value === groupKey;
+
+const deliverGroup = (groupKey) => {
+  if (!groupKey || props.busy) return;
+  pendingDeliveryGroup.value = groupKey;
+  emit('deliver-group', { group: groupKey });
+};
+
 const buildMessage = (groupKey, label, status) => {
   const byGroup = {
     bebida: {
@@ -150,11 +185,12 @@ const buildMessage = (groupKey, label, status) => {
   return `${label} pendientes por iniciar.`;
 };
 
-const stepClass = (currentStatus, status, index) => {
+const stepClass = (currentStatus, status, index, groupKey) => {
   const currentIndex = statusIndex(currentStatus);
   return {
     'is-done': index <= currentIndex,
     'is-current': index === currentIndex,
+    [`is-group-${groupKey}`]: true,
     [`is-${status}`]: true,
   };
 };
@@ -227,6 +263,13 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
 .chip--listo { color: #86efac; background: rgba(34, 197, 94, 0.16); border-color: rgba(74, 222, 128, 0.48); }
 .chip--entregado { color: #93c5fd; background: rgba(59, 130, 246, 0.2); border-color: rgba(96, 165, 250, 0.48); }
 
+.service-group__line-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .progress {
   margin: 0;
   padding: 0;
@@ -234,6 +277,7 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
+  flex: 1;
 }
 .progress__step {
   display: grid;
@@ -276,6 +320,62 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
 .progress__step.is-preparando { --state-color: #facc15; }
 .progress__step.is-listo { --state-color: #4ade80; }
 .progress__step.is-entregado { --state-color: #60a5fa; }
+.progress__step.is-group-bebida.is-done .dot,
+.progress__step.is-group-bebida.is-current .dot,
+.progress__step.is-group-bebida.is-done .line {
+  --state-color: #22d3ee;
+}
+.progress__step.is-group-plato.is-done .dot,
+.progress__step.is-group-plato.is-current .dot,
+.progress__step.is-group-plato.is-done .line {
+  --state-color: #f59e0b;
+}
+
+.deliver-btn {
+  min-width: 96px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8fbff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: transform 170ms ease, filter 170ms ease, opacity 170ms ease, box-shadow 170ms ease;
+}
+.deliver-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+.deliver-btn:focus-visible {
+  outline: 2px solid rgba(147, 197, 253, 0.9);
+  outline-offset: 2px;
+}
+.deliver-btn:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.deliver-btn--bebida {
+  background: linear-gradient(180deg, #22d3ee, #0e7490);
+  box-shadow: 0 8px 20px rgba(14, 116, 144, 0.34);
+}
+.deliver-btn--plato {
+  background: linear-gradient(180deg, #f59e0b, #b45309);
+  box-shadow: 0 8px 20px rgba(180, 83, 9, 0.35);
+}
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: rgba(255, 255, 255, 0.95);
+  animation: spin 640ms linear infinite;
+}
 
 .service-group__message {
   margin: 0;
@@ -292,5 +392,9 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
