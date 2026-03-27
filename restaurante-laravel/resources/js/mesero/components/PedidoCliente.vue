@@ -1,7 +1,7 @@
 <template>
   <article class="pedido-item">
     <header>
-      <strong>Pedido #{{ pedido.id }}</strong>
+      <strong>{{ heading }}</strong>
       <span class="badge">{{ pedido.estado }}</span>
     </header>
     <ul>
@@ -15,7 +15,13 @@
 </template>
 
 <script setup>
-defineProps({ pedido: { type: Object, required: true } });
+const props = defineProps({
+  pedido: { type: Object, required: true },
+  showOrderId: { type: Boolean, default: true },
+  title: { type: String, default: 'Orden activa' },
+});
+
+const heading = props.showOrderId ? `Pedido #${props.pedido?.id ?? ''}` : props.title;
 
 const money = (value) => Number(value || 0).toFixed(2);
 </script>

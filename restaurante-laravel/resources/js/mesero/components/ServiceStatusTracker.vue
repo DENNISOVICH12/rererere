@@ -35,13 +35,14 @@
         </ol>
 
         <button
+          v-if="canDeliverGroup(group)"
           class="deliver-btn"
           :class="`deliver-btn--${group.key}`"
-          :disabled="busy || !canDeliverGroup(group) || isDeliveringGroup(group.key)"
+          :disabled="busy || isDeliveringGroup(group.key)"
           @click="deliverGroup(group.key)"
         >
           <span v-if="isDeliveringGroup(group.key)" class="spinner" aria-hidden="true" />
-          {{ isDeliveringGroup(group.key) ? 'Entregando...' : 'Entregar' }}
+          {{ isDeliveringGroup(group.key) ? 'Entregando...' : deliverLabel(group.key) }}
         </button>
       </div>
 
@@ -152,6 +153,8 @@ const allDelivered = computed(
 );
 
 const canDeliverGroup = (group) => group.currentStatus === 'listo';
+
+const deliverLabel = (groupKey) => (normalizeGroupKey(groupKey) === 'bebida' ? 'Entregar bebidas' : 'Entregar platos');
 const isDeliveringGroup = (groupKey) => props.busy && pendingDeliveryGroup.value === groupKey;
 
 const deliverGroup = (groupKey) => {
