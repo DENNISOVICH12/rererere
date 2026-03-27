@@ -23,28 +23,51 @@
 
       <button class="danger" :disabled="busy || !order.can_be_edited" @click="$emit('delete', order)">Cancelar</button>
       <button
-  v-if="order.estado === 'listo'"
-  class="success"
-  :disabled="busy"
-  @click="$emit('deliver', order)"
->
-  Entregar pedido
-</button>
+        class="deliver deliver--drink"
+        :disabled="busy || !canDeliverBebidas"
+        @click="$emit('deliver-group', { order, group: 'bebida' })"
+      >
+        Entregar bebidas
+      </button>
+      <button
+        class="deliver deliver--food"
+        :disabled="busy || !canDeliverPlatos"
+        @click="$emit('deliver-group', { order, group: 'plato' })"
+      >
+        Entregar platos
+      </button>
     </div>
   </article>
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import OrderStatusBadge from './OrderStatusBadge.vue';
 import ServiceStatusTracker from './ServiceStatusTracker.vue';
+import { getGroupStatus, normalizeGroupKey } from '../utils/serviceStatus';
 
-defineProps({
+const props = defineProps({
   order: { type: Object, required: true },
   elapsedText: { type: String, required: true },
   busy: { type: Boolean, default: false },
 });
 
-defineEmits(['edit', 'delete', 'request-change', 'deliver']);
+const getItemsByGroup = (group) =>
+  (Array.isArray(props.order?.items) ? props.order.items : []).filter(
+    (item) => normalizeGroupKey(item?.grupo_servicio || item?.categoria) === group,
+  );
+
+const canDeliverGroup = (group) => {
+  const items = getItemsByGroup(group);
+  if (!items.length) return false;
+  const currentStatus = getGroupStatus(items, group);
+  return ['pendiente', 'preparando', 'listo'].includes(currentStatus);
+};
+
+const canDeliverBebidas = computed(() => canDeliverGroup('bebida'));
+const canDeliverPlatos = computed(() => canDeliverGroup('plato'));
+
+defineEmits(['edit', 'delete', 'request-change', 'deliver-group']);
 </script>
 
 <style scoped>
@@ -61,8 +84,7 @@ button.warn { background: #ffd37b; color: #382800; }
 
 button.danger { background: #ff6f7c; }
 button:disabled { opacity: .5; }
-button.success {
-  background: linear-gradient(180deg, #22c55e, #15803d);
-  color: white;
-}
+.deliver { color: #fff; }
+.deliver--drink { background: linear-gradient(180deg, #06b6d4, #0e7490); }
+.deliver--food { background: linear-gradient(180deg, #f59e0b, #b45309); }
 </style>

@@ -40,6 +40,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { SERVICE_STEPS, getGroupStatus, normalizeGroupKey, normalizeStatus } from '../utils/serviceStatus';
 
 const props = defineProps({
   order: {
@@ -48,11 +49,9 @@ const props = defineProps({
   },
 });
 
-const SERVICE_STEPS = ['pendiente', 'preparando', 'listo', 'entregado'];
-
 const GROUP_META = {
   bebida: { label: 'Bebidas', icon: '🍹' },
-  plato: { label: 'Cocina', icon: '🍽' },
+  plato: { label: 'Platos', icon: '🍽' },
 };
 
 const statusLabel = (status) => {
@@ -65,34 +64,7 @@ const statusLabel = (status) => {
   }[normalized] || 'Pendiente';
 };
 
-const normalizeStatus = (status) => {
-  const normalized = String(status || 'pendiente').toLowerCase();
-  return SERVICE_STEPS.includes(normalized) ? normalized : 'pendiente';
-};
-
-const normalizeGroupKey = (group) => {
-  const normalized = String(group || '').toLowerCase();
-  if (normalized === 'bebida' || normalized === 'bar' || normalized === 'barra') return 'bebida';
-  if (normalized) return normalized;
-  return 'plato';
-};
-
 const statusIndex = (status) => SERVICE_STEPS.indexOf(normalizeStatus(status));
-
-const deriveGroupStatus = (items = []) => {
-  if (!items.length) return 'pendiente';
-  const indexes = items
-    .map((item) => normalizeStatus(item?.estado_servicio || item?._serviceStatus || item?.estado))
-    .map(statusIndex);
-
-  const min = Math.min(...indexes);
-  const max = Math.max(...indexes);
-
-  if (min === max) return SERVICE_STEPS[max];
-  if (min < statusIndex('preparando') && max >= statusIndex('preparando')) return 'preparando';
-  if (max === statusIndex('entregado') && min >= statusIndex('listo')) return 'listo';
-  return SERVICE_STEPS[min] || 'pendiente';
-};
 
 const fallbackItems = computed(() => {
   const items = Array.isArray(props.order?.items) ? props.order.items : [];
@@ -118,7 +90,7 @@ const serviceGroups = computed(() => {
     groupedMap.set(key, {
       key,
       items,
-      currentStatus: normalizeStatus(group?.estado || deriveGroupStatus(items)),
+      currentStatus: getGroupStatus(items, key) || normalizeStatus(group?.estado),
     });
   });
 
@@ -132,7 +104,7 @@ const serviceGroups = computed(() => {
     groupedMap.forEach((groupData, key) => {
       groupedMap.set(key, {
         ...groupData,
-        currentStatus: deriveGroupStatus(groupData.items),
+        currentStatus: getGroupStatus(groupData.items, key),
       });
     });
   }
