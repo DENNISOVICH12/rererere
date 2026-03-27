@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from 'vue'
-import ServiceStatusCard from './ServiceStatusCard.vue'
 
 const props = defineProps({
   order: {
@@ -14,31 +13,23 @@ const STATUS_PRIORITY = ['pendiente', 'preparando', 'listo', 'entregado']
 const statusMeta = {
   pendiente: {
     key: 'pendiente',
-    label: 'Pendiente',
-    headline: 'Pendiente',
-    icon: '⏳',
-    color: '#8f97a3',
+    label: 'PEND',
+    color: '#7b8794',
   },
   preparando: {
     key: 'preparando',
-    label: 'Preparando',
-    headline: 'En preparación',
-    icon: '🔄',
-    color: '#f5c451',
+    label: 'PREP',
+    color: '#f5b84d',
   },
   listo: {
     key: 'listo',
-    label: 'Listo',
-    headline: 'Listo',
-    icon: '✅',
+    label: 'LISTO',
     color: '#2ecc71',
   },
   entregado: {
     key: 'entregado',
-    label: 'Entregado',
-    headline: 'Entregado',
-    icon: '📦',
-    color: '#4098ff',
+    label: 'ENTREGADO',
+    color: '#4ca5ff',
   },
 }
 
@@ -47,13 +38,11 @@ const groupMeta = {
     key: 'bebida',
     title: 'Bebidas',
     icon: '🍹',
-    emptyStateCopy: 'Aún no hay bebidas registradas para este pedido.',
   },
   plato: {
     key: 'plato',
     title: 'Platos',
     icon: '🍽',
-    emptyStateCopy: 'Aún no hay platos registrados para este pedido.',
   },
 }
 
@@ -122,7 +111,10 @@ const groupedOrderStatus = computed(() => {
       itemCount: items.length,
       statusKey,
       currentStatus: statusMeta[statusKey],
-      statuses: STATUS_PRIORITY.map(status => statusMeta[status]),
+      progress: STATUS_PRIORITY.map(status => ({
+        key: status,
+        active: STATUS_PRIORITY.indexOf(status) <= STATUS_PRIORITY.indexOf(statusKey),
+      })),
     }
   })
 })
@@ -132,82 +124,107 @@ const hasTrackedItems = computed(() => groupedOrderStatus.value.some(group => gr
 
 <template>
   <section class="order-service-status" aria-label="Estado de pedido por grupo de servicio">
-    <header class="order-service-status__header">
-      <p class="eyebrow">ODER EASY · Seguimiento en vivo</p>
-      <h3>Estado de tu pedido</h3>
-      <p>Te mostramos el avance independiente de bebidas y platos en tiempo real.</p>
-    </header>
-
-    <div v-if="hasTrackedItems" class="status-grid">
-      <ServiceStatusCard
+    <div v-if="hasTrackedItems" class="status-list">
+      <article
         v-for="group in groupedOrderStatus"
         :key="group.key"
-        :group="group"
-      />
+        class="status-row"
+      >
+        <p class="status-row__name">{{ group.icon }} {{ group.title }}</p>
+
+        <div class="status-row__progress" aria-hidden="true">
+          <span
+            v-for="step in group.progress"
+            :key="step.key"
+            class="progress-dot"
+            :class="{ active: step.active }"
+            :style="step.active ? { '--dot-color': group.currentStatus.color } : undefined"
+          ></span>
+        </div>
+
+        <p class="status-row__label" :style="{ color: group.currentStatus.color }">
+          {{ group.currentStatus.label }}
+        </p>
+      </article>
     </div>
 
-    <div v-else class="empty-state">
-      <span>🧾</span>
-      <p>Cuando cocina o barra tomen tu orden, aquí verás el avance por servicio.</p>
+    <div v-else class="status-empty">
+      Sin seguimiento disponible todavía
     </div>
   </section>
 </template>
 
 <style scoped>
 .order-service-status {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-list {
   display: grid;
-  gap: 14px;
-}
-
-.order-service-status__header {
-  border-radius: 16px;
-  padding: 16px;
-  background: linear-gradient(130deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.order-service-status__header .eyebrow {
-  margin: 0 0 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.75;
-  font-size: 11px;
-}
-
-.order-service-status__header h3 {
-  margin: 0;
-  font-size: clamp(18px, 3.8vw, 22px);
-}
-
-.order-service-status__header p {
-  margin: 6px 0 0;
-  opacity: 0.9;
-  font-size: 13px;
-}
-
-.status-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.empty-state {
-  display: grid;
-  justify-items: center;
   gap: 8px;
-  text-align: center;
-  border-radius: 14px;
-  padding: 18px;
-  border: 1px dashed rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.03);
 }
 
-.empty-state span {
-  font-size: 22px;
+.status-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
 }
 
-.empty-state p {
+.status-row__name {
   margin: 0;
   font-size: 13px;
-  opacity: 0.88;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-row__progress {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.26);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.progress-dot.active {
+  background: var(--dot-color, #2ecc71);
+  border-color: var(--dot-color, #2ecc71);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--dot-color, #2ecc71) 45%, transparent);
+}
+
+.status-row__label {
+  margin: 0;
+  min-width: 68px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.status-empty {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 480px) {
+  .status-row {
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+  }
+
+  .status-row__name {
+    font-size: 12px;
+  }
+
+  .status-row__label {
+    min-width: 60px;
+    font-size: 10px;
+  }
 }
 </style>

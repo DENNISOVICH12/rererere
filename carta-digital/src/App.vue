@@ -419,9 +419,10 @@ const changeRequestedMessage = computed(() => {
   <!-- PANEL CARRITO -->
   <div v-if="showCart" class="cart-panel">
 
-    <button class="close-cart" @click="showCart = false">✦</button>
-
-    <h2>Tu Pedido</h2>
+    <div class="cart-panel__header">
+      <h2>Tu Pedido</h2>
+      <button class="close-cart" @click="showCart = false" aria-label="Cerrar carrito">✦</button>
+    </div>
 
 
     <!-- ================= ESTADO PEDIDO ================= -->
@@ -431,8 +432,7 @@ const changeRequestedMessage = computed(() => {
   <div class="order-header-pro">
 
     <div class="order-header-copy">
-      <h3 class="title">📦 Estado de tu pedido</h3>
-      <p class="subtitle">Seguimiento en tiempo real antes de cocina</p>
+      <h3 class="title">Estado de tu pedido</h3>
     </div>
 
     <button
@@ -570,7 +570,7 @@ const changeRequestedMessage = computed(() => {
   :disabled="sendingOrder"
 >
   <span v-if="sendingOrder" class="spinner"></span>
-  {{ sendingOrder ? 'Enviando...' : 'Confirmar pedido (ventana de cambios)' }}
+  {{ sendingOrder ? 'Enviando...' : 'Confirmar pedido' }}
 
 </button>
 
@@ -695,7 +695,7 @@ const changeRequestedMessage = computed(() => {
   backdrop-filter: blur(18px);
   border-left: 1px solid rgba(255,255,255,0.18);
 
-  padding: 24px;
+  padding: 18px 18px 0;
   color: #fff;
 
   display: flex;
@@ -704,6 +704,20 @@ const changeRequestedMessage = computed(() => {
   z-index: 4000;
 
   overflow: hidden; /* 🔥 CLAVE */
+}
+
+.cart-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cart-panel__header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 
@@ -810,7 +824,6 @@ const changeRequestedMessage = computed(() => {
 
 /* Cerrar */
 .close-cart {
-  align-self: flex-end;
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.25);
   padding: 8px 12px;
@@ -1195,13 +1208,6 @@ const changeRequestedMessage = computed(() => {
   margin:0;
 }
 
-.subtitle{
-  font-size:12px;
-  opacity:.76;
-  margin:4px 0 0;
-  line-height: 1.35;
-}
-
 /* BOTÓN REFRESH PRO */
 .refresh-pro{
   display:flex;
@@ -1234,7 +1240,11 @@ const changeRequestedMessage = computed(() => {
 
 .order-body-pro {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+}
+
+.order-status-card-pro :deep(.order-service-status) {
+  gap: 8px;
 }
 
 /* vacío */
@@ -1247,6 +1257,7 @@ const changeRequestedMessage = computed(() => {
 /* SOLO la lista scrollea */
 .cart-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
   margin-top: 14px;
@@ -1281,28 +1292,20 @@ const changeRequestedMessage = computed(() => {
 ===================================================== */
 
 .cart-footer {
-
   position: sticky;
-  bottom: 22px;
+  bottom: 0;
+  z-index: 2;
+  margin-top: 12px;
 
-  margin-top: 22px;
-
-  padding: 14px;
+  padding: 14px 0 18px;
 
   display: flex;
   flex-direction: column;
   gap: 14px;
 
   /* glass premium más liviano */
-  background: rgba(18,18,18,.65);
+  background: linear-gradient(to top, rgba(12,12,14,0.96) 65%, rgba(12,12,14,0));
   backdrop-filter: blur(20px);
-
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,.08);
-
-  box-shadow:
-    0 12px 35px rgba(0,0,0,.55),
-    inset 0 1px 0 rgba(255,255,255,.04);
 }
 
 
@@ -1317,7 +1320,7 @@ const changeRequestedMessage = computed(() => {
   justify-content:space-between;
   align-items:center;
 
-  padding: 10px 16px;
+  padding: 10px 12px;
 
   font-size: 14px;
   font-weight: 500;
@@ -1695,7 +1698,7 @@ const changeRequestedMessage = computed(() => {
 @media (max-width: 640px) {
   .cart-panel {
     width: min(100vw, 430px);
-    padding: 16px 14px 18px;
+    padding: 14px 14px 0;
   }
 
   .order-status-card-pro {
@@ -1709,10 +1712,6 @@ const changeRequestedMessage = computed(() => {
 
   .title {
     font-size: 15px;
-  }
-
-  .subtitle {
-    font-size: 11px;
   }
 
   .refresh-pro {
