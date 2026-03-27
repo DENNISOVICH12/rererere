@@ -1,7 +1,7 @@
 <template>
   <article class="card" :class="{ overdue: order.change_request_overdue }">
     <header class="row">
-      <strong>Pedido #{{ order.id }}</strong>
+      <strong>{{ cardTitle }}</strong>
       <OrderStatusBadge :status="order.estado" />
     </header>
     <ServiceStatusTracker :order="order" :busy="busy" @deliver-group="(payload) => $emit('deliver-group', { order, ...payload })" />
@@ -11,7 +11,7 @@
     <p v-if="order.estado === 'modificacion_solicitada'" class="locked">Solicitud de cambio registrada. Esperando atención del mesero.</p>
     <p v-if="order.change_request_overdue" class="alert">⚠ Lleva demasiado tiempo retenido. Requiere decisión inmediata.</p>
     <p v-if="!order.can_be_edited" class="locked">Ya fue enviado a cocina.</p>
-    <div class="actions">
+    <div v-if="!hideActions" class="actions">
       <button :disabled="busy || !order.can_be_edited" @click="$emit('edit', order)">Editar</button>
       <button
         class="warn"
@@ -34,7 +34,11 @@ const props = defineProps({
   order: { type: Object, required: true },
   elapsedText: { type: String, required: true },
   busy: { type: Boolean, default: false },
+  title: { type: String, default: '' },
+  hideActions: { type: Boolean, default: false },
 });
+
+const cardTitle = props.title || `Pedido #${props.order?.id ?? ''}`;
 
 defineEmits(['edit', 'delete', 'request-change', 'deliver-group']);
 </script>
