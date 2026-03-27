@@ -105,12 +105,15 @@ Route::middleware(['auth:web', 'role:mesero'])->group(function () {
     // Vista
     Route::view('/mesero', 'mesero')->name('mesero.panel');
     Route::view('/mesero/mesa/{mesa}', 'mesero')->name('mesero.mesa.detalle');
+    Route::view('/mesas', 'mesero')->name('mesero.mesas');
+    Route::view('/mesas/{mesa}', 'mesero')->name('mesero.mesas.detalle');
     Route::redirect('/meseros', '/mesero');
 
     // ✅ "API interna" del mesero (pero por WEB middleware = sesión estable)
     Route::prefix('api')->group(function () {
         Route::get('/mesas', [MesaController::class, 'index']);
         Route::get('/mesas/{id}', [MesaController::class, 'show']);
+        Route::get('/mesas/{mesa}/pedidos', [MesaController::class, 'pedidos']);
         Route::get('/mesas/{id}/clientes', [MesaController::class, 'clientes']);
         Route::post('/mesas/{id}/clientes', [MesaController::class, 'storeCliente']);
         Route::get('/clientes/{id}/pedidos', [MesaController::class, 'pedidosCliente']);
