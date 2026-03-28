@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Concerns\BelongsToRestaurant;
-use App\Models\Usuario;
 use App\Models\ClienteMesa;
+use App\Models\Cliente;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 
@@ -81,7 +81,9 @@ class Pedido extends Model
 
     public function canBeEditedByWaiter(): bool
     {
-        return $this->isInRetentionWindow() || $this->estado === self::STATUS_CHANGE_REQUESTED;
+        return $this->estado === self::STATUS_RETAINED
+            && $this->hold_expires_at
+            && now()->lt($this->hold_expires_at);
     }
 
     public function canRequestChange(): bool
@@ -109,6 +111,7 @@ class Pedido extends Model
 
         $this->estado = self::STATUS_PENDING;
         $this->released_to_kitchen_at = $now;
+        $this->hold_expires_at = null;
         $this->release_trigger = $trigger;
 
         return $this->save();
@@ -148,13 +151,10 @@ class Pedido extends Model
 
     public function scopeEditableByWaiter(Builder $query): Builder
     {
-        return $query->where(function (Builder $sub) {
-            $sub->where(function (Builder $q) {
-                $q->where('estado', self::STATUS_RETAINED)
-                    ->whereNotNull('hold_expires_at')
-                    ->where('hold_expires_at', '>', now());
-            })->orWhere('estado', self::STATUS_CHANGE_REQUESTED);
-        });
+        return $query
+            ->where('estado', self::STATUS_RETAINED)
+            ->whereNotNull('hold_expires_at')
+            ->where('hold_expires_at', '>', now());
 
     }
 
@@ -175,7 +175,7 @@ class Pedido extends Model
 
     public function cliente()
     {
-        return $this->belongsTo(Usuario::class, 'cliente_id');
+        return $this->belongsTo(Cliente::class, 'cliente_id');
     }
 
     public function clienteMesa()

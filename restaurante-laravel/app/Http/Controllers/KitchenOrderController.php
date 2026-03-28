@@ -30,7 +30,7 @@ class KitchenOrderController extends Controller
             })
             ->when($since, fn ($query) => $query->where('updated_at', '>', $since))
             ->with([
-                'cliente:id,nombre',
+                'cliente:id,nombres,apellidos',
                 'detalle' => fn ($query) => $query
                     ->select([
                         'id',
@@ -165,7 +165,7 @@ class KitchenOrderController extends Controller
                 'id' => $pedido->cliente?->id,
                 'nombre' => $pedido->cliente?->nombre,
             ],
-            'cliente_nombre' => $pedido->cliente?->nombre,
+            'cliente_nombre' => $pedido->cliente?->nombre ?? 'Cliente invitado',
             'items' => $items,
             'detalle' => $items,
             'detalles' => $items,

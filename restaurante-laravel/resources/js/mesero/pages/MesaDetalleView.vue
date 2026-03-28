@@ -98,8 +98,6 @@ const estadoMesaLabel = computed(() => {
   return estado || 'Sin estado';
 });
 
-const normalizeEstado = (estado) => (estado || '').toString().toLowerCase().replace(/\s+/g, '_');
-
 const normalizeItems = (pedido) => {
   const details = pedido.detalle ?? pedido.items ?? [];
   return details.map((item, index) => ({
@@ -118,10 +116,11 @@ const clientesConPedidos = computed(() => {
 
   pedidos.value.forEach((pedido) => {
     const clienteId = pedido?.cliente_mesa_id ?? pedido?.cliente_id ?? pedido?.cliente?.id ?? `anon-${pedido.id}`;
+    const customerName = pedido?.cliente_nombre || pedido?.cliente_mesa?.nombre || pedido?.cliente?.nombre || 'Cliente invitado';
     if (!byCliente.has(clienteId)) {
       byCliente.set(clienteId, {
         id: clienteId,
-        nombre: pedido?.cliente_mesa?.nombre || pedido?.cliente?.nombre || `Cliente ${clienteId}`,
+        nombre: customerName,
         pedidos: [],
       });
     }
@@ -165,11 +164,7 @@ const timerToneMap = computed(() => {
 const canEditCliente = (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido) return false;
-  const diffMinutes = (now.value - clienteCreatedAt(cliente)) / 60000;
-  const isInWindow = diffMinutes <= 5;
-  const pedidoEstado = normalizeEstado(pedido.estado);
-  const blocked = ['preparando', 'en_preparacion', 'listo', 'entregado'].includes(pedidoEstado);
-  return isInWindow && !blocked;
+  return Boolean(pedido.can_be_edited);
 };
 
 const loadMenu = async () => {

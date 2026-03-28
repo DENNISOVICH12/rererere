@@ -7,7 +7,7 @@
     <ServiceStatusTracker :order="order" :busy="busy" @deliver-group="(payload) => $emit('deliver-group', { order, ...payload })" />
     <p class="timer">{{ elapsedText }}</p>
     <p class="meta">{{ order.items_count }} ítems · Mesa {{ order.mesa || '-' }}</p>
-    <p class="meta">Cliente: {{ order.cliente?.nombre || 'Sin cliente' }}</p>
+    <p class="meta">Cliente: {{ customerName }}</p>
     <p v-if="order.estado === 'modificacion_solicitada'" class="locked">Solicitud de cambio registrada. Esperando atención del mesero.</p>
     <p v-if="order.change_request_overdue" class="alert">⚠ Lleva demasiado tiempo retenido. Requiere decisión inmediata.</p>
     <p v-if="!order.can_be_edited" class="locked">Ya fue enviado a cocina.</p>
@@ -38,7 +38,8 @@ const props = defineProps({
   hideActions: { type: Boolean, default: false },
 });
 
-const cardTitle = props.title || `Pedido #${props.order?.id ?? ''}`;
+const customerName = props.order?.cliente_nombre || props.order?.cliente?.nombre || 'Cliente invitado';
+const cardTitle = props.title || `Cliente: ${customerName}`;
 
 defineEmits(['edit', 'delete', 'request-change', 'deliver-group']);
 </script>

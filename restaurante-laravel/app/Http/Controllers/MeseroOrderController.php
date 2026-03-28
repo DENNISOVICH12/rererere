@@ -44,7 +44,7 @@ class MeseroOrderController extends Controller
             ])
 
             ->with([
-                'cliente:id,nombre',
+                'cliente:id,nombres,apellidos',
                 'changeRequestedByUser:id,nombre',
                 'detalle' => fn ($detalleQuery) => $detalleQuery
                     ->select(['id', 'pedido_id', 'menu_item_id', 'cantidad', 'nota'])
@@ -71,7 +71,7 @@ class MeseroOrderController extends Controller
         $pedido->refresh();
 
         $pedido->loadMissing([
-            'cliente:id,nombre',
+            'cliente:id,nombres,apellidos',
             'changeRequestedByUser:id,nombre',
             'detalle.menuItem:id,nombre,categoria,precio',
         ]);
@@ -103,7 +103,7 @@ class MeseroOrderController extends Controller
         }
 
         $pedido->markChangeRequested((int) $request->user()->id, $validated['reason'] ?? null);
-        $pedido->load(['cliente:id,nombre', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+        $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
 
         return response()->json([
             'message' => 'Solicitud de cambio registrada. El pedido queda retenido hasta atención del mesero.',
@@ -123,7 +123,7 @@ class MeseroOrderController extends Controller
         }
 
         $pedido->releaseToKitchen(Pedido::RELEASE_TRIGGER_WAITER_CONFIRMATION);
-        $pedido->load(['cliente:id,nombre', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+        $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
 
         return response()->json([
             'message' => 'Cambios confirmados. Pedido enviado a cocina.',
@@ -195,7 +195,7 @@ class MeseroOrderController extends Controller
             $pedido->save();
         });
 
-        $pedido->load(['cliente:id,nombre', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+        $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
 
         return response()->json([
             'message' => 'Pedido actualizado correctamente. Usa "Confirmar cambios y enviar a cocina" cuando esté listo.',
@@ -314,6 +314,7 @@ class MeseroOrderController extends Controller
                 'id' => $pedido->cliente?->id,
                 'nombre' => $pedido->cliente?->nombre,
             ],
+            'cliente_nombre' => $pedido->cliente?->nombre ?? 'Cliente invitado',
             'change_requested_by_user' => [
                 'id' => $pedido->changeRequestedByUser?->id,
                 'nombre' => $pedido->changeRequestedByUser?->nombre,
