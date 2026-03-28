@@ -28,7 +28,11 @@ const showSendNowConfirm = ref(false)
 const sendingNowToKitchen = ref(false)
 
 const SERVICE_STATUS_PRIORITY = ['pendiente', 'preparando', 'listo', 'entregado']
-
+const params = new URLSearchParams(window.location.search)
+const mesaId = params.get('mesa')
+if (mesaId) {
+    localStorage.setItem('mesa_id', mesaId)
+}
 
 // =========================
 // 🔙 VOLVER AL ADMIN (SOLO SI VIENE DESDE ADMIN)
@@ -198,22 +202,27 @@ function handleNoteEditorEsc(event) {
 ===================================================== */
 async function sendOrder() {
 
-  if (sendingOrder.value) return // 🔥 evita doble click
+  if (sendingOrder.value) return
 
   sendingOrder.value = true
 
   try {
+    const mesaId = localStorage.getItem('mesa_id') // 🔥 FALTABA ESTO
+
+    console.log("MESA:", mesaId)
+
     const clienteActual = getCliente()
+    const restaurantId = 1 
 
     await axios.post(`${API_BASE}/orders`, {
-      mesa: null,
+      mesa_id: mesaId,
       cliente_id: clienteActual ? clienteActual.id : null,
-      restaurant_id: 1,
+      restaurant_id: restaurantId,
       items: cart.value.map(i => ({
         menu_item_id: i.id,
         cantidad: i.quantity,
         precio_unitario: i.precio,
-        nota: i.nota || null // Si backend usa otro campo: ajustar aquí.
+        nota: i.nota || null
       }))
     })
 
@@ -224,13 +233,10 @@ async function sendOrder() {
     loadPedidosCliente(true)
 
   } catch (error) {
-
+    console.error(error) // 👈 agrega esto para debug
     showToast("Error enviando pedido ❌", "error")
-
   } finally {
-
-    sendingOrder.value = false // 🔥 vuelve a habilitar
-
+    sendingOrder.value = false
   }
 }
 

@@ -7,6 +7,8 @@ use App\Models\Pedido;
 use App\Models\Mesa; // 🔥 NUEVO
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
 
 class MesaController extends Controller
 {
@@ -194,4 +196,16 @@ class MesaController extends Controller
             })->values(),
         ];
     }
+    public function generarQR($id)
+{
+    $mesa = Mesa::findOrFail($id);
+
+    // ⚠️ CAMBIA ESTA IP POR LA TUYA
+    $url = "http://192.168.10.171:5174?mesa=" . $mesa->id;
+
+    return QrCode::format('svg')
+        ->size(300)
+        ->generate($url);
+}
+
 }

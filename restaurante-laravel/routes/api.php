@@ -51,6 +51,7 @@ Route::put('/mesero/pedidos/{id}', [PedidoController::class, 'cambiarEstado']);
 
 Route::get('/mesas', [MesaController::class, 'index']);
 Route::get('/mesas/{mesa}/pedidos', [MesaController::class, 'pedidos']);
+Route::get('/mesas/{id}/qr', [MesaController::class, 'generarQR']);
 
 Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->group(function () {
 
