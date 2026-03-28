@@ -4,6 +4,7 @@
       <strong>{{ heading }}</strong>
       <span class="badge">{{ pedido.estado }}</span>
     </header>
+    <p class="cliente">Cliente: {{ customerName }}</p>
     <ul>
       <li v-for="item in pedido.items" :key="item.id">
         <span>{{ item.cantidad }} x {{ item.nombre }}</span>
@@ -21,7 +22,8 @@ const props = defineProps({
   title: { type: String, default: 'Orden activa' },
 });
 
-const heading = props.showOrderId ? `Pedido #${props.pedido?.id ?? ''}` : props.title;
+const customerName = props.pedido?.cliente_nombre || props.pedido?.cliente?.nombre || 'Cliente invitado';
+const heading = props.showOrderId ? customerName : props.title;
 
 const money = (value) => Number(value || 0).toFixed(2);
 </script>
@@ -33,4 +35,5 @@ ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 li { display: flex; justify-content: space-between; color: #dbe8ff; }
 .badge { text-transform: capitalize; font-size: .8rem; background: #1f2f52; padding: 2px 8px; border-radius: 999px; }
 footer { margin-top: 8px; font-weight: 600; }
+.cliente { margin: 0 0 8px; color: #a8b4ce; font-size: 13px; }
 </style>

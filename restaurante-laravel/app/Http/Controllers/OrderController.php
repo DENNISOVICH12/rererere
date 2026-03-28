@@ -90,7 +90,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Pedido creado exitosamente.',
-            'data' => $this->transformCustomerOrderPayload($order->fresh(['detalle.menuItem'])),
+            'data' => $this->transformCustomerOrderPayload($order->fresh(['detalle.menuItem', 'cliente'])),
             'meta' => [
                 'hold_window_seconds' => Pedido::holdWindowSeconds(),
             ],
@@ -126,7 +126,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Pedido confirmado y enviado a cocina.',
-            'data' => $this->transformCustomerOrderPayload($order->fresh(['detalle.menuItem'])),
+            'data' => $this->transformCustomerOrderPayload($order->fresh(['detalle.menuItem', 'cliente'])),
             'meta' => [
                 'hold_window_seconds' => Pedido::holdWindowSeconds(),
             ],
@@ -158,7 +158,7 @@ class OrderController extends Controller
             ]);
         }
 
-        $pedidos = Pedido::with(['detalle.menuItem'])
+        $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
             ->where('cliente_id', $resolvedClienteId)
             ->orderBy('created_at', 'desc')
             ->take(5)
@@ -257,6 +257,9 @@ class OrderController extends Controller
     return [
         ...$pedido->toArray(),
         'grupos_servicio' => $grupos,
+        'cliente_nombre' => $pedido->cliente
+            ? (trim($pedido->cliente->nombres . ' ' . $pedido->cliente->apellidos) ?: 'Cliente invitado')
+            : 'Cliente invitado',
 
         'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
         'released_to_kitchen_at' => optional($pedido->released_to_kitchen_at)->toIso8601String(),

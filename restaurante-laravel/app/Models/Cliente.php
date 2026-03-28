@@ -32,6 +32,10 @@ class Cliente extends Authenticatable
         'activo' => 'boolean',
     ];
 
+    protected $appends = [
+        'nombre',
+    ];
+
     public function restaurante()
     {
         return $this->belongsTo(Restaurant::class, 'restaurant_id');
@@ -45,5 +49,15 @@ class Cliente extends Authenticatable
     public function pedidos()
     {
         return $this->hasMany(Pedido::class, 'cliente_id');
+    }
+
+    public function getNombreAttribute(): string
+    {
+        $nombreCompleto = trim(implode(' ', array_filter([
+            $this->nombres,
+            $this->apellidos,
+        ])));
+
+        return $nombreCompleto !== '' ? $nombreCompleto : 'Cliente invitado';
     }
 }
