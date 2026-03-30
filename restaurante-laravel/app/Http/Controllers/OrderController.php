@@ -2,21 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cliente;
 use App\Models\Pedido;
 use App\Models\PedidoDetalle;
-use App\Models\Cliente;
+use App\Services\WaiterNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-
 class OrderController extends Controller
 {
-    private const HOLD_SECONDS = 60;
-
-    /**
-     * Crear un nuevo pedido desde la Carta Digital
-     */
     public function store(Request $request): JsonResponse
     {
         $restaurantId = $request->integer('restaurant_id');
@@ -34,25 +29,9 @@ class OrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        // 🔥 1. Intentar obtener cliente autenticado (Sanctum)
-$authCliente = auth('sanctum')->user();
+        $resolvedClienteId = $this->resolveAuthenticatedClienteId($restaurantId)
+            ?? $this->resolveClienteId($request->input('cliente_id'), $restaurantId);
 
-if ($authCliente) {
-    // Buscar el cliente asociado al usuario
-    $cliente = \App\Models\Cliente::where('usuario_id', $authCliente->id)
-        ->where('restaurant_id', $restaurantId)
-        ->first();
-
-    $resolvedClienteId = $cliente ? $cliente->id : null;
-} else {
-    // 🔥 2. Si no hay sesión, usar lo que venga del request
-    $resolvedClienteId = $this->resolveClienteId(
-        $request->input('cliente_id'),
-        $restaurantId
-    );
-}
-
-        // ✅ Si no existe cliente registrado, crear cliente invitado
         if (!$resolvedClienteId) {
             $clienteInvitado = $this->createGuestCliente($request, $restaurantId);
 
@@ -79,54 +58,55 @@ if ($authCliente) {
         ]);
 
         foreach ($items as $item) {
-    $cantidad = (int) ($item['cantidad'] ?? 0);
-    $precioUnitario = (float) ($item['precio_unitario'] ?? 0);
+            $cantidad = (int) ($item['cantidad'] ?? 0);
+            $precioUnitario = (float) ($item['precio_unitario'] ?? 0);
 
-    $menuItem = \App\Models\MenuItem::find($item['menu_item_id']);
+            $menuItem = \App\Models\MenuItem::find($item['menu_item_id']);
+            $grupoServicio = strtolower($menuItem?->categoria ?? '') === 'bebida' ? 'bebida' : 'plato';
 
-    $grupoServicio = strtolower($menuItem?->categoria ?? '') === 'bebida'
-        ? 'bebida'
-        : 'plato';
+            PedidoDetalle::create([
+                'restaurant_id' => $restaurantId,
+                'pedido_id' => $order->id,
+                'menu_item_id' => $item['menu_item_id'],
+                'cantidad' => $cantidad,
+                'precio_unitario' => $precioUnitario,
+                'importe' => $precioUnitario * $cantidad,
+                'nota' => $item['nota'] ?? null,
+                'grupo_servicio' => $grupoServicio,
+                'estado_servicio' => 'pendiente',
+            ]);
+        }
 
-    PedidoDetalle::create([
-        'restaurant_id' => $restaurantId,
-        'pedido_id' => $order->id,
-        'menu_item_id' => $item['menu_item_id'],
-        'cantidad' => $cantidad,
-        'precio_unitario' => $precioUnitario,
-        'importe' => $precioUnitario * $cantidad,
-        'nota' => $item['nota'] ?? null,
-        'grupo_servicio' => $grupoServicio,
-        'estado_servicio' => 'pendiente',
-    ]);
-}
+        $order->load(['detalle.menuItem', 'cliente']);
+        app(WaiterNotificationService::class)->createFromPedido(
+            $order,
+            'new_order',
+            '🆕 Nuevo pedido recibido',
+            [
+                'origin' => 'customer',
+                'hold_expires_at' => optional($order->hold_expires_at)->toIso8601String(),
+            ]
+        );
 
         return response()->json([
             'message' => 'Pedido creado exitosamente.',
-            'data' => $this->transformCustomerOrderPayload($order->fresh(['detalle.menuItem', 'cliente'])),
+            'data' => $this->transformCustomerOrderPayload($order),
             'meta' => [
                 'hold_window_seconds' => Pedido::holdWindowSeconds(),
             ],
         ], Response::HTTP_CREATED);
     }
 
-    /**
-     * Confirmación anticipada desde cliente.
-     */
     public function sendNowToKitchen(Request $request, Pedido $order): JsonResponse
     {
         Pedido::releaseExpiredRetentionWindow();
         $order->refresh();
 
-        $resolvedClienteId = $this->resolveClienteId(
-            $request->input('cliente_id'),
-            $order->restaurant_id
-        );
+        $resolvedClienteId = $this->resolveAuthenticatedClienteId((int) $order->restaurant_id)
+            ?? $this->resolveClienteId($request->input('cliente_id'), $order->restaurant_id);
 
         if ($resolvedClienteId && (int) $order->cliente_id !== $resolvedClienteId) {
-            return response()->json([
-                'message' => 'No puedes confirmar este pedido.',
-            ], Response::HTTP_FORBIDDEN);
+            return response()->json(['message' => 'No puedes confirmar este pedido.'], Response::HTTP_FORBIDDEN);
         }
 
         if (!$order->isInRetentionWindow()) {
@@ -163,12 +143,7 @@ if ($authCliente) {
         $resolvedClienteId = $this->resolveClienteId($clienteId);
 
         if (!$resolvedClienteId) {
-            return response()->json([
-                'data' => [],
-                'meta' => [
-                    'hold_window_seconds' => Pedido::holdWindowSeconds(),
-                ],
-            ]);
+            return response()->json(['data' => [], 'meta' => ['hold_window_seconds' => Pedido::holdWindowSeconds()]]);
         }
 
         $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
@@ -178,12 +153,7 @@ if ($authCliente) {
             ->get()
             ->map(fn (Pedido $pedido) => $this->transformCustomerOrderPayload($pedido));
 
-        return response()->json([
-            'data' => $pedidos,
-            'meta' => [
-                'hold_window_seconds' => Pedido::holdWindowSeconds(),
-            ],
-        ]);
+        return response()->json(['data' => $pedidos, 'meta' => ['hold_window_seconds' => Pedido::holdWindowSeconds()]]);
     }
 
     public function updateStatus(Request $request, Pedido $order): JsonResponse
@@ -193,49 +163,42 @@ if ($authCliente) {
         return response()->json(['message' => 'Estado actualizado ✅']);
     }
 
-    /**
-     * Resuelve el ID real de clientes.id.
-     *
-     * Soporta:
-     * - un cliente_id real (clientes.id)
-     * - un usuario_id (usuarios.id), buscando en clientes.usuario_id
-     */
+    private function resolveAuthenticatedClienteId(int $restaurantId): ?int
+    {
+        $authCliente = auth('sanctum')->user();
+        if (!$authCliente) return null;
+
+        if ($authCliente instanceof Cliente) {
+            return (int) $authCliente->id;
+        }
+
+        return Cliente::query()
+            ->where('usuario_id', (int) $authCliente->id)
+            ->where('restaurant_id', $restaurantId)
+            ->value('id');
+    }
+
     private function resolveClienteId($incomingId, ?int $restaurantId = null): ?int
     {
-        if (!$incomingId) {
-            return null;
-        }
+        if (!$incomingId) return null;
 
         $incomingId = (int) $incomingId;
 
-        // 1) Si ya es un clientes.id válido, úsalo
-        $clienteQuery = Cliente::query()->where('id', $incomingId);
+        $clienteDirecto = Cliente::query()
+            ->where('id', $incomingId)
+            ->when($restaurantId, fn ($q) => $q->where('restaurant_id', $restaurantId))
+            ->first();
 
-        if ($restaurantId) {
-            $clienteQuery->where('restaurant_id', $restaurantId);
-        }
+        if ($clienteDirecto) return (int) $clienteDirecto->id;
 
-        $clienteDirecto = $clienteQuery->first();
-        if ($clienteDirecto) {
-            return (int) $clienteDirecto->id;
-        }
-
-        // 2) Si no, intenta resolverlo como usuarios.id => clientes.usuario_id
         $clientePorUsuario = Cliente::query()
             ->when($restaurantId, fn ($q) => $q->where('restaurant_id', $restaurantId))
             ->where('usuario_id', $incomingId)
             ->first();
 
-        if ($clientePorUsuario) {
-            return (int) $clientePorUsuario->id;
-        }
-
-        return null;
+        return $clientePorUsuario ? (int) $clientePorUsuario->id : null;
     }
 
-    /**
-     * Crea un cliente invitado cuando no hay sesión/login de cliente.
-     */
     private function createGuestCliente(Request $request, int $restaurantId): ?Cliente
     {
         $nombres = trim((string) $request->input('nombres', 'Cliente'));
@@ -255,31 +218,28 @@ if ($authCliente) {
     }
 
     private function transformCustomerOrderPayload(Pedido $pedido): array
-{
-    $grupos = $pedido->detalle
-        ->groupBy('grupo_servicio')
-        ->map(function ($items, $grupo) {
-            return [
+    {
+        $grupos = $pedido->detalle
+            ->groupBy('grupo_servicio')
+            ->map(fn ($items, $grupo) => [
                 'grupo' => $grupo,
                 'estado' => $items->pluck('estado_servicio')->unique()->first(),
                 'items' => $items->values(),
-            ];
-        })
-        ->values();
+            ])
+            ->values();
 
-    return [
-        ...$pedido->toArray(),
-        'grupos_servicio' => $grupos,
-        'cliente_nombre' => $pedido->cliente
-            ? (trim($pedido->cliente->nombres . ' ' . $pedido->cliente->apellidos) ?: 'Cliente invitado')
-            : 'Cliente invitado',
-
-        'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
-        'released_to_kitchen_at' => optional($pedido->released_to_kitchen_at)->toIso8601String(),
-        'release_trigger' => $pedido->release_trigger,
-        'can_be_edited' => $pedido->canBeEditedByWaiter(),
-        'can_send_now' => $pedido->isInRetentionWindow(),
-        'change_request_overdue' => $pedido->isChangeRequestOverdue(),
-    ];
-}
+        return [
+            ...$pedido->toArray(),
+            'grupos_servicio' => $grupos,
+            'cliente_nombre' => $pedido->cliente
+                ? (trim($pedido->cliente->nombres.' '.$pedido->cliente->apellidos) ?: 'Cliente invitado')
+                : 'Cliente invitado',
+            'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
+            'released_to_kitchen_at' => optional($pedido->released_to_kitchen_at)->toIso8601String(),
+            'release_trigger' => $pedido->release_trigger,
+            'can_be_edited' => $pedido->canBeEditedByWaiter(),
+            'can_send_now' => $pedido->isInRetentionWindow(),
+            'change_request_overdue' => $pedido->isChangeRequestOverdue(),
+        ];
+    }
 }

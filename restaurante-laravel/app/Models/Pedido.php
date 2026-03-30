@@ -9,6 +9,7 @@ use App\Models\ClienteMesa;
 use App\Models\Cliente;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
+use App\Services\WaiterNotificationService;
 
 class Pedido extends Model
 {
@@ -137,16 +138,34 @@ class Pedido extends Model
     {
         $now = now();
 
-        return static::query()
+        $expiredOrders = static::query()
+            ->with(['cliente:id,nombres,apellidos'])
             ->where('estado', self::STATUS_RETAINED)
             ->whereNotNull('hold_expires_at')
             ->where('hold_expires_at', '<=', $now)
+            ->get();
+
+        if ($expiredOrders->isEmpty()) {
+            return 0;
+        }
+
+        $updated = static::query()
+            ->whereIn('id', $expiredOrders->pluck('id'))
             ->update([
                 'estado' => self::STATUS_PENDING,
                 'released_to_kitchen_at' => $now,
                 'release_trigger' => self::RELEASE_TRIGGER_TIMER,
                 'updated_at' => $now,
             ]);
+
+        $notifier = app(WaiterNotificationService::class);
+        foreach ($expiredOrders as $pedido) {
+            $notifier->createFromPedido($pedido, 'expired_order', '⚠️ Pedido vencido (tiempo agotado)', [
+                'release_trigger' => self::RELEASE_TRIGGER_TIMER,
+            ]);
+        }
+
+        return $updated;
     }
 
     public function scopeEditableByWaiter(Builder $query): Builder

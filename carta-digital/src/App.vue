@@ -10,6 +10,17 @@ import { loadCliente, getCliente, cliente, logoutCliente } from "./cliente.js"
 
 loadCliente()
 
+function applyClienteToken() {
+  const token = cliente.value?.token
+  if (token) {
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`
+  } else {
+    delete axios.defaults.headers.common.Authorization
+  }
+}
+
+applyClienteToken()
+
 const showCart = ref(false)
 const cartButton = ref(null)
 const sendingOrder = ref(false)
@@ -298,6 +309,14 @@ function clearPedidosPolling() {
     pedidosInterval = null
   }
 }
+
+watch(
+  cliente,
+  () => {
+    applyClienteToken()
+  },
+  { deep: true },
+)
 
 watch(
   cliente,

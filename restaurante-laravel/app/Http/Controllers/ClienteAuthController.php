@@ -55,9 +55,12 @@ class ClienteAuthController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $token = $cliente->createToken('carta-digital')->plainTextToken;
+
         return response()->json([
             'message' => 'Inicio de sesión exitoso.',
             'cliente' => $cliente,
+            'token' => $token,
         ]);
     }
 }

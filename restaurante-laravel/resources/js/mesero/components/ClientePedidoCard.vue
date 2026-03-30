@@ -14,7 +14,15 @@
         <button v-if="canEdit" class="action" :disabled="busy" @click="$emit('edit', cliente)">
           Editar pedido
         </button>
-        <p v-else class="locked">Pedido en cocina, no editable</p>
+        <button
+          v-if="pedidos[0]?.can_send_to_kitchen"
+          class="action action-secondary"
+          :disabled="busy"
+          @click="$emit('send-to-kitchen', cliente)"
+        >
+          Enviar a cocina
+        </button>
+        <p v-else-if="!canEdit" class="locked">Pedido en cocina, no editable</p>
       </div>
     </header>
 
@@ -136,7 +144,7 @@ const props = defineProps({
   menuOptions: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['deliver-group', 'facturar-cliente', 'edit', 'save-edit', 'cancel-edit']);
+const emit = defineEmits(['deliver-group', 'facturar-cliente', 'edit', 'save-edit', 'cancel-edit', 'send-to-kitchen']);
 
 const newItemId = ref(null);
 

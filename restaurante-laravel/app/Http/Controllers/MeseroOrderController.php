@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
+use App\Services\WaiterNotificationService;
 
 class MeseroOrderController extends Controller
 {
@@ -116,7 +117,7 @@ class MeseroOrderController extends Controller
         Pedido::releaseExpiredRetentionWindow();
         $pedido->refresh();
 
-        if (!$pedido->canBeEditedByWaiter()) {
+        if (!in_array($pedido->estado, [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED], true)) {
             return response()->json([
                 'message' => 'Este pedido ya fue enviado a cocina y no puede confirmarse nuevamente.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -124,6 +125,11 @@ class MeseroOrderController extends Controller
 
         $pedido->releaseToKitchen(Pedido::RELEASE_TRIGGER_WAITER_CONFIRMATION);
         $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+
+        app(WaiterNotificationService::class)->createFromPedido($pedido, 'edited_order', '✏️ Pedido editado y enviado a cocina', [
+            'origin' => 'waiter',
+            'release_trigger' => Pedido::RELEASE_TRIGGER_WAITER_CONFIRMATION,
+        ]);
 
         return response()->json([
             'message' => 'Cambios confirmados. Pedido enviado a cocina.',
@@ -142,7 +148,7 @@ class MeseroOrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if (!$pedido->canBeEditedByWaiter()) {
+        if (!in_array($pedido->estado, [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED], true)) {
 
             return response()->json([
                 'message' => 'Este pedido ya fue enviado a cocina y no puede modificarse.',
@@ -197,8 +203,12 @@ class MeseroOrderController extends Controller
 
         $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
 
+        app(WaiterNotificationService::class)->createFromPedido($pedido, 'edited_order', '✏️ Pedido editado', [
+            'origin' => 'waiter',
+        ]);
+
         return response()->json([
-            'message' => 'Pedido actualizado correctamente. Usa "Confirmar cambios y enviar a cocina" cuando esté listo.',
+            'message' => 'Pedido actualizado correctamente. Usa "Enviar a cocina" cuando esté listo.',
             'data' => $this->transformOrder($pedido),
         ]);
     }
@@ -214,7 +224,7 @@ class MeseroOrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if (!$pedido->canBeEditedByWaiter()) {
+        if (!in_array($pedido->estado, [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED], true)) {
 
             return response()->json([
                 'message' => 'Este pedido ya fue enviado a cocina y no puede cancelarse con el flujo normal.',

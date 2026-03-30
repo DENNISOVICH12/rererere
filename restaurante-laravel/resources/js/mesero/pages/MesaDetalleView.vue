@@ -51,6 +51,7 @@
           @edit="startEdit"
           @save-edit="handleEditAction(cliente, $event)"
           @cancel-edit="cancelEdit"
+          @send-to-kitchen="sendClienteToKitchen"
         />
       </div>
     </template>
@@ -67,6 +68,7 @@ import {
   getMesa,
   getMesaPedidos,
   searchMenuItems,
+  sendOrderToKitchen,
   updateOrder,
 } from '../api';
 
@@ -85,6 +87,7 @@ const billingMap = ref({});
 const busyMap = ref({});
 const billingWholeTable = ref(false);
 let timerId = null;
+let refreshId = null;
 
 const mesaId = computed(() => route.params.id);
 const mesaCodigo = computed(() => mesa.value?.codigo ?? mesaId.value);
@@ -134,15 +137,15 @@ const clientesConPedidos = computed(() => {
   }));
 });
 
-const clienteCreatedAt = (cliente) => {
-  const created = cliente?.pedidos?.[0]?.created_at;
-  return created ? new Date(created).getTime() : now.value;
+const clienteHoldUntil = (cliente) => {
+  const hold = cliente?.pedidos?.[0]?.hold_expires_at;
+  return hold ? new Date(hold).getTime() : now.value;
 };
 
 const elapsedMap = computed(() => {
   const map = {};
   clientesConPedidos.value.forEach((cliente) => {
-    const diffSeconds = Math.max(0, Math.floor((now.value - clienteCreatedAt(cliente)) / 1000));
+    const diffSeconds = Math.max(0, Math.floor((clienteHoldUntil(cliente) - now.value) / 1000));
     const mm = String(Math.floor(diffSeconds / 60)).padStart(2, '0');
     const ss = String(diffSeconds % 60).padStart(2, '0');
     map[cliente.id] = `${mm}:${ss} min`;
@@ -153,9 +156,9 @@ const elapsedMap = computed(() => {
 const timerToneMap = computed(() => {
   const map = {};
   clientesConPedidos.value.forEach((cliente) => {
-    const diffMinutes = (now.value - clienteCreatedAt(cliente)) / 60000;
-    if (diffMinutes < 5) map[cliente.id] = 'ok';
-    else if (diffMinutes <= 10) map[cliente.id] = 'warning';
+    const remaining = (clienteHoldUntil(cliente) - now.value) / 60000;
+    if (remaining > 2) map[cliente.id] = 'ok';
+    else if (remaining > 0) map[cliente.id] = 'warning';
     else map[cliente.id] = 'danger';
   });
   return map;
@@ -253,6 +256,25 @@ const handleEditAction = async (cliente, payload) => {
   }
 };
 
+
+const sendClienteToKitchen = async (cliente) => {
+  const pedido = cliente?.pedidos?.[0];
+  if (!pedido?.id || !pedido?.can_send_to_kitchen) return;
+
+  busyMap.value = { ...busyMap.value, [cliente.id]: true };
+  error.value = '';
+
+  try {
+    await sendOrderToKitchen(pedido.id);
+    editingClienteId.value = null;
+    await loadMesaData();
+  } catch (err) {
+    error.value = err?.response?.data?.message || 'No se pudo enviar el pedido a cocina.';
+  } finally {
+    busyMap.value = { ...busyMap.value, [cliente.id]: false };
+  }
+};
+
 const deliverGroupForCliente = async ({ cliente, group }) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido?.id || !group) return;
@@ -305,10 +327,14 @@ onMounted(() => {
   timerId = window.setInterval(() => {
     now.value = Date.now();
   }, 1000);
+  refreshId = window.setInterval(() => {
+    loadMesaData();
+  }, 10000);
 });
 
 onUnmounted(() => {
   if (timerId) window.clearInterval(timerId);
+  if (refreshId) window.clearInterval(refreshId);
 });
 </script>
 

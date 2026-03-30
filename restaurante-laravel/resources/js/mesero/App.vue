@@ -1,8 +1,13 @@
 <template>
   <main class="app-shell">
+    <WaiterNotifications :restaurant-id="1" />
     <router-view />
   </main>
 </template>
+
+<script setup>
+import WaiterNotifications from "./components/WaiterNotifications.vue";
+</script>
 
 <style scoped>
 .app-shell {

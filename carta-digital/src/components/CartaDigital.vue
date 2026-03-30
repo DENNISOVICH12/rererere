@@ -280,7 +280,7 @@ async function login() {
       password: form.value.password
     })
 
-    setCliente(res.data.cliente)
+    setCliente({ ...res.data.cliente, token: res.data.token || null })
     loginMessage.value = '✅ Sesión iniciada'
 
     setTimeout(() => {
@@ -311,7 +311,7 @@ async function registerUser() {
       password: register.value.password
     })
 
-    setCliente(loginRes.data.cliente)
+    setCliente({ ...loginRes.data.cliente, token: loginRes.data.token || null })
     registerMessage.value = '✅ Cuenta creada'
 
     setTimeout(() => {
