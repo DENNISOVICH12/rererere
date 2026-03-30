@@ -34,10 +34,23 @@ class OrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $resolvedClienteId = $this->resolveClienteId(
-            $request->input('cliente_id'),
-            $restaurantId
-        );
+        // 🔥 1. Intentar obtener cliente autenticado (Sanctum)
+$authCliente = auth('sanctum')->user();
+
+if ($authCliente) {
+    // Buscar el cliente asociado al usuario
+    $cliente = \App\Models\Cliente::where('usuario_id', $authCliente->id)
+        ->where('restaurant_id', $restaurantId)
+        ->first();
+
+    $resolvedClienteId = $cliente ? $cliente->id : null;
+} else {
+    // 🔥 2. Si no hay sesión, usar lo que venga del request
+    $resolvedClienteId = $this->resolveClienteId(
+        $request->input('cliente_id'),
+        $restaurantId
+    );
+}
 
         // ✅ Si no existe cliente registrado, crear cliente invitado
         if (!$resolvedClienteId) {

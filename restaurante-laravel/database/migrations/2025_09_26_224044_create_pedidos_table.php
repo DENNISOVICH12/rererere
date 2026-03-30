@@ -22,9 +22,9 @@ return new class extends Migration
 
             // Relación con cliente (opcional)
             $table->foreignId('cliente_id')
-                  ->nullable()
-                  ->constrained('usuarios')
-                  ->nullOnDelete();
+      ->nullable()
+      ->constrained('clientes')
+      ->nullOnDelete();
         });
     }
 
