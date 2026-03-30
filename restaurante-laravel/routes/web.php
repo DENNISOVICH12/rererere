@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\URL;
 use App\Http\Controllers\MeseroOrderController;
 use App\Http\Controllers\MesaController;
 use App\Http\Controllers\KitchenOrderController;
+use App\Http\Controllers\WaiterNotificationController;
 
 
 /*
@@ -129,6 +130,9 @@ Route::middleware(['auth:web', 'role:mesero'])->group(function () {
         Route::delete('/orders/{pedido}', [MeseroOrderController::class, 'destroy']);
         Route::get('/menu-items', [MeseroOrderController::class, 'menuItems']);
         Route::put('/pedidos/{id}/entregar-grupo/{grupo}', [PedidoController::class, 'entregarGrupo']);
+        Route::get('/notifications', [WaiterNotificationController::class, 'index']);
+        Route::post('/notifications/read-all', [WaiterNotificationController::class, 'markAllRead']);
+        Route::post('/notifications/{notification}/read', [WaiterNotificationController::class, 'markRead']);
     });
 });
 

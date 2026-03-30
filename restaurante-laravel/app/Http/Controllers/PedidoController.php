@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Log;
+use App\Services\WaiterNotificationService;
 
 class PedidoController extends Controller
 {
@@ -171,6 +172,10 @@ $hasAnyReady = $allItems->contains(function ($item) {
 if ($hasAnyReady) {
     $pedido->estado = 'listo';
     $pedido->save();
+
+    app(WaiterNotificationService::class)->createFromPedido($pedido, 'ready_from_kitchen', '🍽️ Pedido listo desde cocina', [
+        'group' => $grupo,
+    ]);
 
     Log::info('Pedido listo (parcial o completo) para mesero', [
         'pedido_id' => $pedido->id,

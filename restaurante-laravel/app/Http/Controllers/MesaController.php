@@ -166,7 +166,7 @@ class MesaController extends Controller
         $pedidos = Pedido::query()
             ->where('restaurant_id', $restaurantId)
             ->where('mesa', rawurldecode($mesaId))
-            ->with(['detalle.menuItem'])
+            ->with(['detalle.menuItem', 'cliente:id,nombres,apellidos'])
             ->orderByDesc('created_at')
             ->get();
 
@@ -182,6 +182,15 @@ class MesaController extends Controller
             'estado' => $pedido->estado,
             'total' => (float) $pedido->total,
             'created_at' => optional($pedido->created_at)?->toISOString(),
+            'hold_expires_at' => optional($pedido->hold_expires_at)?->toISOString(),
+            'can_be_edited' => $pedido->canBeEditedByWaiter(),
+            'can_send_to_kitchen' => $pedido->canBeEditedByWaiter(),
+            'cliente_id' => $pedido->cliente_id,
+            'cliente' => [
+                'id' => $pedido->cliente?->id,
+                'nombre' => $pedido->cliente?->nombre,
+            ],
+            'cliente_nombre' => $pedido->cliente?->nombre ?? 'Cliente invitado',
             'items' => $pedido->detalle->map(function ($item) {
                 return [
                     'id' => $item->id,

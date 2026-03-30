@@ -9,7 +9,8 @@ export function setCliente(data) {
     id: data.id,
     nombres: data.nombres,
     apellidos: data.apellidos,
-    correo: data.correo
+    correo: data.correo,
+    token: data.token || null
   }
 
   cliente.value = stored

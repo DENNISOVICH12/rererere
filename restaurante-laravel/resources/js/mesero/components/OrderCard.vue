@@ -2,7 +2,6 @@
   <article class="card" :class="{ overdue: order.change_request_overdue }">
     <header class="row">
       <strong>{{ cardTitle }}</strong>
-      <OrderStatusBadge :status="order.estado" />
     </header>
     <ServiceStatusTracker :order="order" :busy="busy" @deliver-group="(payload) => $emit('deliver-group', { order, ...payload })" />
     <p class="timer">{{ elapsedText }}</p>
@@ -27,7 +26,6 @@
 </template>
 
 <script setup>
-import OrderStatusBadge from './OrderStatusBadge.vue';
 import ServiceStatusTracker from './ServiceStatusTracker.vue';
 
 const props = defineProps({

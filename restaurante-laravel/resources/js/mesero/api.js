@@ -59,3 +59,12 @@ export const facturarCliente = (clienteId) =>
 
 export const getMesaPedidos = (mesaId) =>
     floorHttp.get(`/mesas/${mesaId}/pedidos`).then((r) => r.data.data);
+
+export const getNotifications = () =>
+    meseroHttp.get('/notifications').then((r) => r.data);
+
+export const markNotificationRead = (id) =>
+    meseroHttp.post(`/notifications/${id}/read`).then((r) => r.data);
+
+export const markNotificationsReadAll = () =>
+    meseroHttp.post('/notifications/read-all').then((r) => r.data);
