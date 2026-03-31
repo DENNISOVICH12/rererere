@@ -1,7 +1,7 @@
 <template>
   <section class="layout">
-    <header class="header">
-      <button class="back" @click="router.push({ name: 'mesas' })">← Mesas</button>
+    <header class="header card-shell">
+      <button class="btn btn-ghost" @click="router.push({ name: 'mesas' })">← Mesas</button>
 
       <div>
         <h1>Mesa {{ mesaCodigo }}</h1>
@@ -12,11 +12,11 @@
       </div>
 
       <div class="header-actions">
-        <button class="refresh" :disabled="loading" @click="loadMesaData">
+        <button class="btn btn-secondary" :disabled="loading" @click="loadMesaData">
           {{ loading ? 'Actualizando...' : 'Actualizar' }}
         </button>
         <button
-          class="facturar-mesa"
+          class="btn btn-success"
           :disabled="loading || !clientesConPedidos.length || billingWholeTable"
           @click="billWholeTable"
         >
@@ -27,10 +27,10 @@
 
     <p v-if="error" class="error">{{ error }}</p>
 
-    <div v-if="loading" class="card">Cargando clientes y pedidos de la mesa...</div>
+    <div v-if="loading" class="card-shell">Cargando clientes y pedidos de la mesa...</div>
 
     <template v-else>
-      <div v-if="!clientesConPedidos.length" class="card empty">No hay pedidos activos para esta mesa.</div>
+      <div v-if="!clientesConPedidos.length" class="card-shell empty">No hay pedidos activos para esta mesa.</div>
 
       <div class="clientes-grid">
         <ClientePedidoCard
@@ -43,6 +43,7 @@
           :billing="Boolean(billingMap[cliente.id])"
           :busy="Boolean(busyMap[cliente.id])"
           :can-edit="canEditCliente(cliente)"
+          :can-send-to-kitchen="canSendToKitchenCliente(cliente)"
           :editing="editingClienteId === cliente.id"
           :draft-items="draftMap[cliente.id] || []"
           :menu-options="menuItems"
@@ -167,7 +168,15 @@ const timerToneMap = computed(() => {
 const canEditCliente = (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido) return false;
+  if (pedido?.can_be_edited === false) return false;
   return isWithinTime(cliente);
+};
+
+const canSendToKitchenCliente = (cliente) => {
+  const pedido = cliente?.pedidos?.[0];
+  if (!pedido) return false;
+  if (pedido?.can_send_to_kitchen === false) return false;
+  return Boolean(pedido?.can_be_edited ?? isWithinTime(cliente));
 };
 
 const loadMenu = async () => {
@@ -176,63 +185,58 @@ const loadMenu = async () => {
 };
 
 const isWithinTime = (cliente) => {
-  const hold = cliente?.pedidos?.[0]?.hold_expires_at
-  if (!hold) return false
+  const hold = cliente?.pedidos?.[0]?.hold_expires_at;
+  if (!hold) return false;
 
-  return new Date().getTime() < new Date(hold).getTime()
-}
+  return new Date().getTime() < new Date(hold).getTime();
+};
 
 const loadMesaData = async (silent = false) => {
-  if (!mesaId.value) return
+  if (!mesaId.value) return;
 
   if (!silent) {
-    loading.value = true
+    loading.value = true;
   }
 
   try {
     const [mesaData, mesaPedidos] = await Promise.all([
       getMesa(mesaId.value),
-      getMesaPedidos(mesaId.value)
-    ])
+      getMesaPedidos(mesaId.value),
+    ]);
 
-    mesa.value = mesaData
+    mesa.value = mesaData;
 
-    const nuevos = mesaPedidos || []
+    const nuevos = mesaPedidos || [];
 
     if (!pedidos.value.length) {
-      pedidos.value = nuevos
+      pedidos.value = nuevos;
     } else {
       nuevos.forEach((nuevo) => {
-        const index = pedidos.value.findIndex(p => p.id === nuevo.id)
+        const index = pedidos.value.findIndex((p) => p.id === nuevo.id);
 
         if (index !== -1) {
-          pedidos.value[index] = nuevo
+          pedidos.value[index] = nuevo;
         } else {
-          pedidos.value.push(nuevo)
+          pedidos.value.push(nuevo);
         }
-      })
+      });
 
-      pedidos.value = pedidos.value.filter(p =>
-        nuevos.some(n => n.id === p.id)
-      )
+      pedidos.value = pedidos.value.filter((p) => nuevos.some((n) => n.id === p.id));
     }
 
-    await loadMenu()
-
+    await loadMenu();
   } catch (err) {
     if (!silent) {
-      error.value = err?.response?.data?.message || 'Error cargando datos'
+      error.value = err?.response?.data?.message || 'Error cargando datos';
     }
   } finally {
     if (!silent) {
-      loading.value = false
+      loading.value = false;
     }
   }
-}
+};
 
 const startEdit = (cliente) => {
-  console.log("EDITANDO", cliente);
-
   if (!cliente?.pedidos?.length) return;
 
   const pedido = cliente.pedidos[0];
@@ -273,11 +277,13 @@ const handleEditAction = async (cliente, payload) => {
   if (payload.mode !== 'commit') return;
 
   const pedido = cliente.pedidos[0];
-  const items = (draftMap.value[cliente.id] || []).map((item) => ({
-    menu_item_id: Number(item.menu_item_id),
-    cantidad: Math.max(1, Number(item.cantidad || 1)),
-    nota: item.nota || null,
-  })).filter((item) => item.menu_item_id);
+  const items = (draftMap.value[cliente.id] || [])
+    .map((item) => ({
+      menu_item_id: Number(item.menu_item_id),
+      cantidad: Math.max(1, Number(item.cantidad || 1)),
+      nota: item.nota || null,
+    }))
+    .filter((item) => item.menu_item_id);
 
   if (!items.length) {
     error.value = 'Debes mantener al menos un producto para guardar el pedido.';
@@ -298,7 +304,6 @@ const handleEditAction = async (cliente, payload) => {
   }
 };
 
-
 const sendClienteToKitchen = async (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido?.id) return;
@@ -317,44 +322,32 @@ const sendClienteToKitchen = async (cliente) => {
   }
 };
 
-const deliverGroupForCliente = async ({ order, group }) => {
-  console.log("FUNCION EJECUTADA", order, group);
+const deliverGroupForCliente = async ({ cliente, order, group }) => {
+  if (!order?.id || !group) return;
 
-  if (!order?.id || !group) {
-    console.log("SALIO POR VALIDACION");
-    return;
-  }
-
-  busyMap.value = { ...busyMap.value, [order.id]: true };
+  const busyKey = cliente?.id ?? order.id;
+  busyMap.value = { ...busyMap.value, [busyKey]: true };
 
   try {
     const grupoBackend =
       group === 'plato' || group === 'platos'
         ? 'plato'
         : group === 'bebida' || group === 'bebidas'
-        ? 'bebida'
-        : null;
+          ? 'bebida'
+          : null;
 
-    if (!grupoBackend) {
-      console.error('Grupo inválido:', group);
-      return;
-    }
-
-    console.log("ENVIANDO A BACKEND:", order.id, grupoBackend);
+    if (!grupoBackend) return;
 
     await deliverOrderGroup(order.id, grupoBackend);
 
-    console.log("RESPUESTA OK");
-
     await loadMesaData();
-
   } catch (err) {
-    console.error("ERROR:", err);
     error.value = err?.response?.data?.message || 'No se pudo entregar';
   } finally {
-    busyMap.value = { ...busyMap.value, [order.id]: false };
+    busyMap.value = { ...busyMap.value, [busyKey]: false };
   }
 };
+
 const billCliente = async (cliente) => {
   billingMap.value = { ...billingMap.value, [cliente.id]: true };
   error.value = '';
@@ -393,10 +386,10 @@ onMounted(() => {
     now.value = Date.now();
   }, 1000);
   refreshId = window.setInterval(() => {
-  if (!editingClienteId.value) {
-    loadMesaData(true)
-  }
-}, 5000)
+    if (!editingClienteId.value) {
+      loadMesaData(true);
+    }
+  }, 5000);
 });
 
 onUnmounted(() => {
@@ -406,42 +399,47 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.layout { display: grid; gap: 18px; }
+.layout {
+  font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  display: grid;
+  gap: 18px;
+}
+.card-shell {
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: linear-gradient(160deg, rgba(17, 24, 39, 0.86), rgba(9, 14, 28, 0.92));
+  box-shadow: 0 8px 22px rgba(2, 6, 23, 0.28);
+}
 .header {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 12px;
 }
+.header h1 { margin: 0; color: #f8fbff; font-size: 1.3rem; font-weight: 600; }
 .header-actions { display: flex; gap: 10px; }
-.back,
-.refresh,
-.facturar-mesa {
+.btn {
   border: 0;
-  border-radius: 12px;
+  border-radius: 11px;
   padding: 10px 14px;
   font-weight: 600;
-  color: #fff;
+  color: #f8fafc;
+  transition: transform 150ms ease, opacity 150ms ease, filter 150ms ease;
 }
-.back { background: #1f2f52; }
-.refresh { background: #1d4ed8; }
-.facturar-mesa { background: #0f766e; }
-.refresh:disabled,
-.facturar-mesa:disabled { opacity: 0.7; }
-.subtitle { margin: 6px 0 0; color: #b8c6e8; }
+.btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; filter: none; }
+.btn-ghost { background: #1f2f52; }
+.btn-secondary { background: #1d4ed8; }
+.btn-success { background: #059669; }
+.subtitle { margin: 6px 0 0; color: #b8c6e8; font-size: .92rem; }
 .error {
   margin: 0;
   padding: 10px 12px;
-  border-radius: 10px;
-  background: #450a0a;
-  border: 1px solid #7f1d1d;
+  border-radius: 12px;
+  background: rgba(127, 29, 29, 0.38);
+  border: 1px solid rgba(248, 113, 113, 0.45);
   color: #fecaca;
-}
-.card {
-  border-radius: 16px;
-  padding: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(15, 23, 42, 0.72);
 }
 .empty { color: #9db0d8; }
 .clientes-grid {
@@ -454,12 +452,12 @@ onUnmounted(() => {
   align-items: center;
   border-radius: 999px;
   padding: 4px 10px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 .estado-pendiente { background: rgba(107, 114, 128, 0.28); color: #e5e7eb; }
-.estado-en_uso { background: rgba(250, 204, 21, 0.28); color: #fde68a; }
-.estado-listo { background: rgba(59, 130, 246, 0.28); color: #bfdbfe; }
+.estado-en_uso { background: rgba(59, 130, 246, 0.22); color: #bfdbfe; }
+.estado-listo { background: rgba(249, 115, 22, 0.24); color: #fed7aa; }
 .estado-entregado,
 .estado-libre { background: rgba(16, 185, 129, 0.28); color: #bbf7d0; }
 
@@ -474,7 +472,7 @@ onUnmounted(() => {
 @media (max-width: 760px) {
   .header { grid-template-columns: 1fr; }
   .header-actions { width: 100%; }
-  .refresh,
-  .facturar-mesa { flex: 1; }
+  .btn-secondary,
+  .btn-success { flex: 1; }
 }
 </style>
