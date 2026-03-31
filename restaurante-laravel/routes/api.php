@@ -25,6 +25,7 @@ Route::get('/ping', [HealthController::class, 'ping']);
 Route::get('/kitchen/orders', [KitchenOrderController::class, 'index']);
 Route::get('/kitchen/orders/{order}', [KitchenOrderController::class, 'show']);
 Route::put('/pedidos/{pedido}/servicio/{grupo}', [PedidoController::class, 'updateServicioGrupo']);
+Route::put('/pedidos/{pedido}/entregar/{grupo}', [PedidoController::class, 'entregarGrupo']);
 
 
 
@@ -46,9 +47,17 @@ Route::get('/clientes/{cliente}/pedidos', [OrderController::class, 'clientePedid
 Route::get('/menu/today', [MenuController::class, 'showToday']);
 Route::get('/platos-fisicos', [PlatoTableController::class, 'index']);
 Route::get('/bebidas-fisicas', [BebidaTableController::class, 'index']);
+Route::post('/clientes/{cliente}/facturar', [PedidoController::class, 'facturarCliente']);
+Route::prefix('mesero')->group(function () {
 
-Route::put('/mesero/pedidos/{id}', [PedidoController::class, 'cambiarEstado']);
+    Route::get('/orders', [MeseroOrderController::class, 'index']);
+    Route::get('/orders/{pedido}', [MeseroOrderController::class, 'show']);
 
+    Route::put('/orders/{pedido}', [MeseroOrderController::class, 'update']);
+    Route::post('/orders/{pedido}/send', [MeseroOrderController::class, 'sendToKitchen']);
+
+    
+});
 Route::get('/mesas', [MesaController::class, 'index']);
 Route::get('/mesas/{mesa}/pedidos', [MesaController::class, 'pedidos']);
 Route::get('/mesas/{id}/qr', [MesaController::class, 'generarQR']);

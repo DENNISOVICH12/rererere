@@ -9,21 +9,29 @@
         </div>
       </div>
 
-      <div class="acciones-header">
-        <span class="timer" :class="`timer--${timerTone}`">⏱ {{ elapsedText }}</span>
-        <button v-if="canEdit" class="action" :disabled="busy" @click="$emit('edit', cliente)">
-          Editar pedido
-        </button>
-        <button
-          v-if="pedidos[0]?.can_send_to_kitchen"
-          class="action action-secondary"
-          :disabled="busy"
-          @click="$emit('send-to-kitchen', cliente)"
-        >
-          Enviar a cocina
-        </button>
-        <p v-else-if="!canEdit" class="locked">Pedido en cocina, no editable</p>
-      </div>
+        <div class="acciones-header">
+  <span class="timer" :class="`timer--${timerTone}`">⏱ {{ elapsedText }}</span>
+
+  <button
+  class="action"
+  :disabled="busy || !canEdit"
+  @click="$emit('edit', cliente)"
+>
+  ✏️ Editar pedido
+</button>
+
+<button
+  class="action action-secondary"
+  :disabled="busy || !canEdit"
+  @click="$emit('send-to-kitchen', cliente)"
+>
+  🍽️ Enviar a cocina
+</button>
+
+  <p v-if="!canEdit" class="locked">
+    Pedido en cocina, no editable
+  </p>
+</div>
     </header>
 
     <div class="pedidos-resumen">
@@ -73,7 +81,10 @@
       <ServiceStatusTracker
         :order="serviceOrder"
         :busy="busy"
-        @deliver-group="(payload) => $emit('deliver-group', { cliente, ...payload })"
+        @deliver-group="(payload) => {
+  console.log('CLICK ENTREGAR', payload)
+  $emit('deliver-group', { cliente, ...payload })
+}"
       />
     </section>
 

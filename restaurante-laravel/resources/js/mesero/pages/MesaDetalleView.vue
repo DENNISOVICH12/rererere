@@ -167,7 +167,7 @@ const timerToneMap = computed(() => {
 const canEditCliente = (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido) return false;
-  return Boolean(pedido.can_be_edited);
+  return isWithinTime(cliente);
 };
 
 const loadMenu = async () => {
@@ -175,28 +175,70 @@ const loadMenu = async () => {
   menuItems.value = await searchMenuItems('');
 };
 
-const loadMesaData = async () => {
-  if (!mesaId.value) return;
+const isWithinTime = (cliente) => {
+  const hold = cliente?.pedidos?.[0]?.hold_expires_at
+  if (!hold) return false
 
-  loading.value = true;
-  error.value = '';
+  return new Date().getTime() < new Date(hold).getTime()
+}
+
+const loadMesaData = async (silent = false) => {
+  if (!mesaId.value) return
+
+  if (!silent) {
+    loading.value = true
+  }
 
   try {
-    const [mesaData, mesaPedidos] = await Promise.all([getMesa(mesaId.value), getMesaPedidos(mesaId.value)]);
-    mesa.value = mesaData;
-    pedidos.value = mesaPedidos || [];
-    await loadMenu();
+    const [mesaData, mesaPedidos] = await Promise.all([
+      getMesa(mesaId.value),
+      getMesaPedidos(mesaId.value)
+    ])
+
+    mesa.value = mesaData
+
+    const nuevos = mesaPedidos || []
+
+    if (!pedidos.value.length) {
+      pedidos.value = nuevos
+    } else {
+      nuevos.forEach((nuevo) => {
+        const index = pedidos.value.findIndex(p => p.id === nuevo.id)
+
+        if (index !== -1) {
+          pedidos.value[index] = nuevo
+        } else {
+          pedidos.value.push(nuevo)
+        }
+      })
+
+      pedidos.value = pedidos.value.filter(p =>
+        nuevos.some(n => n.id === p.id)
+      )
+    }
+
+    await loadMenu()
+
   } catch (err) {
-    error.value = err?.response?.data?.message || 'No se pudo cargar el detalle de la mesa.';
+    if (!silent) {
+      error.value = err?.response?.data?.message || 'Error cargando datos'
+    }
   } finally {
-    loading.value = false;
+    if (!silent) {
+      loading.value = false
+    }
   }
-};
+}
 
 const startEdit = (cliente) => {
-  if (!canEditCliente(cliente)) return;
+  console.log("EDITANDO", cliente);
+
+  if (!cliente?.pedidos?.length) return;
+
   const pedido = cliente.pedidos[0];
+
   editingClienteId.value = cliente.id;
+
   draftMap.value = {
     ...draftMap.value,
     [cliente.id]: normalizeItems(pedido).map((item) => ({
@@ -259,7 +301,7 @@ const handleEditAction = async (cliente, payload) => {
 
 const sendClienteToKitchen = async (cliente) => {
   const pedido = cliente?.pedidos?.[0];
-  if (!pedido?.id || !pedido?.can_send_to_kitchen) return;
+  if (!pedido?.id) return;
 
   busyMap.value = { ...busyMap.value, [cliente.id]: true };
   error.value = '';
@@ -275,21 +317,44 @@ const sendClienteToKitchen = async (cliente) => {
   }
 };
 
-const deliverGroupForCliente = async ({ cliente, group }) => {
-  const pedido = cliente?.pedidos?.[0];
-  if (!pedido?.id || !group) return;
+const deliverGroupForCliente = async ({ order, group }) => {
+  console.log("FUNCION EJECUTADA", order, group);
 
-  busyMap.value = { ...busyMap.value, [cliente.id]: true };
+  if (!order?.id || !group) {
+    console.log("SALIO POR VALIDACION");
+    return;
+  }
+
+  busyMap.value = { ...busyMap.value, [order.id]: true };
+
   try {
-    await deliverOrderGroup(pedido.id, group);
+    const grupoBackend =
+      group === 'plato' || group === 'platos'
+        ? 'plato'
+        : group === 'bebida' || group === 'bebidas'
+        ? 'bebida'
+        : null;
+
+    if (!grupoBackend) {
+      console.error('Grupo inválido:', group);
+      return;
+    }
+
+    console.log("ENVIANDO A BACKEND:", order.id, grupoBackend);
+
+    await deliverOrderGroup(order.id, grupoBackend);
+
+    console.log("RESPUESTA OK");
+
     await loadMesaData();
+
   } catch (err) {
-    error.value = err?.response?.data?.message || 'No se pudo entregar el grupo de productos.';
+    console.error("ERROR:", err);
+    error.value = err?.response?.data?.message || 'No se pudo entregar';
   } finally {
-    busyMap.value = { ...busyMap.value, [cliente.id]: false };
+    busyMap.value = { ...busyMap.value, [order.id]: false };
   }
 };
-
 const billCliente = async (cliente) => {
   billingMap.value = { ...billingMap.value, [cliente.id]: true };
   error.value = '';
@@ -320,16 +385,18 @@ const billWholeTable = async () => {
   }
 };
 
-watch(() => route.params.id, loadMesaData);
+watch(() => route.params.id, () => loadMesaData(false));
 
 onMounted(() => {
-  loadMesaData();
+  loadMesaData(false);
   timerId = window.setInterval(() => {
     now.value = Date.now();
   }, 1000);
   refreshId = window.setInterval(() => {
-    loadMesaData();
-  }, 10000);
+  if (!editingClienteId.value) {
+    loadMesaData(true)
+  }
+}, 5000)
 });
 
 onUnmounted(() => {

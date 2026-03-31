@@ -53,7 +53,7 @@ class OrderController extends Controller
             'restaurant_id' => $restaurantId,
             'mesa' => $request->mesa_id,
             'estado' => Pedido::STATUS_RETAINED,
-            'hold_expires_at' => now()->addSeconds(Pedido::holdWindowSeconds()),
+            'hold_expires_at' => now()->addMinutes(5),
             'total' => $total,
         ]);
 
@@ -99,7 +99,7 @@ class OrderController extends Controller
 
     public function sendNowToKitchen(Request $request, Pedido $order): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
         $order->refresh();
 
         $resolvedClienteId = $this->resolveAuthenticatedClienteId((int) $order->restaurant_id)
@@ -128,7 +128,7 @@ class OrderController extends Controller
 
     public function index()
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
 
         return Pedido::where('estado', Pedido::STATUS_PENDING)
             ->with('detalle.menuItem')
@@ -138,7 +138,7 @@ class OrderController extends Controller
 
     public function clientePedidos(int $clienteId): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
 
         $resolvedClienteId = $this->resolveClienteId($clienteId);
 

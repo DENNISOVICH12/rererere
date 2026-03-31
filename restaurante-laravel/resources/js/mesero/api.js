@@ -27,9 +27,9 @@ export const updateOrderStatus = (orderId, payload) =>
         headers: { Accept: 'application/json' },
     }).then((r) => r.data);
 
-export const deliverOrderGroup = (orderId, group) =>
-    meseroHttp.put(`/pedidos/${orderId}/entregar-grupo/${group}`).then((r) => r.data.data);
-
+export const deliverOrderGroup = (orderId, group) => 
+    axios.put(`/api/pedidos/${orderId}/entregar/${group}`)
+         .then((r) => r.data);
 export const requestOrderChange = (orderId, payload = {}) =>
     meseroHttp.post(`/orders/${orderId}/request-change`, payload).then((r) => r.data.data);
 
@@ -54,8 +54,20 @@ export const createMesaCliente = (mesaId, payload) =>
 export const getClientePedidos = (clienteId) =>
     floorHttp.get(`/clientes/${clienteId}/pedidos`).then((r) => r.data);
 
-export const facturarCliente = (clienteId) =>
-    floorHttp.post(`/clientes/${clienteId}/facturar`).then((r) => r.data);
+export const facturarCliente = (clienteId) => {
+    return axios({
+        url: `/api/clientes/${clienteId}/facturar`,
+        method: 'POST',
+        responseType: 'blob'
+    }).then((response) => {
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'factura.pdf');
+        document.body.appendChild(link);
+        link.click();
+    });
+};
 
 export const getMesaPedidos = (mesaId) =>
     floorHttp.get(`/mesas/${mesaId}/pedidos`).then((r) => r.data.data);

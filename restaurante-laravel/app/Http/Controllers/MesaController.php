@@ -210,7 +210,7 @@ class MesaController extends Controller
     $mesa = Mesa::findOrFail($id);
 
     // ⚠️ CAMBIA ESTA IP POR LA TUYA
-    $url = "http://192.168.1.61:5174?mesa=" . $mesa->id;
+    $url = "http://192.168.10.171:5174?mesa=" . $mesa->id;
 
     return QrCode::format('svg')
         ->size(300)

@@ -159,8 +159,15 @@ const isDeliveringGroup = (groupKey) => props.busy && pendingDeliveryGroup.value
 
 const deliverGroup = (groupKey) => {
   if (!groupKey || props.busy) return;
+
   pendingDeliveryGroup.value = groupKey;
-  emit('deliver-group', { group: groupKey });
+
+  console.log("EMITIENDO DESDE TRACKER:", props.order, groupKey);
+
+  emit('deliver-group', {
+    order: props.order, // ✅ ESTA ES LA CLAVE
+    group: groupKey
+  });
 };
 
 const buildMessage = (groupKey, label, status) => {

@@ -17,7 +17,7 @@ class MeseroOrderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
 
         $status = $request->query('status');
 
@@ -68,7 +68,7 @@ class MeseroOrderController extends Controller
 
     public function show(Pedido $pedido): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
         $pedido->refresh();
 
         $pedido->loadMissing([
@@ -84,7 +84,7 @@ class MeseroOrderController extends Controller
 
     public function requestChange(Request $request, Pedido $pedido): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
         $pedido->refresh();
 
         $validated = $request->validate([
@@ -114,14 +114,14 @@ class MeseroOrderController extends Controller
 
     public function sendToKitchen(Pedido $pedido): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
         $pedido->refresh();
 
-        if (!in_array($pedido->estado, [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED], true)) {
-            return response()->json([
-                'message' => 'Este pedido ya fue enviado a cocina y no puede confirmarse nuevamente.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+        if (!$pedido->canBeEditedByWaiter()) {
+    return response()->json([
+        'message' => 'Este pedido ya no puede enviarse.'
+    ], 403);
+}
 
         $pedido->releaseToKitchen(Pedido::RELEASE_TRIGGER_WAITER_CONFIRMATION);
         $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
@@ -139,7 +139,7 @@ class MeseroOrderController extends Controller
 
     public function update(Request $request, Pedido $pedido): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
         $pedido->refresh();
 
         if ($pedido->estado === self::BLOCKED_STATE) {
@@ -148,12 +148,11 @@ class MeseroOrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if (!in_array($pedido->estado, [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED], true)) {
-
-            return response()->json([
-                'message' => 'Este pedido ya fue enviado a cocina y no puede modificarse.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+        if (!$pedido->canBeEditedByWaiter()) {
+    return response()->json([
+        'message' => 'El tiempo para editar este pedido ha expirado o ya fue enviado.'
+    ], 403);
+}
 
         $validated = $request->validate([
             'mesa' => ['nullable', 'string', 'max:50'],
@@ -215,7 +214,7 @@ class MeseroOrderController extends Controller
 
     public function destroy(Request $request, Pedido $pedido): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
         $pedido->refresh();
 
         if ($pedido->estado === self::BLOCKED_STATE) {

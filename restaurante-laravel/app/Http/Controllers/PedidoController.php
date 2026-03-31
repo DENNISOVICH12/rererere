@@ -10,12 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Log;
 use App\Services\WaiterNotificationService;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PedidoController extends Controller
 {
     public function index(): JsonResponse
 {
-    Pedido::releaseExpiredRetentionWindow();
+    //Pedido::releaseExpiredRetentionWindow();
 
     $pedidos = Pedido::with([
         'detalle' => function ($q) {
@@ -45,7 +46,7 @@ class PedidoController extends Controller
 }
     public function pedidosPendientes(): JsonResponse
     {
-        Pedido::releaseExpiredRetentionWindow();
+      //Pedido::releaseExpiredRetentionWindow();
 
         $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
             ->where('estado', Pedido::STATUS_PENDING)
@@ -203,35 +204,95 @@ if ($hasAnyReady) {
     }
 
     public function entregarGrupo(int $pedidoId, string $grupo): JsonResponse
-    {
-        $grupo = strtolower(trim($grupo));
+{
+    $grupo = strtolower(trim($grupo));
 
-        if (!in_array($grupo, ['plato', 'bebida'], true)) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Grupo de servicio inválido. Usa "plato" o "bebida".',
-            ], 422);
-        }
-
-        $pedido = Pedido::with(['detalle.menuItem', 'cliente'])->find($pedidoId);
-
-        if (!$pedido) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Pedido no encontrado.',
-            ], 404);
-        }
-
-        PedidoDetalle::where('pedido_id', $pedidoId)
-            ->whereRaw('LOWER(COALESCE(grupo_servicio, ?)) = ?', ['plato', $grupo])
-            ->update(['estado_servicio' => 'entregado']);
-
-        $pedido->refresh()->load(['detalle.menuItem', 'cliente']);
-
+    if (!in_array($grupo, ['plato', 'bebida'], true)) {
         return response()->json([
-            'ok' => true,
-            'message' => sprintf('%s marcados como entregados.', $grupo === 'bebida' ? 'Bebidas' : 'Platos'),
-            'data' => $pedido,
+            'ok' => false,
+            'message' => 'Grupo de servicio inválido. Usa "plato" o "bebida".',
+        ], 422);
+    }
+
+    $pedido = Pedido::with(['detalle.menuItem', 'cliente'])->find($pedidoId);
+
+    if (!$pedido) {
+        return response()->json([
+            'ok' => false,
+            'message' => 'Pedido no encontrado.',
+        ], 404);
+    }
+
+    // 🔥 ACTUALIZA LOS ITEMS
+    PedidoDetalle::where('pedido_id', $pedidoId)
+        ->whereRaw('LOWER(COALESCE(grupo_servicio, ?)) = ?', ['plato', $grupo])
+        ->update(['estado_servicio' => 'entregado']);
+
+    // 🔥 RECARGAR
+    $pedido->refresh()->load(['detalle.menuItem', 'cliente']);
+
+    // 🔥 NUEVO: verificar si TODO está entregado
+    $allDelivered = $pedido->detalle->every(function ($item) {
+        return strtolower($item->estado_servicio) === 'entregado';
+    });
+
+    if ($allDelivered) {
+        $pedido->estado = 'entregado';
+        $pedido->save();
+
+        Log::info('Pedido completamente entregado', [
+            'pedido_id' => $pedido->id
         ]);
     }
+
+    return response()->json([
+        'ok' => true,
+        'message' => sprintf('%s marcados como entregados.', $grupo === 'bebida' ? 'Bebidas' : 'Platos'),
+        'data' => $pedido,
+    ]);
+}
+public function facturarCliente(int $clienteId)
+{
+    $pedidos = Pedido::with('detalle')
+        ->where(function ($q) use ($clienteId) {
+            $q->where('cliente_id', $clienteId)
+              ->orWhere('cliente_mesa_id', $clienteId);
+        })
+        ->whereIn('estado', ['listo', 'entregado'])
+        ->get();
+
+    if ($pedidos->isEmpty()) {
+        return response()->json([
+            'ok' => false,
+            'message' => 'No hay pedidos para facturar.',
+        ], 422);
+    }
+
+    $total = $pedidos->sum('total');
+
+    DB::transaction(function () use ($pedidos) {
+        foreach ($pedidos as $pedido) {
+            $pedido->estado = 'facturado';
+            $pedido->save();
+        }
+    });
+
+    return response()->json([
+        'ok' => true,
+        'message' => 'Factura generada correctamente.',
+        'total' => $total,
+        'pedidos' => $pedidos,
+    ]);
+    $total = $pedidos->sum('total');
+
+    // 🔥 generar PDF
+   $pdf = Pdf::loadView('factura', [
+    'pedidos' => $pedidos,
+    'total' => $total,
+    'clienteId' => $clienteId
+])->setPaper('a4');
+
+return $pdf->stream('factura.pdf'); 
+}
+
 }

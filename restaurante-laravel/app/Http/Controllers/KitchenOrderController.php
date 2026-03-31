@@ -14,7 +14,7 @@ class KitchenOrderController extends Controller
         $since = $this->parseSince($request->query('since'));
         $activeOnly = $request->boolean('active_only', true);
 
-        Pedido::releaseExpiredRetentionWindow();
+        //Pedido::releaseExpiredRetentionWindow();
 
         $orders = Pedido::query()
             ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id', 'hold_expires_at'])
