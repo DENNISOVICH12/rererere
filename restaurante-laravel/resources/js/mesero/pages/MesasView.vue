@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import MesaCard from '../components/MesaCard.vue';
 import { listMesas } from '../api.js';
@@ -36,8 +36,11 @@ const router = useRouter();
 const mesas = ref([]);
 const loading = ref(false);
 const error = ref('');
+let refreshTimer = null;
 
 const loadMesas = async () => {
+  if (loading.value) return;
+
   try {
     loading.value = true;
     error.value = '';
@@ -59,6 +62,18 @@ const openMesa = (mesa) => {
 };
 
 onMounted(loadMesas);
+
+onMounted(() => {
+  refreshTimer = window.setInterval(() => {
+    loadMesas();
+  }, 10000);
+});
+
+onBeforeUnmount(() => {
+  if (!refreshTimer) return;
+  window.clearInterval(refreshTimer);
+  refreshTimer = null;
+});
 </script>
 
 <style scoped>
