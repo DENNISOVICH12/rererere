@@ -162,11 +162,9 @@ const deliverGroup = (groupKey) => {
 
   pendingDeliveryGroup.value = groupKey;
 
-  console.log("EMITIENDO DESDE TRACKER:", props.order, groupKey);
-
   emit('deliver-group', {
-    order: props.order, // ✅ ESTA ES LA CLAVE
-    group: groupKey
+    order: props.order,
+    group: groupKey,
   });
 };
 
@@ -210,9 +208,10 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
 
 <style scoped>
 .service-status {
-  margin-top: 8px;
+  margin-top: 4px;
   display: grid;
   gap: 12px;
+  font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 .service-status__header {
   display: flex;
@@ -240,7 +239,7 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
   border: 1px solid #2f3e5f;
   border-radius: 14px;
   padding: 12px;
-  background: linear-gradient(180deg, rgba(16, 25, 41, 0.92), rgba(10, 18, 32, 0.98));
+  background: linear-gradient(180deg, rgba(16, 25, 41, 0.9), rgba(10, 18, 32, 0.96));
   display: grid;
   gap: 10px;
 }
@@ -268,10 +267,10 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
   padding: 4px 9px;
   border: 1px solid transparent;
 }
-.chip--pendiente { color: #d1d5db; background: rgba(107, 114, 128, 0.15); border-color: rgba(107, 114, 128, 0.5); }
-.chip--preparando { color: #fde68a; background: rgba(245, 158, 11, 0.15); border-color: rgba(250, 204, 21, 0.45); }
-.chip--listo { color: #86efac; background: rgba(34, 197, 94, 0.16); border-color: rgba(74, 222, 128, 0.48); }
-.chip--entregado { color: #93c5fd; background: rgba(59, 130, 246, 0.2); border-color: rgba(96, 165, 250, 0.48); }
+.chip--pendiente { color: #d1d5db; background: rgba(107, 114, 128, 0.15); border-color: rgba(107, 114, 128, 0.45); }
+.chip--preparando { color: #bfdbfe; background: rgba(59, 130, 246, 0.18); border-color: rgba(96, 165, 250, 0.45); }
+.chip--listo { color: #fed7aa; background: rgba(249, 115, 22, 0.18); border-color: rgba(251, 146, 60, 0.44); }
+.chip--entregado { color: #bbf7d0; background: rgba(16, 185, 129, 0.18); border-color: rgba(52, 211, 153, 0.45); }
 
 .service-group__line-wrap {
   display: flex;
@@ -286,7 +285,7 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
   list-style: none;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
+  gap: 2px;
   flex: 1;
 }
 .progress__step {
@@ -296,22 +295,22 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
   position: relative;
 }
 .dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  border: 2px solid #3f516f;
+  border: 1.7px solid #3f516f;
   background: #101a2a;
-  transition: all 240ms ease;
+  transition: all 260ms ease;
   z-index: 2;
 }
 .line {
   position: absolute;
-  top: 5px;
+  top: 4px;
   right: -52%;
   width: 100%;
-  height: 2px;
+  height: 1.5px;
   background: #2a3954;
-  transition: background 240ms ease;
+  transition: background 260ms ease;
 }
 .label {
   font-size: 10px;
@@ -322,30 +321,20 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
 
 .progress__step.is-done .dot { background: var(--state-color); border-color: var(--state-color); }
 .progress__step.is-current .dot {
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--state-color) 28%, transparent);
-  animation: pulse 1.9s ease-in-out infinite;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--state-color) 26%, transparent);
+  animation: pulse 1.8s ease-in-out infinite;
 }
 .progress__step.is-done .line { background: var(--state-color); }
 .progress__step.is-pendiente { --state-color: #9ca3af; }
-.progress__step.is-preparando { --state-color: #facc15; }
-.progress__step.is-listo { --state-color: #4ade80; }
-.progress__step.is-entregado { --state-color: #60a5fa; }
-.progress__step.is-group-bebida.is-done .dot,
-.progress__step.is-group-bebida.is-current .dot,
-.progress__step.is-group-bebida.is-done .line {
-  --state-color: #22d3ee;
-}
-.progress__step.is-group-plato.is-done .dot,
-.progress__step.is-group-plato.is-current .dot,
-.progress__step.is-group-plato.is-done .line {
-  --state-color: #f59e0b;
-}
+.progress__step.is-preparando { --state-color: #60a5fa; }
+.progress__step.is-listo { --state-color: #fb923c; }
+.progress__step.is-entregado { --state-color: #34d399; }
 
 .deliver-btn {
-  min-width: 96px;
+  min-width: 106px;
   height: 36px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 11px;
   padding: 0 12px;
   font-size: 13px;
   font-weight: 700;
@@ -355,28 +344,21 @@ const capitalize = (value) => String(value).charAt(0).toUpperCase() + String(val
   justify-content: center;
   gap: 7px;
   cursor: pointer;
-  transition: transform 170ms ease, filter 170ms ease, opacity 170ms ease, box-shadow 170ms ease;
+  transition: transform 170ms ease, filter 170ms ease, opacity 170ms ease;
 }
 .deliver-btn:hover:not(:disabled) {
   transform: translateY(-1px);
   filter: brightness(1.05);
 }
-.deliver-btn:focus-visible {
-  outline: 2px solid rgba(147, 197, 253, 0.9);
-  outline-offset: 2px;
-}
 .deliver-btn:disabled {
   opacity: 0.46;
   cursor: not-allowed;
-  box-shadow: none;
 }
 .deliver-btn--bebida {
-  background: linear-gradient(180deg, #22d3ee, #0e7490);
-  box-shadow: 0 8px 20px rgba(14, 116, 144, 0.34);
+  background: linear-gradient(180deg, #38bdf8, #0369a1);
 }
 .deliver-btn--plato {
-  background: linear-gradient(180deg, #f59e0b, #b45309);
-  box-shadow: 0 8px 20px rgba(180, 83, 9, 0.35);
+  background: linear-gradient(180deg, #fb923c, #c2410c);
 }
 .spinner {
   width: 14px;

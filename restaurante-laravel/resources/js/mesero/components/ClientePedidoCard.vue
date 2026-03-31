@@ -1,5 +1,5 @@
 <template>
-  <article class="cliente-card">
+  <article class="cliente-card" :class="{ 'is-billed': isBilled }">
     <header class="cliente-header">
       <div class="cliente-identidad">
         <span class="avatar">{{ inicialCliente }}</span>
@@ -9,29 +9,30 @@
         </div>
       </div>
 
-        <div class="acciones-header">
-  <span class="timer" :class="`timer--${timerTone}`">⏱ {{ elapsedText }}</span>
+      <div class="acciones-header">
+        <span class="timer" :class="`timer--${timerTone}`">⏱ {{ elapsedText }}</span>
 
-  <button
-  class="action"
-  :disabled="busy || !canEdit"
-  @click="$emit('edit', cliente)"
->
-  ✏️ Editar pedido
-</button>
+        <div class="header-buttons">
+          <button
+            class="btn btn-primary"
+            :disabled="isActionDisabled || !canEdit"
+            @click="$emit('edit', cliente)"
+          >
+            ✏️ Editar pedido
+          </button>
 
-<button
-  class="action action-secondary"
-  :disabled="busy || !canEdit"
-  @click="$emit('send-to-kitchen', cliente)"
->
-  🍽️ Enviar a cocina
-</button>
+          <button
+            class="btn btn-secondary"
+            :disabled="isActionDisabled || !canSendToKitchen"
+            @click="$emit('send-to-kitchen', cliente)"
+          >
+            🍽️ Enviar a cocina
+          </button>
+        </div>
 
-  <p v-if="!canEdit" class="locked">
-    Pedido en cocina, no editable
-  </p>
-</div>
+        <p v-if="isBilled" class="state state--billed">Facturado</p>
+        <p v-else-if="!canEdit" class="state">Pedido en cocina, no editable</p>
+      </div>
     </header>
 
     <div class="pedidos-resumen">
@@ -66,7 +67,6 @@
       </section>
     </div>
 
-
     <section v-if="pedidos.length" class="pedidos-mini">
       <PedidoCliente
         v-for="pedido in pedidos"
@@ -77,14 +77,11 @@
       />
     </section>
 
-    <section class="estado-servicio" v-if="pedidos.length">
+    <section v-if="pedidos.length" class="estado-servicio">
       <ServiceStatusTracker
         :order="serviceOrder"
-        :busy="busy"
-        @deliver-group="(payload) => {
-  console.log('CLICK ENTREGAR', payload)
-  $emit('deliver-group', { cliente, ...payload })
-}"
+        :busy="busy || isBilled"
+        @deliver-group="(payload) => $emit('deliver-group', { cliente, ...payload })"
       />
     </section>
 
@@ -110,25 +107,13 @@
       </div>
 
       <div class="editor-actions">
-        <button class="action" :disabled="busy || !draftItems.length" @click="saveDraft">Guardar cambios</button>
+        <button class="btn btn-primary" :disabled="busy || isBilled || !draftItems.length" @click="saveDraft">Guardar cambios</button>
         <button class="btn-small ghost" :disabled="busy" @click="$emit('cancel-edit')">Cancelar</button>
       </div>
     </section>
 
-
-    <details v-if="pedidos.length" class="operativa">
-      <summary>Vista operativa</summary>
-      <OrderCard
-        :order="pedidos[0]"
-        :elapsed-text="elapsedText"
-        :busy="busy"
-        :hide-actions="true"
-        title="Orden activa"
-      />
-    </details>
-
     <footer class="footer-actions">
-      <button class="action action-secondary" :disabled="busy || billing" @click="$emit('facturar-cliente', cliente)">
+      <button class="btn btn-success" :disabled="isActionDisabled || billing || isBilled" @click="$emit('facturar-cliente', cliente)">
         {{ billing ? 'Facturando...' : 'Facturar cliente' }}
       </button>
     </footer>
@@ -138,7 +123,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import ServiceStatusTracker from './ServiceStatusTracker.vue';
-import OrderCard from './OrderCard.vue';
 import PedidoCliente from './PedidoCliente.vue';
 import { normalizeGroupKey } from '../utils/serviceStatus';
 
@@ -150,6 +134,7 @@ const props = defineProps({
   busy: { type: Boolean, default: false },
   billing: { type: Boolean, default: false },
   canEdit: { type: Boolean, default: false },
+  canSendToKitchen: { type: Boolean, default: false },
   editing: { type: Boolean, default: false },
   draftItems: { type: Array, default: () => [] },
   menuOptions: { type: Array, default: () => [] },
@@ -167,6 +152,16 @@ watch(
 );
 
 const inicialCliente = computed(() => (props.cliente?.nombre || 'C').trim().charAt(0).toUpperCase());
+
+const billingFlags = ['facturado', 'is_billed', 'billed', 'factura_id', 'facturado_at'];
+const statusFlags = ['facturado', 'cerrado', 'closed', 'paid'];
+const isBilled = computed(() => props.pedidos.some((pedido) => {
+  const hasFlag = billingFlags.some((flag) => Boolean(pedido?.[flag]));
+  const estado = String(pedido?.estado || pedido?.status || '').toLowerCase();
+  return hasFlag || statusFlags.includes(estado);
+}));
+
+const isActionDisabled = computed(() => props.busy || props.billing || isBilled.value);
 
 const allItems = computed(() => props.pedidos.flatMap((pedido, pedidoIndex) => {
   const items = pedido.detalle ?? pedido.items ?? [];
@@ -224,14 +219,19 @@ const money = (value) => Number(value || 0).toFixed(2);
 
 <style scoped>
 .cliente-card {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 16px;
-  padding: 16px;
+  font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  padding: 18px;
   display: grid;
   gap: 14px;
-  background: linear-gradient(135deg, rgba(17, 27, 47, 0.78), rgba(17, 27, 47, 0.5));
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(155deg, rgba(17, 27, 47, 0.92), rgba(10, 18, 36, 0.88));
+  box-shadow: 0 10px 24px rgba(3, 8, 20, 0.3);
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+.cliente-card.is-billed {
+  opacity: 0.6;
+  filter: grayscale(0.15);
 }
 .cliente-header,
 .cliente-identidad,
@@ -246,72 +246,84 @@ const money = (value) => Number(value || 0).toFixed(2);
 .avatar {
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: 14px;
   display: grid;
   place-items: center;
   font-weight: 700;
-  background: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.28);
   color: #dbe9ff;
 }
-h3, h4 { margin: 0; }
-p { margin: 0; color: #9cb0d8; font-size: .88rem; }
-.timer { font-weight: 700; }
-.timer--ok { color: #34d399; }
+h3 { margin: 0; font-size: 1.02rem; font-weight: 600; color: #f8fbff; }
+h4 { margin: 0; font-size: .96rem; font-weight: 600; color: #edf3ff; }
+p { margin: 0; color: #b6c4de; font-size: .86rem; }
+.timer { font-size: .82rem; font-weight: 700; }
+.timer--ok { color: #4ade80; }
 .timer--warning { color: #facc15; }
 .timer--danger { color: #fb7185; }
+.header-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.state { color: #fca5a5; text-align: right; font-size: .8rem; }
+.state--billed { color: #86efac; font-weight: 600; }
 .pedidos-mini { display: grid; gap: 8px; }
-.locked { color: #fda4af; max-width: 160px; text-align: right; }
 .pedidos-resumen {
   display: grid;
   gap: 12px;
   grid-template-columns: 1fr;
 }
 .grupo {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  padding: 10px;
-  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.54);
 }
 .grupo ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
-.grupo li { display: flex; justify-content: space-between; gap: 10px; }
-.nota { color: #fde68a; font-size: .8rem; }
-.empty { color: #8093ba; }
-.editor { border-top: 1px solid rgba(255,255,255,.12); padding-top: 12px; display: grid; gap: 10px; }
+.grupo li { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.grupo li span { font-weight: 600; color: #e3ecff; }
+.nota { color: #fcd34d; font-size: .8rem; }
+.empty { color: #91a5c9; }
+.editor { border-top: 1px solid rgba(148,163,184,.2); padding-top: 12px; display: grid; gap: 10px; }
 .editor-items { display: grid; gap: 8px; }
 .editor-item, .editor-add, .editor-actions { display: grid; grid-template-columns: 1.2fr .5fr 1fr auto; gap: 8px; }
 .editor-add { grid-template-columns: 1fr auto; }
 select, input {
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.84);
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 10px;
   color: #dbeafe;
-  padding: 8px;
+  padding: 9px;
 }
-.action, .btn-small {
+.btn, .btn-small {
   border: 0;
-  border-radius: 10px;
-  padding: 9px 12px;
+  border-radius: 11px;
+  padding: 10px 13px;
   font-weight: 600;
-  background: #2563eb;
-  color: #fff;
+  transition: transform 140ms ease, opacity 140ms ease, filter 140ms ease;
 }
-.btn-small { background: #334155; }
-.btn-small.danger { background: #be123c; }
+.btn:hover:not(:disabled), .btn-small:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
+.btn:disabled, .btn-small:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+.btn-primary { background: #3b82f6; color: #eff6ff; }
+.btn-secondary { background: #2563eb; color: #eff6ff; }
+.btn-success { background: #10b981; color: #022c22; }
+.btn-small { background: #334155; color: #f8fafc; }
+.btn-small.danger { background: #b91c1c; }
 .btn-small.ghost { background: transparent; border: 1px solid rgba(148, 163, 184, 0.45); }
-.action-secondary { background: #0ea5e9; }
-.operativa summary { cursor: pointer; color: #93c5fd; margin-bottom: 8px; }
 .footer-actions { display: flex; justify-content: flex-end; }
 
 @media (min-width: 620px) {
   .pedidos-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .cliente-header,
   .acciones-header,
   .editor-item,
   .editor-actions { grid-template-columns: 1fr; display: grid; }
-  .acciones-header { justify-items: flex-start; }
-  .locked { text-align: left; }
+  .acciones-header,
+  .header-buttons { justify-items: flex-start; justify-content: flex-start; }
+  .state { text-align: left; }
 }
 </style>
