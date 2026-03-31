@@ -1,9 +1,9 @@
 <template>
   <button class="mesa-card" :class="stateClass" @click="$emit('select', mesa)">
-    <span class="mesa-numero">{{ mesa.codigo }}</span>
-    <span class="mesa-titulo">Mesa</span>
+    <span class="mesa-numero">{{ mesaNumero }}</span>
+    <span class="mesa-titulo">Mesa {{ mesaNumero }}</span>
     <span class="mesa-estado">{{ estadoLabel }}</span>
-    <span class="mesa-meta">{{ mesa.clientes_activos }} clientes</span>
+    <span class="mesa-meta">{{ mesa.pedidos_activos_count ?? 0 }} pedidos activos</span>
   </button>
 </template>
 
@@ -17,6 +17,7 @@ const props = defineProps({
 defineEmits(['select']);
 
 const isLibre = computed(() => props.mesa.estado === 'libre');
+const mesaNumero = computed(() => props.mesa.numero ?? props.mesa.codigo ?? props.mesa.id ?? '-');
 
 const stateClass = computed(() => (isLibre.value ? 'estado-libre' : 'estado-ocupada'));
 

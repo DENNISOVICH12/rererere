@@ -12,16 +12,52 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class MesaController extends Controller
 {
+    private const PEDIDO_ESTADOS_INACTIVOS = ['facturado', 'cancelado'];
+
     public function index(Request $request)
 {
     try {
         // 🔥 FORZAMOS restaurant_id (temporal mientras no uses login multi-restaurante)
         $restaurantId = 1;
+        $mesas = Mesa::query()
+            ->where('restaurant_id', $restaurantId)
+            ->orderBy('numero')
+            ->orderBy('id')
+            ->get();
 
-        $mesas = \App\Models\Mesa::where('restaurant_id', $restaurantId)->get();
+        $mesaKeys = $mesas
+            ->flatMap(fn (Mesa $mesa) => array_filter([
+                (string) $mesa->id,
+                $mesa->numero !== null ? (string) $mesa->numero : null,
+            ]))
+            ->unique()
+            ->values();
+
+        $pedidosActivosPorMesa = Pedido::query()
+            ->selectRaw('mesa, COUNT(*) as pedidos_activos_count')
+            ->where('restaurant_id', $restaurantId)
+            ->whereIn('mesa', $mesaKeys)
+            ->whereNotIn('estado', self::PEDIDO_ESTADOS_INACTIVOS)
+            ->groupBy('mesa')
+            ->pluck('pedidos_activos_count', 'mesa');
 
         return response()->json([
-            'data' => $mesas
+            'data' => $mesas->map(function (Mesa $mesa) use ($pedidosActivosPorMesa) {
+                $pedidosActivos = (int) (
+                    ($pedidosActivosPorMesa[(string) $mesa->id] ?? 0)
+                    + ($mesa->numero !== null ? ($pedidosActivosPorMesa[(string) $mesa->numero] ?? 0) : 0)
+                );
+
+                return [
+                    'id' => (string) $mesa->id,
+                    'numero' => $mesa->numero,
+                    'codigo' => $mesa->numero ?: $mesa->id,
+                    'display_name' => 'Mesa ' . ($mesa->numero ?: $mesa->id),
+                    'pedidos_activos_count' => $pedidosActivos,
+                    'estado' => $pedidosActivos > 0 ? 'ocupada' : 'libre',
+                    'clientes_activos' => 0,
+                ];
+            })->values(),
         ]);
     } catch (\Throwable $e) {
         return response()->json([
@@ -56,6 +92,7 @@ class MesaController extends Controller
             'data' => [
                 'id' => rawurlencode($mesa),
                 'codigo' => $mesa,
+                'estado' => $pedidosPorCliente->flatten(1)->isNotEmpty() ? 'ocupada' : 'libre',
                 'clientes' => $clientes->map(function (ClienteMesa $cliente) use ($pedidosPorCliente) {
                     $pedidos = $pedidosPorCliente->get($cliente->id, collect());
 
