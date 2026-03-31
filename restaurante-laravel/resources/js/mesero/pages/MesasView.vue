@@ -92,8 +92,10 @@ onMounted(loadMesas);
 
 .grid {
   display: grid;
-  gap: 12px;
+  gap: 18px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-items: center;
+  align-items: center;
 }
 
 .error {
@@ -112,13 +114,13 @@ onMounted(loadMesas);
 
 @media (min-width: 768px) {
   .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1024px) {
   .grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   }
 }
 </style>
