@@ -74,6 +74,8 @@ Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->grou
         Route::post('/menu-items', [MenuItemController::class, 'store']);
         Route::put('/menu-items/{id}', [MenuItemController::class, 'update']);
         Route::delete('/menu-items/{id}', [MenuItemController::class, 'destroy']);
+        Route::post('/mesas', [MesaController::class, 'store']);
+        Route::delete('/mesas/{id}', [MesaController::class, 'destroy']);
     });
 
     Route::middleware('rol:mesero')->group(function () {

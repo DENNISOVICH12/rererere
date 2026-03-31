@@ -150,6 +150,10 @@
         <i class="icon">🧾</i><span>Mesas / Pedidos</span>
     </a>
 
+    <a href="{{ route('admin.mesas') }}" class="nav-item {{ request()->routeIs('admin.mesas') ? 'active' : '' }}">
+        <i class="icon">🪑</i><span>Gestión de Mesas</span>
+    </a>
+
     <a href="{{ route('carta.digital') }}" class="nav-item">
         <i class="icon">📋</i><span>Carta Digital</span>
     </a>

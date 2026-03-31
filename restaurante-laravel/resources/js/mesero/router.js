@@ -27,6 +27,11 @@ const routes = [
         component: MesaDetalleView,
         props: true,
     },
+    {
+        path: '/admin/mesas',
+        name: 'admin-mesas',
+        component: () => import('../pages/admin/MesasAdmin.vue'),
+    },
 ];
 
 const router = createRouter({

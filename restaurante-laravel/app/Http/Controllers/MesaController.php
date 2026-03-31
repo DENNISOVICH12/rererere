@@ -7,12 +7,84 @@ use App\Models\Pedido;
 use App\Models\Mesa; // 🔥 NUEVO
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 
 class MesaController extends Controller
 {
     private const PEDIDO_ESTADOS_INACTIVOS = ['facturado', 'cancelado'];
+
+    public function store(Request $request): JsonResponse
+    {
+        $restaurantId = (int) ($request->user()->restaurant_id ?? 1);
+
+        $payload = $request->validate([
+            'numero' => [
+                'nullable',
+                'integer',
+                'min:1',
+                Rule::unique('mesas', 'numero')->where(fn ($query) => $query->where('restaurant_id', $restaurantId)),
+            ],
+        ]);
+
+        $numero = $payload['numero'] ?? null;
+
+        if ($numero === null) {
+            $ultimoNumero = (int) Mesa::query()
+                ->where('restaurant_id', $restaurantId)
+                ->max('numero');
+
+            $numero = $ultimoNumero > 0 ? ($ultimoNumero + 1) : 1;
+        }
+
+        $mesa = Mesa::query()->create([
+            'restaurant_id' => $restaurantId,
+            'numero' => $numero,
+            'estado' => 'libre',
+        ]);
+
+        return response()->json([
+            'message' => 'Mesa creada correctamente.',
+            'data' => [
+                'id' => (string) $mesa->id,
+                'numero' => $mesa->numero,
+                'estado' => 'libre',
+            ],
+        ], 201);
+    }
+
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $restaurantId = (int) ($request->user()->restaurant_id ?? 1);
+
+        $mesa = Mesa::query()
+            ->where('restaurant_id', $restaurantId)
+            ->findOrFail($id);
+
+        $mesaValues = array_filter([
+            (string) $mesa->id,
+            $mesa->numero !== null ? (string) $mesa->numero : null,
+        ]);
+
+        $tienePedidosActivos = Pedido::query()
+            ->where('restaurant_id', $restaurantId)
+            ->whereIn('mesa', $mesaValues)
+            ->whereNotIn('estado', self::PEDIDO_ESTADOS_INACTIVOS)
+            ->exists();
+
+        if ($tienePedidosActivos) {
+            return response()->json([
+                'message' => 'No se puede eliminar la mesa porque tiene pedidos activos.',
+            ], 422);
+        }
+
+        $mesa->delete();
+
+        return response()->json([
+            'message' => 'Mesa eliminada correctamente.',
+        ]);
+    }
 
     public function index(Request $request)
 {

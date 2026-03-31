@@ -127,6 +127,8 @@
 
         <a href="{{ route('cocina.pedidos.todos') }}" class="nav-link">Pedidos / Mesas</a>
 
+        <a href="{{ route('admin.mesas') }}" class="nav-link {{ request()->routeIs('admin.mesas') ? 'active' : '' }}">🪑 Gestión de Mesas</a>
+
         <a href="{{ route('carta.digital') }}" class="nav-link">Carta Digital</a>
 
         <form method="POST" action="{{ route('logout') }}" style="margin-top: 40px;">
