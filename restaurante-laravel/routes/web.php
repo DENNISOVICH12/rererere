@@ -57,6 +57,7 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
         ->name('admin.menu');
     Route::get('/admin/menu/{id}/edit', [MenuItemController::class, 'edit'])
         ->name('admin.menu.edit');
+    Route::view('/admin/mesas', 'admin.mesas')->name('admin.mesas');
 
 
 
