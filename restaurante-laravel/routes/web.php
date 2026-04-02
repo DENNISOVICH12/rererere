@@ -37,6 +37,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/registro',  [AuthController::class, 'showRegister'])->name('registro');
 Route::post('/registro', [AuthController::class, 'doRegister'])->name('registro.post');
 
+
+
+
 /*
 |--------------------------------------------------------------------------
 | PANEL ADMINISTRACIÓN (SOLO ADMIN)
@@ -112,15 +115,6 @@ Route::middleware(['auth:web', 'role:mesero'])->group(function () {
     Route::redirect('/meseros', '/mesero');
 
     // ✅ "API interna" del mesero (pero por WEB middleware = sesión estable)
-    Route::prefix('api')->group(function () {
-        Route::get('/mesas', [MesaController::class, 'index']);
-        Route::get('/mesas/{id}', [MesaController::class, 'show']);
-        Route::get('/mesas/{mesa}/pedidos', [MesaController::class, 'pedidos']);
-        Route::get('/mesas/{id}/clientes', [MesaController::class, 'clientes']);
-        Route::post('/mesas/{id}/clientes', [MesaController::class, 'storeCliente']);
-        Route::get('/clientes/{id}/pedidos', [MesaController::class, 'pedidosCliente']);
-        Route::post('/clientes/{id}/facturar', [MesaController::class, 'facturarCliente']);
-    });
 
     Route::prefix('api/mesero')->group(function () {
         Route::get('/orders', [MeseroOrderController::class, 'index']);

@@ -169,131 +169,159 @@
 </style>
 
 <script>
-    const tableBody = document.getElementById('mesasTableBody');
-    const modal = document.getElementById('mesaModal');
-    const createForm = document.getElementById('createMesaForm');
-    const openModalBtn = document.getElementById('openCreateMesa');
-    const cancelModalBtn = document.getElementById('cancelMesaModal');
-    const mesaNumeroInput = document.getElementById('mesaNumero');
+ const tableBody = document.getElementById('mesasTableBody');
+const modal = document.getElementById('mesaModal');
+const createForm = document.getElementById('createMesaForm');
+const openModalBtn = document.getElementById('openCreateMesa');
+const cancelModalBtn = document.getElementById('cancelMesaModal');
+const mesaNumeroInput = document.getElementById('mesaNumero');
 
-    const openModal = () => {
-        modal.hidden = false;
-        mesaNumeroInput.focus();
-    };
+const openModal = () => {
+    modal.hidden = false;
+    mesaNumeroInput.focus();
+};
 
-    const closeModal = () => {
-        modal.hidden = true;
-        createForm.reset();
-    };
+const closeModal = () => {
+    modal.hidden = true;
+    createForm.reset();
+};
 
-    const renderMesas = (mesas) => {
-        if (!mesas.length) {
-            tableBody.innerHTML = '<tr><td colspan="4" class="table-empty">No hay mesas registradas.</td></tr>';
+const renderMesas = (mesas) => {
+    if (!mesas.length) {
+        tableBody.innerHTML = '<tr><td colspan="4" class="table-empty">No hay mesas registradas.</td></tr>';
+        return;
+    }
+
+    tableBody.innerHTML = mesas.map((mesa) => {
+        const estado = (mesa.estado || 'libre').toLowerCase();
+        const estadoClass = estado === 'ocupada' ? 'badge-ocupada' : 'badge-libre';
+        const estadoLabel = estado === 'ocupada' ? 'Ocupada' : 'Libre';
+
+        return `
+            <tr>
+                <td>${mesa.id}</td>
+                <td>${mesa.numero ?? '-'}</td>
+                <td><span class="badge ${estadoClass}">${estadoLabel}</span></td>
+                <td>
+                    <button class="btn btn-danger" data-delete-id="${mesa.id}">Eliminar</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+};
+
+const loadMesas = async () => {
+    tableBody.innerHTML = '<tr><td colspan="4" class="table-empty">Cargando mesas...</td></tr>';
+
+    try {
+        const res = await fetch('/api/mesas', {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        const text = await res.text(); // 🔥 LEEMOS COMO TEXTO PRIMERO
+
+        console.log('RESPUESTA RAW:', text);
+
+        let payload;
+
+        try {
+            payload = JSON.parse(text); // 🔥 INTENTAMOS PARSEAR
+        } catch (e) {
+            console.error('NO ES JSON:', text);
+            tableBody.innerHTML = '<tr><td colspan="4" class="table-empty">El servidor devolvió HTML (error interno).</td></tr>';
             return;
         }
 
-        tableBody.innerHTML = mesas.map((mesa) => {
-            const estado = (mesa.estado || 'libre').toLowerCase();
-            const estadoClass = estado === 'ocupada' ? 'badge-ocupada' : 'badge-libre';
-            const estadoLabel = estado === 'ocupada' ? 'Ocupada' : 'Libre';
-
-            return `
-                <tr>
-                    <td>${mesa.id}</td>
-                    <td>${mesa.numero ?? '-'}</td>
-                    <td><span class="badge ${estadoClass}">${estadoLabel}</span></td>
-                    <td>
-                        <button class="btn btn-danger" data-delete-id="${mesa.id}">Eliminar</button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    };
-
-    const loadMesas = async () => {
-        tableBody.innerHTML = '<tr><td colspan="4" class="table-empty">Cargando mesas...</td></tr>';
-
-        try {
-            const res = await fetch('/api/mesas', { headers: { Accept: 'application/json' } });
-            const payload = await res.json();
-            renderMesas(payload.data || []);
-        } catch (error) {
-            tableBody.innerHTML = '<tr><td colspan="4" class="table-empty">No fue posible cargar las mesas.</td></tr>';
-        }
-    };
-
-    createForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        const numero = mesaNumeroInput.value ? Number(mesaNumeroInput.value) : null;
-        const body = {};
-
-        if (numero) {
-            body.numero = numero;
+        if (!res.ok) {
+            console.error('ERROR BACKEND:', payload);
+            tableBody.innerHTML = '<tr><td colspan="4" class="table-empty">Error cargando mesas.</td></tr>';
+            return;
         }
 
-        try {
-            const res = await fetch('/api/mesas', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                },
-                body: JSON.stringify(body),
-            });
+        renderMesas(payload.data || []);
 
-            const payload = await res.json();
-            if (!res.ok) {
-                alert(payload.message || 'No se pudo crear la mesa.');
-                return;
-            }
+    } catch (error) {
+        console.error(error);
+        tableBody.innerHTML = '<tr><td colspan="4" class="table-empty">No fue posible cargar las mesas.</td></tr>';
+    }
+};
 
-            closeModal();
-            await loadMesas();
-        } catch (error) {
-            alert('No se pudo crear la mesa.');
+createForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const numero = mesaNumeroInput.value ? Number(mesaNumeroInput.value) : null;
+    const body = numero ? { numero } : {};
+
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+console.log('ENVIANDO:', body);
+const res = await fetch('/api/mesas', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': token,
+    },
+    body: JSON.stringify(body),
+});
+console.log('STATUS:', res.status);
+const payload = await res.json();
+
+console.log('RESPUESTA:', payload);
+
+if (!res.ok) {
+    console.error('ERROR BACKEND:', payload);
+    alert(payload.message || 'No se pudo crear la mesa.');
+    return;
+}
+
+        closeModal();
+        await loadMesas();
+    } catch (error) {
+        alert('No se pudo crear la mesa.');
+    }
+});
+
+tableBody.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-delete-id]');
+    if (!button) return;
+
+    const mesaId = button.getAttribute('data-delete-id');
+    if (!confirm('¿Seguro que deseas eliminar esta mesa?')) return;
+
+    try {
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+const res = await fetch(`/api/mesas/${mesaId}`, {
+    method: 'DELETE',
+    headers: {
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': token,
+    },
+});
+
+        const payload = await res.json();
+
+        if (!res.ok) {
+            console.error('ERROR BACKEND:', payload);
+            alert(payload.message || 'No se pudo eliminar la mesa.');
+            return;
         }
-    });
 
-    tableBody.addEventListener('click', async (event) => {
-        const button = event.target.closest('[data-delete-id]');
-        if (!button) return;
+        await loadMesas();
+    } catch (error) {
+        alert('No se pudo eliminar la mesa.');
+    }
+});
 
-        const mesaId = button.getAttribute('data-delete-id');
-        const confirmed = window.confirm('¿Seguro que deseas eliminar esta mesa?');
+openModalBtn.addEventListener('click', openModal);
+cancelModalBtn.addEventListener('click', closeModal);
+modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeModal();
+});
 
-        if (!confirmed) return;
-
-        try {
-            const res = await fetch(`/api/mesas/${mesaId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                },
-            });
-
-            const payload = await res.json();
-            if (!res.ok) {
-                alert(payload.message || 'No se pudo eliminar la mesa.');
-                return;
-            }
-
-            await loadMesas();
-        } catch (error) {
-            alert('No se pudo eliminar la mesa.');
-        }
-    });
-
-    openModalBtn.addEventListener('click', openModal);
-    cancelModalBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (event) => {
-        if (event.target === modal) {
-            closeModal();
-        }
-    });
-
-    loadMesas();
+loadMesas();
 </script>
 @endsection

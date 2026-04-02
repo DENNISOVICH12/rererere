@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Log;
 
 
 class MesaController extends Controller
@@ -16,16 +17,27 @@ class MesaController extends Controller
     private const PEDIDO_ESTADOS_INACTIVOS = ['facturado', 'cancelado'];
 
     public function store(Request $request): JsonResponse
-    {
-        $restaurantId = (int) ($request->user()->restaurant_id ?? 1);
+{
+    try {
+        Log::info('📥 [MESA] Intentando crear mesa', [
+            'request' => $request->all()
+        ]);
+
+        $restaurantId = 1;
 
         $payload = $request->validate([
             'numero' => [
                 'nullable',
                 'integer',
                 'min:1',
-                Rule::unique('mesas', 'numero')->where(fn ($query) => $query->where('restaurant_id', $restaurantId)),
+                Rule::unique('mesas', 'numero')->where(fn ($query) => 
+                    $query->where('restaurant_id', $restaurantId)
+                ),
             ],
+        ]);
+
+        Log::info('✅ [MESA] Validación OK', [
+            'payload' => $payload
         ]);
 
         $numero = $payload['numero'] ?? null;
@@ -36,12 +48,21 @@ class MesaController extends Controller
                 ->max('numero');
 
             $numero = $ultimoNumero > 0 ? ($ultimoNumero + 1) : 1;
+
+            Log::info('🔢 [MESA] Número autogenerado', [
+                'numero' => $numero
+            ]);
         }
 
         $mesa = Mesa::query()->create([
             'restaurant_id' => $restaurantId,
             'numero' => $numero,
             'estado' => 'libre',
+        ]);
+
+        Log::info('🎉 [MESA] Mesa creada correctamente', [
+            'mesa_id' => $mesa->id,
+            'numero' => $mesa->numero
         ]);
 
         return response()->json([
@@ -52,7 +73,22 @@ class MesaController extends Controller
                 'estado' => 'libre',
             ],
         ], 201);
+
+    } catch (\Throwable $e) {
+
+        Log::error('❌ [MESA] ERROR AL CREAR MESA', [
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'message' => 'No se pudo crear la mesa.',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function destroy(Request $request, int $id): JsonResponse
     {
@@ -86,56 +122,26 @@ class MesaController extends Controller
         ]);
     }
 
-    public function index(Request $request)
+   public function index(Request $request)
 {
-    try {
-        // 🔥 FORZAMOS restaurant_id (temporal mientras no uses login multi-restaurante)
-        $restaurantId = 1;
-        $mesas = Mesa::query()
-            ->where('restaurant_id', $restaurantId)
-            ->orderBy('numero')
-            ->orderBy('id')
-            ->get();
+    $restaurantId = 1;
 
-        $mesaKeys = $mesas
-            ->flatMap(fn (Mesa $mesa) => array_filter([
-                (string) $mesa->id,
-                $mesa->numero !== null ? (string) $mesa->numero : null,
-            ]))
-            ->unique()
-            ->values();
+    $mesas = Mesa::query()
+        ->where('restaurant_id', $restaurantId)
+        ->orderBy('numero')
+        ->orderBy('id')
+        ->get();
 
-        $pedidosActivosPorMesa = Pedido::query()
-            ->selectRaw('mesa, COUNT(*) as pedidos_activos_count')
-            ->where('restaurant_id', $restaurantId)
-            ->whereIn('mesa', $mesaKeys)
-            ->whereNotIn('estado', self::PEDIDO_ESTADOS_INACTIVOS)
-            ->groupBy('mesa')
-            ->pluck('pedidos_activos_count', 'mesa');
-
-        return response()->json([
-            'data' => $mesas->map(function (Mesa $mesa) use ($pedidosActivosPorMesa) {
-                $pedidosActivos = (int) (
-                    ($pedidosActivosPorMesa[(string) $mesa->id] ?? 0)
-                    + ($mesa->numero !== null ? ($pedidosActivosPorMesa[(string) $mesa->numero] ?? 0) : 0)
-                );
-
-                return [
-                    'id' => (string) $mesa->id,
-                    'numero' => $mesa->numero,
-                    'codigo' => $mesa->numero ?: $mesa->id,
-                    'display_name' => 'Mesa ' . ($mesa->numero ?: $mesa->id),
-                    'pedidos_activos_count' => $pedidosActivos,
-                    'estado' => $pedidosActivos > 0 ? 'ocupada' : 'libre',
-                    'clientes_activos' => 0,
-                ];
-            })->values(),
-        ]);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'error' => $e->getMessage()
-        ], 500);
-    }
+    // 🔥 FORZAMOS SIEMPRE JSON (para admin)
+    return response()->json([
+        'data' => $mesas->map(function ($mesa) {
+            return [
+                'id' => $mesa->id,
+                'numero' => $mesa->numero,
+                'estado' => $mesa->estado ?? 'libre',
+            ];
+        })
+    ]);
 }
 
     public function show(Request $request, string $id): JsonResponse
@@ -319,7 +325,7 @@ class MesaController extends Controller
     $mesa = Mesa::findOrFail($id);
 
     // ⚠️ CAMBIA ESTA IP POR LA TUYA
-    $url = "http://192.168.10.171:5174?mesa=" . $mesa->id;
+    $url = "http://192.168.1.63:5174?mesa=" . $mesa->id;
 
     return QrCode::format('svg')
         ->size(300)
