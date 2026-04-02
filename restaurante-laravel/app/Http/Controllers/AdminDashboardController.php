@@ -45,9 +45,9 @@ class AdminDashboardController extends Controller
         $averageTicket = $ordersCount > 0 ? $totalRevenue / $ordersCount : 0;
 
         $tablesServed = (int) (clone $ordersQuery)
-            ->whereNotNull('mesa')
-            ->distinct('mesa')
-            ->count('mesa');
+            ->whereNotNull('mesa_id')
+            ->distinct('mesa_id')
+            ->count('mesa_id');
 
         $avgOrderMinutes = (float) (clone $ordersQuery)
             ->whereNotNull('updated_at')
@@ -88,17 +88,19 @@ class AdminDashboardController extends Controller
             ->get();
 
         $mostUsedTables = (clone $ordersQuery)
-            ->whereNotNull('mesa')
-            ->selectRaw('mesa, COUNT(*) as pedidos')
-            ->groupBy('mesa')
+            ->whereNotNull('mesa_id')
+            ->join('mesas', 'pedidos.mesa_id', '=', 'mesas.id')
+            ->selectRaw('pedidos.mesa_id, mesas.numero as mesa_numero, COUNT(*) as pedidos')
+            ->groupBy('pedidos.mesa_id', 'mesas.numero')
             ->orderByDesc('pedidos')
             ->limit(5)
             ->get();
 
         $topRevenueTables = (clone $ordersQuery)
-            ->whereNotNull('mesa')
-            ->selectRaw('mesa, SUM(total) as ingresos')
-            ->groupBy('mesa')
+            ->whereNotNull('mesa_id')
+            ->join('mesas', 'pedidos.mesa_id', '=', 'mesas.id')
+            ->selectRaw('pedidos.mesa_id, mesas.numero as mesa_numero, SUM(pedidos.total) as ingresos')
+            ->groupBy('pedidos.mesa_id', 'mesas.numero')
             ->orderByDesc('ingresos')
             ->limit(5)
             ->get();
@@ -121,7 +123,7 @@ class AdminDashboardController extends Controller
             ]);
 
         $recentOrders = (clone $ordersQuery)
-            ->with(['cliente', 'detalle.menuItem'])
+            ->with(['mesa:id,numero', 'cliente', 'detalle.menuItem'])
             ->orderByDesc('created_at')
             ->limit(8)
             ->get()
@@ -132,7 +134,8 @@ class AdminDashboardController extends Controller
 
                 return [
                     'id' => $order->id,
-                    'mesa' => $order->mesa,
+                    'mesa_id' => $order->mesa_id,
+                    'mesa_numero' => $order->mesa?->numero,
                     'cliente' => $client ?: 'Invitado',
                     'estado' => $order->estado,
                     'total' => (float) $order->total,

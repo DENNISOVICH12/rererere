@@ -61,7 +61,7 @@ namespace App\Swagger;
  *     description="ID del restaurante. Si se omite, el sistema usa el enviado en el encabezado X-Restaurant-ID o el único restaurante registrado."
  *   ),
 
- *   @OA\Property(property="mesa", type="string", nullable=true, example="Mesa 4"),
+ *   @OA\Property(property="mesa_id", type="integer", nullable=true, example=4),
  *   @OA\Property(property="estado", type="string", example="pendiente"),
  *   @OA\Property(property="total", type="number", format="float", example=11000),
  *   @OA\Property(property="fecha", type="string", example="2024-05-01 12:30"),
@@ -158,7 +158,7 @@ namespace App\Swagger;
  *     description="ID del restaurante. Puedes omitirlo si envías el encabezado X-Restaurant-ID o si solo existe un restaurante registrado."
  *   ),
 
- *   @OA\Property(property="mesa", type="string", nullable=true, example="Mesa 4"),
+ *   @OA\Property(property="mesa_id", type="integer", nullable=true, example=4),
  *   @OA\Property(property="estado", type="string", example="pendiente"),
  *   @OA\Property(
  *     property="items",

@@ -12,7 +12,7 @@
     />
 
     <p class="timer" :class="`timer--${timerTone}`">{{ elapsedText }}</p>
-    <p class="meta">{{ order.items_count }} ítems · Mesa {{ order.mesa || '-' }}</p>
+    <p class="meta">{{ order.items_count }} ítems · Mesa {{ order.mesa_numero || order.mesa_id || '-' }}</p>
     <p class="meta">Cliente: {{ customerName }}</p>
 
     <p v-if="order.estado === 'modificacion_solicitada'" class="locked">

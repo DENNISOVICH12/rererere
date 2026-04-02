@@ -5,7 +5,7 @@
 
 <div class="info-box">
     <p><b>Cliente:</b> {{ $pedido->cliente->nombres ?? 'Invitado' }}</p>
-    <p><b>Mesa:</b> {{ $pedido->mesa ?? '-' }}</p>
+    <p><b>Mesa:</b> {{ $pedido->mesa?->numero ?? '-' }}</p>
     <p><b>Total:</b> ${{ number_format($pedido->total, 0, ',', '.') }}</p>
 </div>
 

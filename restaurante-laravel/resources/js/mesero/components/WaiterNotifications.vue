@@ -15,7 +15,7 @@
         <li v-for="item in notifications" :key="item.id" :class="{ unread: !item.read_at }">
           <div>
             <p>{{ item.title }}</p>
-            <small>#{{ item.payload?.pedido_id }} · Mesa {{ item.payload?.mesa || '-' }} · {{ item.payload?.cliente_nombre || 'Cliente invitado' }}</small>
+            <small>#{{ item.payload?.pedido_id }} · Mesa {{ item.payload?.mesa_numero || item.payload?.mesa_id || '-' }} · {{ item.payload?.cliente_nombre || 'Cliente invitado' }}</small>
           </div>
           <button v-if="!item.read_at" @click="markOne(item.id)">Leída</button>
         </li>

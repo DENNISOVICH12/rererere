@@ -11,8 +11,8 @@
       </p>
     </header>
 
-    <label>Mesa</label>
-    <input v-model="localOrder.mesa" placeholder="Mesa / referencia" />
+    <label>Mesa ID</label>
+    <input v-model.number="localOrder.mesa_id" type="number" min="1" placeholder="ID de mesa" />
 
     <div class="items">
       <article v-for="(item, idx) in localOrder.items" :key="item.localKey" class="item-row">
@@ -91,7 +91,7 @@ const addItem = (menuItem) => {
 const removeItem = (idx) => localOrder.value.items.splice(idx, 1);
 
 const payload = computed(() => ({
-  mesa: localOrder.value.mesa,
+  mesa_id: localOrder.value.mesa_id,
   items: localOrder.value.items.map((item) => ({
     menu_item_id: item.menu_item_id,
     cantidad: item.cantidad,

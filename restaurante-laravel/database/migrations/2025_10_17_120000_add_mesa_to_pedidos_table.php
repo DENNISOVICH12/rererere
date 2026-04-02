@@ -8,8 +8,8 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('pedidos', function (Blueprint $table) {
-            if (!Schema::hasColumn('pedidos', 'mesa')) {
-                $table->string('mesa', 50)->nullable()->after('estado');
+            if (!Schema::hasColumn('pedidos', 'mesa_id')) {
+                $table->unsignedBigInteger('mesa_id')->nullable()->after('estado');
             }
         });
     }
@@ -17,8 +17,8 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('pedidos', function (Blueprint $table) {
-            if (Schema::hasColumn('pedidos', 'mesa')) {
-                $table->dropColumn('mesa');
+            if (Schema::hasColumn('pedidos', 'mesa_id')) {
+                $table->dropColumn('mesa_id');
             }
         });
     }

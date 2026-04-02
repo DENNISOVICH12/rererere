@@ -51,7 +51,7 @@ class OrderController extends Controller
         $order = Pedido::create([
             'cliente_id' => $resolvedClienteId,
             'restaurant_id' => $restaurantId,
-            'mesa' => $request->mesa_id,
+            'mesa_id' => $request->mesa_id,
             'estado' => Pedido::STATUS_RETAINED,
             'hold_expires_at' => now()->addMinutes(5),
             'total' => $total,
@@ -77,7 +77,7 @@ class OrderController extends Controller
             ]);
         }
 
-        $order->load(['detalle.menuItem', 'cliente']);
+        $order->load(['mesa:id,numero', 'detalle.menuItem', 'cliente']);
         app(WaiterNotificationService::class)->createFromPedido(
             $order,
             'new_order',
@@ -119,7 +119,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Pedido confirmado y enviado a cocina.',
-            'data' => $this->transformCustomerOrderPayload($order->fresh(['detalle.menuItem', 'cliente'])),
+            'data' => $this->transformCustomerOrderPayload($order->fresh(['mesa:id,numero', 'detalle.menuItem', 'cliente'])),
             'meta' => [
                 'hold_window_seconds' => Pedido::holdWindowSeconds(),
             ],
@@ -131,7 +131,7 @@ class OrderController extends Controller
         //Pedido::releaseExpiredRetentionWindow();
 
         return Pedido::where('estado', Pedido::STATUS_PENDING)
-            ->with('detalle.menuItem')
+            ->with(['mesa:id,numero', 'detalle.menuItem'])
             ->orderBy('id', 'asc')
             ->get();
     }
@@ -146,7 +146,7 @@ class OrderController extends Controller
             return response()->json(['data' => [], 'meta' => ['hold_window_seconds' => Pedido::holdWindowSeconds()]]);
         }
 
-        $pedidos = Pedido::with(['detalle.menuItem', 'cliente'])
+        $pedidos = Pedido::with(['mesa:id,numero', 'detalle.menuItem', 'cliente'])
             ->where('cliente_id', $resolvedClienteId)
             ->orderBy('created_at', 'desc')
             ->take(5)
@@ -230,6 +230,7 @@ class OrderController extends Controller
 
         return [
             ...$pedido->toArray(),
+            'mesa_numero' => $pedido->mesa?->numero,
             'grupos_servicio' => $grupos,
             'cliente_nombre' => $pedido->cliente
                 ? (trim($pedido->cliente->nombres.' '.$pedido->cliente->apellidos) ?: 'Cliente invitado')

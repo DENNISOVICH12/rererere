@@ -294,7 +294,7 @@ const handleEditAction = async (cliente, payload) => {
   error.value = '';
 
   try {
-    await updateOrder(pedido.id, { items, mesa: mesaCodigo.value });
+    await updateOrder(pedido.id, { items, mesa_id: Number(mesaId.value) || null });
     editingClienteId.value = null;
     await loadMesaData();
   } catch (err) {

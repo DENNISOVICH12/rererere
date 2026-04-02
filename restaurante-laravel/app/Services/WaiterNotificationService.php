@@ -17,7 +17,8 @@ class WaiterNotificationService
             'title' => $title,
             'payload' => array_merge($payload, [
                 'pedido_id' => $pedido->id,
-                'mesa' => $pedido->mesa,
+                'mesa_id' => $pedido->mesa_id,
+                'mesa_numero' => $pedido->mesa?->numero,
                 'cliente_nombre' => $pedido->cliente?->nombre ?? 'Cliente invitado',
             ]),
         ]);
