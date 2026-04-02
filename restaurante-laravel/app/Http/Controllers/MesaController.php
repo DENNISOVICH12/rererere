@@ -98,14 +98,9 @@ class MesaController extends Controller
             ->where('restaurant_id', $restaurantId)
             ->findOrFail($id);
 
-        $mesaValues = array_filter([
-            (string) $mesa->id,
-            $mesa->numero !== null ? (string) $mesa->numero : null,
-        ]);
-
         $tienePedidosActivos = Pedido::query()
             ->where('restaurant_id', $restaurantId)
-            ->whereIn('mesa', $mesaValues)
+            ->where('mesa_id', $mesa->id)
             ->whereNotIn('estado', self::PEDIDO_ESTADOS_INACTIVOS)
             ->exists();
 
@@ -158,9 +153,9 @@ class MesaController extends Controller
 
         $pedidoQuery = Pedido::query()
             ->where('restaurant_id', $restaurantId)
-            ->where('mesa', $mesa)
+            ->where('mesa_id', (int) $mesa)
             ->whereIn('estado', ['retenido', 'modificacion_solicitada', 'pendiente', 'preparando', 'listo'])
-            ->with(['detalle.menuItem:id,nombre,categoria,precio']);
+            ->with(['mesa:id,numero', 'detalle.menuItem:id,nombre,categoria,precio']);
 
         $pedidosPorCliente = $pedidoQuery
             ->get()
@@ -168,7 +163,7 @@ class MesaController extends Controller
 
         return response()->json([
             'data' => [
-                'id' => rawurlencode($mesa),
+                'id' => (int) $mesa,
                 'codigo' => $mesa,
                 'estado' => $pedidosPorCliente->flatten(1)->isNotEmpty() ? 'ocupada' : 'libre',
                 'clientes' => $clientes->map(function (ClienteMesa $cliente) use ($pedidosPorCliente) {
@@ -280,7 +275,7 @@ class MesaController extends Controller
 
         $pedidos = Pedido::query()
             ->where('restaurant_id', $restaurantId)
-            ->where('mesa', rawurldecode($mesaId))
+            ->where('mesa_id', (int) rawurldecode($mesaId))
             ->with(['detalle.menuItem', 'cliente:id,nombres,apellidos'])
             ->orderByDesc('created_at')
             ->get();

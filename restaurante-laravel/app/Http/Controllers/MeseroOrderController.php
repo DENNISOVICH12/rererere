@@ -27,7 +27,7 @@ class MeseroOrderController extends Controller
                 'estado',
                 'created_at',
                 'updated_at',
-                'mesa',
+                'mesa_id',
                 'cliente_id',
                 'hold_expires_at',
                 'change_requested_at',
@@ -45,6 +45,7 @@ class MeseroOrderController extends Controller
             ])
 
             ->with([
+                'mesa:id,numero',
                 'cliente:id,nombres,apellidos',
                 'changeRequestedByUser:id,nombre',
                 'detalle' => fn ($detalleQuery) => $detalleQuery
@@ -72,6 +73,7 @@ class MeseroOrderController extends Controller
         $pedido->refresh();
 
         $pedido->loadMissing([
+            'mesa:id,numero',
             'cliente:id,nombres,apellidos',
             'changeRequestedByUser:id,nombre',
             'detalle.menuItem:id,nombre,categoria,precio',
@@ -104,7 +106,7 @@ class MeseroOrderController extends Controller
         }
 
         $pedido->markChangeRequested((int) $request->user()->id, $validated['reason'] ?? null);
-        $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+        $pedido->load(['mesa:id,numero', 'cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
 
         return response()->json([
             'message' => 'Solicitud de cambio registrada. El pedido queda retenido hasta atención del mesero.',
@@ -124,7 +126,7 @@ class MeseroOrderController extends Controller
 }
 
         $pedido->releaseToKitchen(Pedido::RELEASE_TRIGGER_WAITER_CONFIRMATION);
-        $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+        $pedido->load(['mesa:id,numero', 'cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
 
         app(WaiterNotificationService::class)->createFromPedido($pedido, 'edited_order', '✏️ Pedido editado y enviado a cocina', [
             'origin' => 'waiter',
@@ -155,7 +157,7 @@ class MeseroOrderController extends Controller
 }
 
         $validated = $request->validate([
-            'mesa' => ['nullable', 'string', 'max:50'],
+            'mesa_id' => ['nullable', 'integer', Rule::exists('mesas', 'id')],
             'items' => ['required', 'array', 'min:1'],
             'items.*.menu_item_id' => ['required', 'integer', Rule::exists('menu_items', 'id')],
             'items.*.cantidad' => ['required', 'integer', 'min:1', 'max:100'],
@@ -168,7 +170,7 @@ class MeseroOrderController extends Controller
             ->keyBy('id');
 
         DB::transaction(function () use ($pedido, $validated, $menuItems) {
-            $pedido->mesa = $validated['mesa'] ?? $pedido->mesa;
+            $pedido->mesa_id = $validated['mesa_id'] ?? $pedido->mesa_id;
             $pedido->save();
 
             $pedido->detalle()->delete();
@@ -200,7 +202,7 @@ class MeseroOrderController extends Controller
             $pedido->save();
         });
 
-        $pedido->load(['cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
+        $pedido->load(['mesa:id,numero', 'cliente:id,nombres,apellidos', 'changeRequestedByUser:id,nombre', 'detalle.menuItem:id,nombre,categoria,precio']);
 
         app(WaiterNotificationService::class)->createFromPedido($pedido, 'edited_order', '✏️ Pedido editado', [
             'origin' => 'waiter',
@@ -318,7 +320,8 @@ class MeseroOrderController extends Controller
             'can_request_change' => $pedido->canRequestChange(),
             'can_send_to_kitchen' => $pedido->canBeEditedByWaiter(),
 
-            'mesa' => $pedido->mesa,
+            'mesa_id' => $pedido->mesa_id,
+            'mesa_numero' => $pedido->mesa?->numero,
             'cliente' => [
                 'id' => $pedido->cliente?->id,
                 'nombre' => $pedido->cliente?->nombre,

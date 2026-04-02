@@ -27,7 +27,7 @@
                     Invitado
                 @endif
             </td>
-            <td>{{ $p->mesa ?? '-' }}</td>
+            <td>{{ $p->mesa?->numero ?? '-' }}</td>
             <td>${{ number_format($p->total, 0, ',', '.') }}</td>
             <td><span class="estado {{ strtolower($p->estado) }}">{{ ucfirst($p->estado) }}</span></td>
             <td>{{ $p->created_at->format('d/m/y H:i') }}</td>

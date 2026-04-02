@@ -374,7 +374,7 @@ body.has-admin-back .kds { padding-top: 64px; }
         <header class="kds-card-head">
           <div class="kds-card-head-main">
             <h2 class="num">Pedido #@{{ order.id }}</h2>
-            <p class="kds-meta">Mesa @{{ order.mesa || '-' }} · @{{ fmtTime(order.created_at) }}</p>
+            <p class="kds-meta">Mesa @{{ order.mesa_numero || order.mesa_id || '-' }} · @{{ fmtTime(order.created_at) }}</p>
           </div>
           <span class="card-action-icon" aria-hidden="true">›</span>
           <span class="timer" :class="timerClass(order)">@{{ formatElapsed(order._elapsedMs) }}</span>
@@ -866,7 +866,7 @@ const OrderDetailsDrawer = {
             <div class="ticket-grid" style="margin-top:10px;">
               <p><strong>Creado:</strong> <span v-text="fmtDate(order.created_at)"></span></p>
               <p><strong>Hora:</strong> <span v-text="fmtTime(order.created_at)"></span></p>
-              <p><strong>Mesa:</strong> <span v-text="order.mesa || '-'"></span></p>
+              <p><strong>Mesa:</strong> <span v-text="order.mesa_numero || order.mesa_id || '-'"></span></p>
               <p><strong>Cliente:</strong> <span v-text="order.cliente?.nombre || order.cliente_nombre || '-'"></span></p>
             </div>
 

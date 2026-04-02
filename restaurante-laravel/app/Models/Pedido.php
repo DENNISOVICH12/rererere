@@ -25,7 +25,7 @@ class Pedido extends Model
         'cliente_id',
         'cliente_mesa_id',
         'restaurant_id',
-        'mesa',
+        'mesa_id',
         'estado',
         'hold_expires_at',
         'released_to_kitchen_at',
@@ -227,7 +227,7 @@ class Pedido extends Model
     
     public function mesa()
 {
-    return $this->belongsTo(Mesa::class);
+    return $this->belongsTo(Mesa::class, 'mesa_id');
 }
    
 }

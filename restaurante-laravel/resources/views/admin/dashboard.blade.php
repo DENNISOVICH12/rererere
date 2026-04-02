@@ -320,11 +320,11 @@
             : '<li>Sin datos de meseros para el rango actual.</li>';
 
         const usedTables = ops.most_used_tables.length
-            ? ops.most_used_tables.map(t => `<li>Mesa ${t.mesa}: ${t.pedidos} pedidos</li>`).join('')
+            ? ops.most_used_tables.map(t => `<li>Mesa ${t.mesa_numero ?? t.mesa_id ?? '-'}: ${t.pedidos} pedidos</li>`).join('')
             : '<li>Sin mesas utilizadas.</li>';
 
         const revenueTables = ops.top_revenue_tables.length
-            ? ops.top_revenue_tables.map(t => `<li>Mesa ${t.mesa}: ${formatCurrency(t.ingresos)}</li>`).join('')
+            ? ops.top_revenue_tables.map(t => `<li>Mesa ${t.mesa_numero ?? t.mesa_id ?? '-'}: ${formatCurrency(t.ingresos)}</li>`).join('')
             : '<li>Sin ingresos por mesa.</li>';
 
         document.getElementById('operations').innerHTML = `
@@ -343,7 +343,7 @@
         document.getElementById('recentOrders').innerHTML = orders.map(o => `
             <tr>
                 <td>#${o.id}</td>
-                <td>${o.mesa ?? '-'}</td>
+                <td>${o.mesa_numero ?? o.mesa_id ?? '-'}</td>
                 <td>${o.cliente}</td>
                 <td>${formatCurrency(o.total)}</td>
                 <td><span class="status ${statusClass(o.estado)}">${o.estado}</span></td>
@@ -355,7 +355,7 @@
         document.querySelectorAll('.link-btn').forEach((el) => {
             el.addEventListener('click', () => {
                 const order = JSON.parse(el.dataset.order.replaceAll('&#39;', "'"));
-                document.getElementById('modalTitle').textContent = `Pedido #${order.id} · Mesa ${order.mesa ?? '-'}`;
+                document.getElementById('modalTitle').textContent = `Pedido #${order.id} · Mesa ${order.mesa_numero ?? order.mesa_id ?? '-'}`;
                 document.getElementById('modalBody').innerHTML = order.detalles?.length
                     ? `<ul>${order.detalles.map(d => `<li>${d.cantidad}x ${d.producto} (${formatCurrency(d.importe)})</li>`).join('')}</ul>`
                     : '<p>Pedido sin detalle disponible.</p>';

@@ -17,7 +17,7 @@ class KitchenOrderController extends Controller
         //Pedido::releaseExpiredRetentionWindow();
 
         $orders = Pedido::query()
-            ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa', 'cliente_id', 'hold_expires_at'])
+            ->select(['id', 'estado', 'created_at', 'updated_at', 'mesa_id', 'cliente_id', 'hold_expires_at'])
             ->whereNotIn('estado', [Pedido::STATUS_RETAINED, Pedido::STATUS_CHANGE_REQUESTED])
             ->when($activeOnly, function ($query) {
                 $query->where(function ($stateQuery) {
@@ -30,6 +30,7 @@ class KitchenOrderController extends Controller
             })
             ->when($since, fn ($query) => $query->where('updated_at', '>', $since))
             ->with([
+                'mesa:id,numero',
                 'cliente:id,nombres,apellidos',
                 'detalle' => fn ($query) => $query
                     ->select([
@@ -160,7 +161,8 @@ class KitchenOrderController extends Controller
             'estado' => $pedido->estado,
             'created_at' => optional($pedido->created_at)->toIso8601String(),
             'hold_expires_at' => optional($pedido->hold_expires_at)->toIso8601String(),
-            'mesa' => $pedido->mesa,
+            'mesa_id' => $pedido->mesa_id,
+            'mesa_numero' => $pedido->mesa?->numero,
             'cliente' => [
                 'id' => $pedido->cliente?->id,
                 'nombre' => $pedido->cliente?->nombre,

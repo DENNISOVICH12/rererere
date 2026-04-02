@@ -25,7 +25,7 @@
   <header>
     <h1>Menú del restaurante</h1>
     <div>
-      <span class="tag">Mesa: <strong id="mesa-tag">{{ $mesa ?? 'N/A' }}</strong></span>
+      <span class="tag">Mesa ID: <strong id="mesa-tag">{{ $mesa ?? 'N/A' }}</strong></span>
     </div>
   </header>
 
@@ -44,7 +44,7 @@
 
   <div class="cart">
     <div>Cliente ID: <input id="cliente_id" type="number" placeholder="Ej: 12" style="width:110px"></div>
-    <div>Mesa: <input id="mesa" type="text" value="{{ $mesa }}" placeholder="Ej: A1" style="width:80px"></div>
+    <div>Mesa ID: <input id="mesa_id" type="number" value="{{ $mesa }}" placeholder="Ej: 12" style="width:80px"></div>
     <div>Total ítems: <strong id="total-items">0</strong></div>
     <button id="btn-ver-carrito" class="secondary">Ver carrito</button>
     <button id="btn-enviar">Enviar pedido</button>
@@ -58,7 +58,7 @@
     const $totalItems = document.getElementById('total-items');
     const $btnEnviar = document.getElementById('btn-enviar');
     const $btnVerCarrito = document.getElementById('btn-ver-carrito');
-    const $mesaInput = document.getElementById('mesa');
+    const $mesaInput = document.getElementById('mesa_id');
     const $mesaTag = document.getElementById('mesa-tag');
     const $clienteId = document.getElementById('cliente_id');
 
@@ -127,14 +127,14 @@
 
     $btnEnviar.addEventListener('click', async ()=>{
       const cliente_id = parseInt($clienteId.value,10);
-      const mesa = $mesaInput.value.trim();
+      const mesa_id = Number($mesaInput.value) || null;
       if (!cliente_id) return alert('Debes indicar el ID del cliente.');
       if (!cart.length) return alert('El carrito está vacío.');
 
       // payload para tu POST /api/pedidos
       const payload = {
         cliente_id,
-        mesa: mesa || null,
+        mesa_id,
         items: cart.map(x=>({
           menu_item_id: x.menu_item_id,
           cantidad: x.cantidad,

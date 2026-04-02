@@ -10,7 +10,7 @@ class PedidoUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'mesa'   => 'sometimes|nullable|string|max:50',
+            'mesa_id'   => 'sometimes|nullable|integer|exists:mesas,id',
             'estado' => 'sometimes|in:retenido,modificacion_solicitada,pendiente,en_entrega,preparando,listo,entregado,cancelado',
 
         ];
