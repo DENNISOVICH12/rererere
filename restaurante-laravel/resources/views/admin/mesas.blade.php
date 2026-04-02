@@ -309,10 +309,19 @@
         position: fixed;
         inset: 0;
         background: rgba(2, 6, 23, .65);
-        display: grid;
+        display: none;
         place-items: center;
         padding: 16px;
         z-index: 90;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s ease;
+    }
+
+    .modal-overlay.is-open {
+        display: grid;
+        opacity: 1;
+        pointer-events: auto;
     }
 
     .modal-card {
@@ -322,7 +331,18 @@
         border: 1px solid var(--border-soft);
         padding: 20px;
         box-shadow: 0 24px 60px rgba(2, 6, 23, .6);
-        animation: pop .2s ease;
+        transform: translateY(10px) scale(.98);
+        opacity: 0;
+        transition: transform .2s ease, opacity .2s ease;
+    }
+
+    .modal-overlay.is-open .modal-card {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+
+    body.modal-open {
+        overflow: hidden;
     }
 
     .modal-head { display: flex; justify-content: space-between; align-items: center; }
@@ -440,6 +460,7 @@
         mesas: [],
         filtered: [],
         selectedMesa: null,
+        activeModal: null,
         loading: false,
         filter: 'all',
         search: '',
@@ -475,6 +496,7 @@
         ocupada: 'Ocupada',
         en_proceso: 'En proceso',
     };
+    const MODAL_ANIMATION_MS = 200;
 
     const getMesaStatus = (mesa) => {
         const raw = String(mesa?.estado || mesa?.status || 'libre').toLowerCase();
@@ -571,8 +593,41 @@
         el.statProceso.textContent = totals.en_proceso;
     };
 
-    const openModal = (modal) => { modal.hidden = false; };
-    const closeModal = (modal) => { modal.hidden = true; };
+    const hideModalImmediately = (modal) => {
+        if (!modal) return;
+        modal.classList.remove('is-open');
+        modal.hidden = true;
+    };
+
+    const openModal = (id) => {
+        const modal = typeof id === 'string' ? document.getElementById(id) : id;
+        if (!modal) return;
+        if (state.activeModal && state.activeModal !== modal) {
+            hideModalImmediately(state.activeModal);
+        }
+
+        modal.hidden = false;
+        requestAnimationFrame(() => modal.classList.add('is-open'));
+        document.body.classList.add('modal-open');
+        state.activeModal = modal;
+    };
+
+    const closeModal = () => {
+        if (!state.activeModal) return;
+
+        const modal = state.activeModal;
+        modal.classList.remove('is-open');
+        document.body.classList.remove('modal-open');
+        state.activeModal = null;
+
+        if (modal === el.detailModal) state.selectedMesa = null;
+
+        window.setTimeout(() => {
+            if (!modal.classList.contains('is-open')) {
+                modal.hidden = true;
+            }
+        }, MODAL_ANIMATION_MS);
+    };
 
     const loadMesas = async () => {
         setLoading(true);
@@ -617,7 +672,7 @@
             <p>Acciones rápidas: puedes eliminar la mesa o cerrar esta ventana.</p>
         `;
 
-        openModal(el.detailModal);
+        openModal('mesaDetailModal');
     };
 
     const createMesa = async (event) => {
@@ -640,7 +695,7 @@
             const payload = await res.json();
             if (!res.ok) throw new Error(payload?.message || 'No se pudo crear la mesa.');
 
-            closeModal(el.createModal);
+            closeModal();
             el.createForm.reset();
             showToast('Mesa creada correctamente.');
             await loadMesas();
@@ -665,8 +720,7 @@
             const payload = await res.json();
             if (!res.ok) throw new Error(payload?.message || 'No se pudo eliminar la mesa.');
 
-            closeModal(el.detailModal);
-            state.selectedMesa = null;
+            closeModal();
             showToast('Mesa eliminada exitosamente.');
             await loadMesas();
         } catch (error) {
@@ -693,29 +747,37 @@
     el.createForm.addEventListener('submit', createMesa);
 
     el.openCreate.addEventListener('click', () => {
-        openModal(el.createModal);
+        openModal('createMesaModal');
         el.mesaNumero.focus();
     });
 
     [el.closeCreate, el.cancelCreate].forEach((button) => {
         button.addEventListener('click', () => {
-            closeModal(el.createModal);
+            closeModal();
             el.createForm.reset();
         });
     });
 
     [el.closeDetail, el.closeDetailAction].forEach((button) => {
-        button.addEventListener('click', () => closeModal(el.detailModal));
+        button.addEventListener('click', closeModal);
     });
 
     el.createModal.addEventListener('click', (event) => {
-        if (event.target === el.createModal) closeModal(el.createModal);
+        if (event.target === el.createModal) closeModal();
     });
     el.detailModal.addEventListener('click', (event) => {
-        if (event.target === el.detailModal) closeModal(el.detailModal);
+        if (event.target === el.detailModal) closeModal();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeModal();
     });
 
     el.deleteMesaAction.addEventListener('click', deleteSelectedMesa);
+
+    [el.createModal, el.detailModal].forEach((modal) => {
+        hideModalImmediately(modal);
+    });
 
     loadMesas();
 })();
