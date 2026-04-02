@@ -52,7 +52,7 @@ class AdminDashboardController extends Controller
         $avgOrderMinutes = (float) (clone $ordersQuery)
             ->whereNotNull('updated_at')
             ->whereRaw('updated_at > created_at')
-            ->avg(DB::raw('TIMESTAMPDIFF(MINUTE, COALESCE(released_to_kitchen_at, created_at), updated_at)'));
+            ->avg(DB::raw("EXTRACT(EPOCH FROM (updated_at - COALESCE(released_to_kitchen_at, created_at))) / 60"));
 
         $cancelledOrRetained = (int) (clone $ordersQuery)
             ->whereIn('estado', ['cancelado', 'retenido', 'modificacion_solicitada'])
@@ -67,19 +67,21 @@ class AdminDashboardController extends Controller
         $dayMap = $this->mapDays($start, $end, $dailyRows);
 
         $topProducts = DB::table('pedido_detalles as pd')
-            ->join('pedidos as p', 'p.id', '=', 'pd.pedido_id')
-            ->leftJoin('menu_items as mi', 'mi.id', '=', 'pd.menu_item_id')
-            ->whereBetween('p.created_at', [$start, $end])
-            ->selectRaw("COALESCE(mi.nombre, CONCAT('Producto #', pd.menu_item_id), 'Producto') as nombre")
-            ->selectRaw('SUM(pd.cantidad) as cantidad')
-            ->selectRaw('SUM(pd.importe) as ingresos')
-            ->groupBy('nombre')
-            ->orderByDesc('cantidad')
-            ->limit(5)
-            ->get();
+    ->join('pedidos as p', 'p.id', '=', 'pd.pedido_id')
+    ->leftJoin('menu_items as mi', 'mi.id', '=', 'pd.menu_item_id')
+    ->whereBetween('p.created_at', [$start, $end])
+    ->selectRaw("
+        COALESCE(mi.nombre, CONCAT('Producto #', pd.menu_item_id), 'Producto') as nombre
+    ")
+    ->selectRaw('SUM(pd.cantidad) as cantidad')
+    ->selectRaw('SUM(pd.importe) as ingresos')
+    ->groupBy('mi.nombre', 'pd.menu_item_id') // 🔥 FIX AQUÍ
+    ->orderByDesc('cantidad')
+    ->limit(5)
+    ->get();
 
         $peakHours = (clone $ordersQuery)
-            ->selectRaw('HOUR(created_at) as hour, COUNT(*) as orders')
+            ->selectRaw('EXTRACT(HOUR FROM created_at) as hour, COUNT(*) as orders')
             ->groupBy('hour')
             ->orderByDesc('orders')
             ->limit(6)
@@ -105,7 +107,7 @@ class AdminDashboardController extends Controller
             ->join('pedidos as p', 'p.id', '=', 'pd.pedido_id')
             ->whereBetween('p.created_at', [$start, $end])
             ->whereRaw('pd.updated_at > pd.created_at')
-            ->avg(DB::raw('TIMESTAMPDIFF(MINUTE, pd.created_at, pd.updated_at)'));
+            ->avg(DB::raw("EXTRACT(EPOCH FROM (pd.updated_at - pd.created_at)) / 60"));
 
         $waiters = Usuario::query()
             ->where('rol', 'mesero')
