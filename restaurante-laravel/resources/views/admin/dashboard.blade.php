@@ -2,244 +2,413 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel Administrativo</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
-
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo · Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --bg: #090b12;
+            --panel: #111622;
+            --panel-soft: #0f1420;
+            --border: rgba(255,255,255,.08);
+            --text: #e8edf7;
+            --muted: #9ca7bf;
+            --primary: #7c8cff;
+            --success: #4ade80;
+            --warning: #facc15;
+            --danger: #fb7185;
+        }
+        * { box-sizing: border-box; }
         body {
             margin: 0;
-            background: #0e0e0f;
-            color: #fff;
-            font-family: 'Inter', sans-serif;
+            font-family: Inter, sans-serif;
+            background: radial-gradient(circle at top right, #19223a 0%, var(--bg) 45%);
+            color: var(--text);
             display: flex;
+            min-height: 100vh;
         }
-
-        /* === SIDEBAR === */
         .sidebar {
-            width: 70px;
-            background: rgba(255,255,255,0.03);
-            border-right: 1px solid rgba(255,255,255,0.07);
-            backdrop-filter: blur(14px);
-            padding: 18px 10px;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
+            width: 74px;
+            background: rgba(8, 12, 20, .88);
+            border-right: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 20px 10px;
+            position: fixed;
+            inset: 0 auto 0 0;
+            z-index: 10;
             overflow: hidden;
             transition: width .25s ease;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 900;
         }
-
-        .sidebar:hover { width: 230px; }
-
+        .sidebar:hover { width: 240px; }
         .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 12px 14px;
-            border-radius: 12px;
-            font-size: 15px;
-            color: rgba(255,255,255,0.75);
-            cursor: pointer;
-            white-space: nowrap;
-            transition: .25s ease;
             text-decoration: none;
-        }
-
-        .nav-item span {
-            opacity: 0;
-            transform: translateX(-8px);
-            transition: .25s ease;
-        }
-
-        .sidebar:hover .nav-item span {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .nav-item:hover { background: rgba(255,255,255,0.12); }
-
-        .nav-item.active {
-            background: rgba(255,255,255,0.18);
-            border: 1px solid rgba(255,255,255,0.25);
-            color: #fff;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-        }
-
-        .icon { font-size: 18px; }
-
-        /* === MAIN CONTENT === */
-        .main-content {
-            margin-left: 80px;
-            padding: 30px;
-            width: 100%;
-            transition: .25s;
-        }
-
-        .sidebar:hover ~ .main-content { margin-left: 240px; }
-
-        h1 {
-            font-family: 'Playfair Display', serif;
-            margin-bottom: 4px;
-        }
-        .subtitle { opacity: .75; margin-bottom: 30px; }
-
-        /* === CARDS === */
-        .cards {
+            color: #b9c3d8;
             display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            margin-bottom: 25px;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 13px;
+            border-radius: 12px;
+            transition: .2s;
+            margin-bottom: 8px;
+            white-space: nowrap;
         }
-
-        .card {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.12);
-            padding: 16px 22px;
-            border-radius: 14px;
-            width: 190px;
-            font-size: 14px;
-            backdrop-filter: blur(12px);
-        }
-        .card b { font-size: 20px; display: block; margin-top: 4px; }
-
-        /* === TABLE === */
-        .table-box {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 14px;
-            padding: 25px;
+        .nav-item span { opacity: 0; transform: translateX(-8px); transition: .2s; }
+        .sidebar:hover .nav-item span { opacity: 1; transform: translateX(0); }
+        .nav-item:hover, .nav-item.active { background: rgba(124, 140, 255, .18); color: #fff; }
+        .main {
+            margin-left: 84px;
+            padding: 28px;
             width: 100%;
-            max-width: 1000px;
-            backdrop-filter: blur(10px);
+            transition: margin-left .25s;
         }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th, td { padding: 12px 10px; text-align: left; }
-        th { opacity: .75; font-size: 14px; }
-        tr + tr { border-top: 1px solid rgba(255,255,255,0.08); }
-
-        /* Badges */
-        .badge { padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; display: inline-block; }
-
+        .sidebar:hover ~ .main { margin-left: 248px; }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .title h1 { margin: 0; font-size: 1.8rem; }
+        .title p { margin: 6px 0 0; color: var(--muted); }
+        .filters {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: var(--panel);
+            padding: 10px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+        }
+        .btn, .date-input {
+            border: 1px solid var(--border);
+            background: #0d1320;
+            color: var(--text);
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: .85rem;
+        }
+        .btn.active { background: rgba(124,140,255,.24); border-color: rgba(124,140,255,.6); }
+        .btn.primary { background: linear-gradient(135deg, #6578ff, #7c8cff); border: 0; }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .kpi {
+            background: linear-gradient(140deg, var(--panel), var(--panel-soft));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+        }
+        .kpi .label { color: var(--muted); font-size: .82rem; }
+        .kpi .value { font-size: 1.4rem; font-weight: 700; margin-top: 6px; }
+        .layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 14px;
+        }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px;
+        }
+        .panel h3 { margin: 0 0 12px; font-size: 1rem; }
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .ops-list, .insight-list { display: grid; gap: 10px; }
+        .pill {
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.02);
+            font-size: .87rem;
+        }
+        .insight-danger { border-color: rgba(251,113,133,.45); }
+        .insight-warning { border-color: rgba(250,204,21,.45); }
+        .insight-success { border-color: rgba(74,222,128,.45); }
+        table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+        th, td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; }
+        th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; }
+        .status { padding: 4px 8px; border-radius: 999px; font-size: .74rem; font-weight: 600; }
+        .s-pendiente { background: rgba(251,113,133,.25); color: #fecdd3; }
+        .s-preparando, .s-retenido { background: rgba(250,204,21,.22); color: #fef08a; }
+        .s-listo, .s-entregado { background: rgba(74,222,128,.22); color: #bbf7d0; }
+        .s-cancelado { background: rgba(248,113,113,.22); color: #fecaca; }
+        .link-btn { color: #bdc8ff; cursor: pointer; text-decoration: underline; }
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(2,6,16,.8);
+            display: none;
+            place-items: center;
+            z-index: 30;
+            padding: 18px;
+        }
+        .modal.open { display: grid; }
+        .modal-card {
+            width: min(700px, 100%);
+            background: #0f1523;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+        }
+        @media (max-width: 1180px) {
+            .layout, .charts-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
-
 <body>
-
-<!-- ✅ SIDEBAR -->
 <div class="sidebar">
-    <a href="/admin" class="nav-item {{ request()->is('admin') ? 'active' : '' }}">
-        <i class="icon">🏠</i><span>Dashboard</span>
-    </a>
-
-    <a href="/usuarios" class="nav-item {{ request()->is('usuarios*') ? 'active' : '' }}">
-        <i class="icon">👤</i><span>Gestionar Usuarios</span>
-    </a>
-
-    <a href="/cocina" class="nav-item {{ request()->is('cocina') ? 'active' : '' }}">
-        <i class="icon">🍳</i><span>Cocina</span>
-    </a>
-
-    <a href="/pedidos" class="nav-item {{ request()->is('pedidos*') ? 'active' : '' }}">
-        <i class="icon">🧾</i><span>Mesas / Pedidos</span>
-    </a>
-
-    <a href="{{ route('admin.mesas') }}" class="nav-item {{ request()->routeIs('admin.mesas') ? 'active' : '' }}">
-        <i class="icon">🪑</i><span>Gestión de Mesas</span>
-    </a>
-
-    <a href="{{ route('carta.digital') }}" class="nav-item">
-        <i class="icon">📋</i><span>Carta Digital</span>
-    </a>
-
-    <a href="{{ route('admin.menu') }}" class="nav-item">
-        <i class="icon">🍽</i><span> Gestión del Menú</span>
-    </a>
-
+    <a href="/admin" class="nav-item {{ request()->is('admin') ? 'active' : '' }}"><span>🏠 Dashboard</span></a>
+    <a href="/usuarios" class="nav-item {{ request()->is('usuarios*') ? 'active' : '' }}"><span>👤 Usuarios</span></a>
+    <a href="/cocina" class="nav-item {{ request()->is('cocina') ? 'active' : '' }}"><span>🍳 Cocina</span></a>
+    <a href="/pedidos" class="nav-item {{ request()->is('pedidos*') ? 'active' : '' }}"><span>🧾 Pedidos</span></a>
+    <a href="{{ route('admin.mesas') }}" class="nav-item {{ request()->routeIs('admin.mesas') ? 'active' : '' }}"><span>🪑 Mesas</span></a>
+    <a href="{{ route('carta.digital') }}" class="nav-item"><span>📋 Carta Digital</span></a>
+    <a href="{{ route('admin.menu') }}" class="nav-item"><span>🍽 Menú</span></a>
 </div>
 
-
-<!-- ✅ MAIN CONTENT -->
-<div class="main-content">
-
-    <h1>Panel Administrativo</h1>
-    <p class="subtitle">Resumen general del restaurante</p>
-
-    <div class="cards">
-        <div class="card">Usuarios Totales<b>{{ $totalUsuarios }}</b></div>
-        <div class="card">Clientes<b>{{ $totalClientes }}</b></div>
-        <div class="card">Meseros<b>{{ $totalMeseros }}</b></div>
-        <div class="card">Cocineros<b>{{ $totalCocineros }}</b></div>
-        <div class="card">Pedidos Hoy<b>{{ $totalPedidosHoy }}</b></div>
-        <div class="card">Items en Menú<b>{{ $totalMenuItems }}</b></div>
+<div class="main" id="dashboardApp">
+    <div class="topbar">
+        <div class="title">
+            <h1>Dashboard Estratégico</h1>
+            <p id="rangeLabel">{{ $initialRange['label'] ?? 'Hoy' }}</p>
+        </div>
+        <div class="filters">
+            <button class="btn js-preset" data-preset="today">Hoy</button>
+            <button class="btn js-preset" data-preset="yesterday">Ayer</button>
+            <button class="btn js-preset" data-preset="last_7_days">Últimos 7 días</button>
+            <button class="btn js-preset" data-preset="last_30_days">Últimos 30 días</button>
+            <input class="date-input" type="date" id="startDate" value="{{ $initialRange['start_date'] }}">
+            <input class="date-input" type="date" id="endDate" value="{{ $initialRange['end_date'] }}">
+            <button class="btn primary" id="applyCustom">Aplicar</button>
+        </div>
     </div>
 
-    <!-- ✅ PEDIDOS RECIENTES -->
-    <div class="table-box">
-        <h3 style="margin-bottom: 10px;">Pedidos Recientes</h3>
+    <div class="kpi-grid" id="kpis"></div>
 
-        <table>
-            <thead>
+    <div class="layout">
+        <div>
+            <div class="panel" style="margin-bottom:12px;">
+                <h3>Visual analítico</h3>
+                <div class="charts-grid">
+                    <div><canvas id="revenueChart" height="120"></canvas></div>
+                    <div><canvas id="ordersChart" height="120"></canvas></div>
+                    <div><canvas id="productsChart" height="120"></canvas></div>
+                    <div><canvas id="hoursChart" height="120"></canvas></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Pedidos recientes</h3>
+                <table>
+                    <thead><tr><th>ID</th><th>Mesa</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Tiempo</th><th>Detalle</th></tr></thead>
+                    <tbody id="recentOrders"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div>
+            <div class="panel" style="margin-bottom:12px;">
+                <h3>Insights automáticos</h3>
+                <div class="insight-list" id="insights"></div>
+            </div>
+            <div class="panel">
+                <h3>Análisis operativo</h3>
+                <div class="ops-list" id="operations"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="orderModal">
+    <div class="modal-card">
+        <h3 id="modalTitle">Detalle pedido</h3>
+        <div id="modalBody"></div>
+        <button class="btn" id="closeModal" style="margin-top:10px;">Cerrar</button>
+    </div>
+</div>
+
+<script>
+(() => {
+    const initialData = @json($initialData);
+    const initialRange = @json($initialRange);
+    const state = {
+        preset: initialRange.preset || 'today',
+        startDate: initialRange.start_date,
+        endDate: initialRange.end_date,
+        data: initialData,
+        charts: {},
+    };
+
+    const formatCurrency = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(v || 0));
+    const formatNumber = (v) => new Intl.NumberFormat('es-CO').format(Number(v || 0));
+    const elapsed = (iso) => {
+        if (!iso) return '-';
+        const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+        if (min < 60) return `${min} min`;
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        return `${h}h ${m}m`;
+    };
+
+    function activatePreset() {
+        document.querySelectorAll('.js-preset').forEach((btn) => btn.classList.toggle('active', btn.dataset.preset === state.preset));
+    }
+
+    function renderKpis(kpis) {
+        const cards = [
+            ['💵 Ingresos totales', formatCurrency(kpis.revenue)],
+            ['📦 Número de pedidos', formatNumber(kpis.orders)],
+            ['🧾 Ticket promedio', formatCurrency(kpis.average_ticket)],
+            ['🍽️ Mesas atendidas', formatNumber(kpis.tables_served)],
+            ['⏱️ Tiempo promedio por pedido', `${kpis.average_order_minutes} min`],
+            ['❌ Cancelados / retenidos', formatNumber(kpis.cancelled_or_retained)],
+        ];
+        document.getElementById('kpis').innerHTML = cards.map(([label, value]) => `
+            <div class="kpi"><div class="label">${label}</div><div class="value">${value}</div></div>
+        `).join('');
+    }
+
+    function buildOrUpdateChart(id, config) {
+        if (state.charts[id]) {
+            state.charts[id].data = config.data;
+            state.charts[id].update();
+            return;
+        }
+        state.charts[id] = new Chart(document.getElementById(id), config);
+    }
+
+    function renderCharts(charts) {
+        buildOrUpdateChart('revenueChart', {
+            type: 'line',
+            data: { labels: charts.days, datasets: [{ label: 'Ingresos por día', data: charts.daily_revenue, borderColor: '#7c8cff', backgroundColor: 'rgba(124,140,255,.2)', tension: .35, fill: true }] },
+            options: { plugins: { legend: { labels: { color: '#ccd5e6' } } }, scales: { x: { ticks: { color: '#8fa0c2' } }, y: { ticks: { color: '#8fa0c2' } } } }
+        });
+
+        buildOrUpdateChart('ordersChart', {
+            type: 'bar',
+            data: { labels: charts.days, datasets: [{ label: 'Pedidos por día', data: charts.daily_orders, backgroundColor: 'rgba(76,201,240,.6)' }] },
+            options: { plugins: { legend: { labels: { color: '#ccd5e6' } } }, scales: { x: { ticks: { color: '#8fa0c2' } }, y: { ticks: { color: '#8fa0c2' } } } }
+        });
+
+        buildOrUpdateChart('productsChart', {
+            type: 'bar',
+            data: { labels: charts.top_products.map(p => p.nombre), datasets: [{ label: 'Top productos', data: charts.top_products.map(p => p.cantidad), backgroundColor: 'rgba(74,222,128,.6)' }] },
+            options: { indexAxis: 'y', plugins: { legend: { labels: { color: '#ccd5e6' } } }, scales: { x: { ticks: { color: '#8fa0c2' } }, y: { ticks: { color: '#8fa0c2' } } } }
+        });
+
+        buildOrUpdateChart('hoursChart', {
+            type: 'bar',
+            data: { labels: charts.peak_hours.map(h => `${String(h.hour).padStart(2, '0')}:00`), datasets: [{ label: 'Horas pico', data: charts.peak_hours.map(h => h.orders), backgroundColor: 'rgba(250,204,21,.62)' }] },
+            options: { plugins: { legend: { labels: { color: '#ccd5e6' } } }, scales: { x: { ticks: { color: '#8fa0c2' } }, y: { ticks: { color: '#8fa0c2' } } } }
+        });
+    }
+
+    function renderInsights(insights) {
+        document.getElementById('insights').innerHTML = insights.map(i => `<div class="pill insight-${i.type}">${i.text}</div>`).join('');
+    }
+
+    function renderOperations(ops) {
+        const waiters = ops.top_waiters.length
+            ? ops.top_waiters.map(w => `<li>${w.nombre}: ${w.pedidos ?? 'sin trazabilidad de pedidos'}</li>`).join('')
+            : '<li>Sin datos de meseros para el rango actual.</li>';
+
+        const usedTables = ops.most_used_tables.length
+            ? ops.most_used_tables.map(t => `<li>Mesa ${t.mesa}: ${t.pedidos} pedidos</li>`).join('')
+            : '<li>Sin mesas utilizadas.</li>';
+
+        const revenueTables = ops.top_revenue_tables.length
+            ? ops.top_revenue_tables.map(t => `<li>Mesa ${t.mesa}: ${formatCurrency(t.ingresos)}</li>`).join('')
+            : '<li>Sin ingresos por mesa.</li>';
+
+        document.getElementById('operations').innerHTML = `
+            <div class="pill"><b>Mesas más utilizadas</b><ul>${usedTables}</ul></div>
+            <div class="pill"><b>Mesas con más ingresos</b><ul>${revenueTables}</ul></div>
+            <div class="pill"><b>Meseros con más pedidos</b><ul>${waiters}</ul></div>
+            <div class="pill"><b>Tiempo promedio de cocina</b><div style="margin-top:6px; font-size:1.05rem;">${ops.avg_kitchen_minutes} min</div></div>
+        `;
+    }
+
+    function statusClass(status) {
+        return `s-${String(status || '').toLowerCase().replace(/\s+/g, '-')}`;
+    }
+
+    function renderRecentOrders(orders) {
+        document.getElementById('recentOrders').innerHTML = orders.map(o => `
             <tr>
-                <th>ID</th>
-                <th>Mesa</th>
-                <th>Cliente</th>
-                <th>Total</th>
-                <th>Estado</th>
-                <th>Fecha</th>
+                <td>#${o.id}</td>
+                <td>${o.mesa ?? '-'}</td>
+                <td>${o.cliente}</td>
+                <td>${formatCurrency(o.total)}</td>
+                <td><span class="status ${statusClass(o.estado)}">${o.estado}</span></td>
+                <td>${elapsed(o.created_at)}</td>
+                <td><span class="link-btn" data-order='${JSON.stringify(o).replaceAll("'", "&#39;")}'>Ver</span></td>
             </tr>
-            </thead>
-            <tbody id="tablaPedidosRecientes">
+        `).join('');
 
-            @foreach($pedidosRecientes as $p)
-                @php
-                    $estado = strtolower($p->estado);
-                    $badgeClass = match($estado) {
-                        'pendiente'   => 'background:#ff4b4b; color:white;',
-                        'preparando'  => 'background:#ffcc00; color:black;',
-                        'listo'       => 'background:#2ecc71; color:white;',
-                        'entregado'   => 'background:#3498db; color:white;',
-                        default       => 'background:#666; color:white;'
-                    };
+        document.querySelectorAll('.link-btn').forEach((el) => {
+            el.addEventListener('click', () => {
+                const order = JSON.parse(el.dataset.order.replaceAll('&#39;', "'"));
+                document.getElementById('modalTitle').textContent = `Pedido #${order.id} · Mesa ${order.mesa ?? '-'}`;
+                document.getElementById('modalBody').innerHTML = order.detalles?.length
+                    ? `<ul>${order.detalles.map(d => `<li>${d.cantidad}x ${d.producto} (${formatCurrency(d.importe)})</li>`).join('')}</ul>`
+                    : '<p>Pedido sin detalle disponible.</p>';
+                document.getElementById('orderModal').classList.add('open');
+            });
+        });
+    }
 
-                    $clienteNombre = $p->cliente
-    ? trim(($p->cliente->nombres ?? '') . ' ' . ($p->cliente->apellidos ?? ''))
-    : 'Invitado';
+    function renderAll(payload) {
+        document.getElementById('rangeLabel').textContent = `${payload.meta.start_date} → ${payload.meta.end_date}`;
+        renderKpis(payload.kpis);
+        renderCharts(payload.charts);
+        renderInsights(payload.insights);
+        renderOperations(payload.operations);
+        renderRecentOrders(payload.recent_orders);
+    }
 
-if ($clienteNombre === '') {
-    $clienteNombre = 'Invitado';
-}
+    async function fetchData() {
+        const params = new URLSearchParams({ preset: state.preset });
+        if (state.preset === 'custom') {
+            params.set('start_date', state.startDate);
+            params.set('end_date', state.endDate);
+        }
+        const response = await fetch(`{{ route('admin.dashboard.data') }}?${params.toString()}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        state.data = await response.json();
+        renderAll(state.data);
+    }
 
-$esInvitado = $p->cliente
-    && strtolower(trim(($p->cliente->nombres ?? '') . ' ' . ($p->cliente->apellidos ?? ''))) === 'cliente invitado';
+    document.querySelectorAll('.js-preset').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            state.preset = btn.dataset.preset;
+            activatePreset();
+            await fetchData();
+        });
+    });
 
-$clienteStyle = $p->cliente ? 'color:#a4c6ff;' : 'color:#ccc;';
-$clienteIcon  = $esInvitado || !$p->cliente ? '🧾' : '✨';
-                @endphp
+    document.getElementById('applyCustom').addEventListener('click', async () => {
+        state.preset = 'custom';
+        state.startDate = document.getElementById('startDate').value;
+        state.endDate = document.getElementById('endDate').value;
+        activatePreset();
+        await fetchData();
+    });
 
-                <tr style="{{ $estado === 'pendiente' ? 'background:rgba(255,0,0,0.08);' : '' }}">
-                    <td>{{ $p->id }}</td>
-                    <td>{{ $p->mesa ?? '-' }}</td>
-                    <td style="{{ $clienteStyle }}">{{ $clienteIcon }} {{ $clienteNombre }}</td>
-                    <td>${{ number_format($p->total, 0, ',', '.') }}</td>
-                    <td><span class="badge" style="{{ $badgeClass }}">{{ ucfirst($p->estado) }}</span></td>
-                    <td>{{ $p->created_at->format('d/m/Y H:i') }}</td>
-                </tr>
+    document.getElementById('closeModal').addEventListener('click', () => document.getElementById('orderModal').classList.remove('open'));
+    document.getElementById('orderModal').addEventListener('click', (e) => {
+        if (e.target.id === 'orderModal') e.currentTarget.classList.remove('open');
+    });
 
-            @endforeach
-
-            </tbody>
-        </table>
-
-    </div>
-
-</div>
-
+    activatePreset();
+    renderAll(state.data);
+    setInterval(fetchData, 60000);
+})();
+</script>
 </body>
 </html>
