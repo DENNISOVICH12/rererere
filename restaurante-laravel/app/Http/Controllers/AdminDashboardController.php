@@ -38,7 +38,7 @@ class AdminDashboardController extends Controller
 
     private function buildDashboardPayload(Carbon $start, Carbon $end, string $preset): array
     {
-        $ordersQuery = Pedido::query()->whereBetween('created_at', [$start, $end]);
+        $ordersQuery = Pedido::query()->whereBetween('pedidos.created_at', [$start, $end]);
 
         $totalRevenue = (float) $ordersQuery->sum('total');
         $ordersCount = (int) (clone $ordersQuery)->count();
