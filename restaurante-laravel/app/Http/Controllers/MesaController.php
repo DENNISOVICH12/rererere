@@ -316,15 +316,13 @@ class MesaController extends Controller
         ];
     }
     public function generarQR($id)
-{
-    $mesa = Mesa::findOrFail($id);
+    {
+        $mesa = Mesa::findOrFail($id);
+        $url = request()->getSchemeAndHttpHost() . ":5180?mesa=" . $mesa->id;
 
-    // ⚠️ CAMBIA ESTA IP POR LA TUYA
-    $url = "http://192.168.10.171:5174?mesa=" . $mesa->id;
-
-    return QrCode::format('svg')
-        ->size(300)
-        ->generate($url);
-}
+        return QrCode::format('svg')
+            ->size(300)
+            ->generate($url);
+    }
 
 }
