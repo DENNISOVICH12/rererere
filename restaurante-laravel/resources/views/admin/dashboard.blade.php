@@ -4,26 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Administrativo · Premium</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg: #090b12;
-            --panel: #111622;
-            --panel-soft: #0f1420;
+            --bg: #020617;
+            --panel: rgba(15, 23, 42, .85);
+            --panel-soft: rgba(15, 23, 42, .72);
             --border: rgba(255,255,255,.08);
-            --text: #e8edf7;
-            --muted: #9ca7bf;
-            --primary: #7c8cff;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --primary: #9c2030;
             --success: #4ade80;
-            --warning: #facc15;
+            --warning: #f59e0b;
             --danger: #fb7185;
         }
         * { box-sizing: border-box; }
         body {
             margin: 0;
             font-family: Inter, sans-serif;
-            background: radial-gradient(circle at top right, #19223a 0%, var(--bg) 45%);
+            background: radial-gradient(circle at top right, rgba(156,32,48,.18) 0%, var(--bg) 45%);
             color: var(--text);
             display: flex;
             min-height: 100vh;
@@ -55,7 +55,7 @@
         }
         .nav-item span { opacity: 0; transform: translateX(-8px); transition: .2s; }
         .sidebar:hover .nav-item span { opacity: 1; transform: translateX(0); }
-        .nav-item:hover, .nav-item.active { background: rgba(124, 140, 255, .18); color: #fff; }
+        .nav-item:hover, .nav-item.active { background: rgba(156, 32, 48, .24); color: #fff; }
         .main {
             margin-left: 84px;
             padding: 28px;
@@ -91,8 +91,8 @@
             border-radius: 10px;
             font-size: .85rem;
         }
-        .btn.active { background: rgba(124,140,255,.24); border-color: rgba(124,140,255,.6); }
-        .btn.primary { background: linear-gradient(135deg, #6578ff, #7c8cff); border: 0; }
+        .btn.active { background: rgba(156,32,48,.28); border-color: rgba(156,32,48,.65); }
+        .btn.primary { background: linear-gradient(135deg, #b12a3b, #9c2030); border: 0; }
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -139,7 +139,7 @@
         .s-preparando, .s-retenido { background: rgba(250,204,21,.22); color: #fef08a; }
         .s-listo, .s-entregado { background: rgba(74,222,128,.22); color: #bbf7d0; }
         .s-cancelado { background: rgba(248,113,113,.22); color: #fecaca; }
-        .link-btn { color: #bdc8ff; cursor: pointer; text-decoration: underline; }
+        .link-btn { color: #ffd7aa; cursor: pointer; text-decoration: underline; }
         .modal {
             position: fixed;
             inset: 0;
@@ -164,13 +164,13 @@
 </head>
 <body>
 <div class="sidebar">
-    <a href="/admin" class="nav-item {{ request()->is('admin') ? 'active' : '' }}"><span>🏠 Dashboard</span></a>
-    <a href="/usuarios" class="nav-item {{ request()->is('usuarios*') ? 'active' : '' }}"><span>👤 Usuarios</span></a>
-    <a href="/cocina" class="nav-item {{ request()->is('cocina') ? 'active' : '' }}"><span>🍳 Cocina</span></a>
-    <a href="/pedidos" class="nav-item {{ request()->is('pedidos*') ? 'active' : '' }}"><span>🧾 Pedidos</span></a>
-    <a href="{{ route('admin.mesas') }}" class="nav-item {{ request()->routeIs('admin.mesas') ? 'active' : '' }}"><span>🪑 Mesas</span></a>
-    <a href="{{ route('carta.digital') }}" class="nav-item"><span>📋 Carta Digital</span></a>
-    <a href="{{ route('admin.menu') }}" class="nav-item"><span>🍽 Menú</span></a>
+    <a href="/admin" class="nav-item {{ request()->is('admin') ? 'active' : '' }}"><span>Dashboard</span></a>
+    <a href="/usuarios" class="nav-item {{ request()->is('usuarios*') ? 'active' : '' }}"><span>Usuarios</span></a>
+    <a href="/cocina" class="nav-item {{ request()->is('cocina') ? 'active' : '' }}"><span>Cocina</span></a>
+    <a href="/pedidos" class="nav-item {{ request()->is('pedidos*') ? 'active' : '' }}"><span>Pedidos</span></a>
+    <a href="{{ route('admin.mesas') }}" class="nav-item {{ request()->routeIs('admin.mesas') ? 'active' : '' }}"><span>Mesas</span></a>
+    <a href="{{ route('carta.digital') }}" class="nav-item"><span>Carta Digital</span></a>
+    <a href="{{ route('admin.menu') }}" class="nav-item"><span>Menú</span></a>
 </div>
 
 <div class="main" id="dashboardApp">

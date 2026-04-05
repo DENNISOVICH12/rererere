@@ -88,13 +88,13 @@ onBeforeUnmount(() => {
 
 .topbar p {
   margin: 4px 0 0;
-  color: #9db0d8;
+  color: #94a3b8;
 }
 
 .refresh {
-  border: 0;
+  border: 1px solid rgba(248, 113, 113, 0.35);
   border-radius: 10px;
-  background: #1d4ed8;
+  background: linear-gradient(145deg, #9c2030, #7a1522);
   color: #fff;
   padding: 10px 14px;
   font-weight: 600;
@@ -116,15 +116,15 @@ onBeforeUnmount(() => {
 .error {
   margin: 0;
   padding: 10px 12px;
-  border: 1px solid #7f1d1d;
+  border: 1px solid rgba(248, 113, 113, 0.4);
   border-radius: 10px;
-  background: #450a0a;
+  background: rgba(127, 29, 29, 0.35);
   color: #fecaca;
 }
 
 .empty {
   margin: 0;
-  color: #9db0d8;
+  color: #94a3b8;
 }
 
 @media (min-width: 768px) {

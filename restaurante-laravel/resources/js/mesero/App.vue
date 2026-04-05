@@ -12,7 +12,7 @@ import WaiterNotifications from "./components/WaiterNotifications.vue";
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  background: radial-gradient(circle at top, #13213f 0%, #0b1220 55%, #080d17 100%);
+  background: radial-gradient(circle at top, rgba(156, 32, 48, 0.24) 0%, #0f172a 52%, #020617 100%);
   color: #f8fbff;
   padding: 20px;
 }

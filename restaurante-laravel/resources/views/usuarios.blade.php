@@ -1,45 +1,9 @@
 @extends('layouts.admin')
 
 @section('content')
-<style>
-    .grid-two-cols {
-        display: grid;
-        grid-template-columns: 1fr 1.6fr;
-        gap: 18px;
-        align-items: start;
-    }
-    .card h2 { margin-top: 0; }
-    .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { color: #f6dede; font-size: 14px; }
-    .form-control, select {
-        padding: 10px 12px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.12);
-        background: rgba(0,0,0,0.35);
-        color: #fff;
-    }
-    .form-inline { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .btn {
-        padding: 10px 14px;
-        border: none;
-        border-radius: 10px;
-        cursor: pointer;
-        font-weight: 600;
-    }
-    .btn-primary { background: #9c2030; color: #fff; box-shadow: 0 6px 18px rgba(156,32,48,0.4); }
-    .btn-secondary { background: rgba(255,255,255,0.08); color: #fff; }
-    .btn-danger { background: #3d0b12; color: #ffb4c0; border: 1px solid rgba(255,255,255,0.1); }
-    .badge-success { background: #6eff7a33; color: #6eff7a; padding: 6px 10px; border-radius: 10px; }
-    .badge-muted { background: rgba(255,255,255,0.08); color: #ccc; padding: 6px 10px; border-radius: 10px; }
-    .alert { padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; }
-    .alert-success { background: #153524; color: #9ff8c9; border: 1px solid #1f5f3b; }
-    .alert-error { background: #3a0d0d; color: #ffcfcf; border: 1px solid #6e1d1d; }
-    details summary { cursor: pointer; color: #ffdede; }
-</style>
-
-<div class="card" style="margin-bottom: 18px;">
+<div class="card mb-2">
     <h1>👤 Gestión de usuarios</h1>
-    <p style="color:#cfcfcf;">Crea, actualiza o elimina cuentas para el personal y clientes del restaurante.</p>
+    <p class="text-muted">Crea, actualiza o elimina cuentas para el personal y clientes del restaurante.</p>
 </div>
 
     @if (session('status'))
@@ -122,8 +86,8 @@
                         <td>#{{ $u->id }}</td>
                         <td>
                             <div style="font-weight:600;">{{ $u->usuario }}</div>
-                            <small style="color:#cfcfcf;">{{ $u->nombre }} {{ $u->apellido }}</small><br>
-                            <small style="color:#cfcfcf;">{{ $u->correo }}</small>
+                            <small class="text-muted">{{ $u->nombre }} {{ $u->apellido }}</small><br>
+                            <small class="text-muted">{{ $u->correo }}</small>
                         </td>
                         <td>{{ $roles[$u->rol] ?? $u->rol }}</td>
                         <td>
@@ -136,7 +100,7 @@
                         <td>
                             <details>
                                 <summary>Editar</summary>
-                                <form method="POST" action="{{ route('usuarios.update', $u->id) }}" style="margin-top:10px;">
+                                <form method="POST" action="{{ route('usuarios.update', $u->id) }}" class="mt-1">
                                     @csrf
                                     @method('PUT')
                                     <div class="form-group">
@@ -179,7 +143,7 @@
                                     <button type="submit" class="btn btn-secondary">Guardar cambios</button>
                                 </form>
                             </details>
-                            <form method="POST" action="{{ route('usuarios.delete', $u->id) }}" onsubmit="return confirm('¿Eliminar al usuario {{ $u->usuario }}?');" style="margin-top:8px;">
+                            <form method="POST" action="{{ route('usuarios.delete', $u->id) }}" onsubmit="return confirm('¿Eliminar al usuario {{ $u->usuario }}?');" class="mt-1">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger">Eliminar</button>
@@ -194,7 +158,7 @@
             </tbody>
         </table>
 
-        <div style="margin-top:14px;">
+        <div class="mt-2">
             {{ $usuarios->links() }}
         </div>
     </section>
