@@ -16,13 +16,9 @@ export default defineConfig({
   ],
 
   server: {
-  host: '0.0.0.0',
-  port: 5180,
-  strictPort: true,
-  cors: true,
-  hmr: {
-    host: '192.168.10.171',
-    port: Number(process.env.VITE_PORT_HOST || 5180),
+    host: true,
+    port: 5180,
+    strictPort: true,
+    cors: true,
   },
-},  
-});
+});  

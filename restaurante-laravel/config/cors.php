@@ -18,18 +18,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    // ✅ Incluye tanto tu IP local como localhost para desarrollo
-    'allowed_origins' => [
-        'http://192.168.1.79:5174',
-        'http://localhost:5174',
-        'http://192.168.224.1:5174',
-        'http://192.168.80.36:5174',
-        'http://192.168.80.14:5174'
-        
+    'allowed_origins' => [],
 
+    'allowed_origins_patterns' => [
+        '/^https?:\/\/[^\/:]+(?::5180)?$/',
     ],
-
-    'allowed_origins_patterns' => [],
 
     'allowed_headers' => ['*'],
 
