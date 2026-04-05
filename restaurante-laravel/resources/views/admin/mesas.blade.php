@@ -103,18 +103,18 @@
 
 <style>
     .mesas-admin {
-        --bg-primary: #0f172a;
-        --bg-card: rgba(15, 23, 42, 0.72);
-        --bg-card-hover: rgba(30, 41, 59, 0.92);
+        --bg-primary: #020617;
+        --bg-card: rgba(15, 23, 42, 0.78);
+        --bg-card-hover: rgba(30, 41, 59, 0.96);
         --text-main: #e2e8f0;
         --text-soft: #94a3b8;
         --border-soft: rgba(148, 163, 184, 0.24);
-        --accent: #60a5fa;
+        --accent: #ffd7aa;
 
         color: var(--text-main);
         background:
-            radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.22), transparent 35%),
-            radial-gradient(circle at 90% 10%, rgba(14, 165, 233, 0.15), transparent 35%),
+            radial-gradient(circle at 20% 20%, rgba(156, 32, 48, 0.2), transparent 35%),
+            radial-gradient(circle at 90% 10%, rgba(255, 215, 170, 0.08), transparent 35%),
             var(--bg-primary);
         border-radius: 28px;
         padding: clamp(18px, 2.8vw, 36px);

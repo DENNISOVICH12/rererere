@@ -3,10 +3,10 @@
 @section('content')
 <div class="admin-container">
 
-    <h2 class="title">🍽 Gestión del Menú</h2>
+    <h2 class="title">Gestión del Menú</h2>
 
     <!-- ✅ MENSAJES -->
-    <div id="msg-status" style="margin-bottom:15px; font-weight:bold;"></div>
+    <div id="msg-status" class="mb-2" style="font-weight:700;"></div>
 
     <!-- BUSCAR -->
     <form method="GET" action="{{ route('admin.menu') }}" class="search-bar">
@@ -66,37 +66,37 @@
     </div>
 
     <!-- NUEVO PLATO -->
-    <h3 class="section-title">➕ Nuevo Plato</h3>
+    <h3 class="section-title">Nuevo Plato</h3>
 
 <form id="formNuevoPlato" enctype="multipart/form-data">
     @csrf
 
-    <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+    <div class="inline-form-row">
 
-        <div style="display:flex; flex-direction:column;">
+        <div class="inline-field">
             <input type="text" name="nombre" placeholder="Nombre" value="">
         </div>
 
-        <div style="display:flex; flex-direction:column;">
+        <div class="inline-field">
             <input type="text" name="descripcion" placeholder="Descripción">
         </div>
 
-        <div style="display:flex; flex-direction:column;">
+        <div class="inline-field">
             <select name="categoria">
                 <option value="plato">Plato</option>
                 <option value="bebida">Bebida</option>
             </select>
         </div>
 
-        <div style="display:flex; flex-direction:column;">
+        <div class="inline-field">
             <input type="number" name="precio" placeholder="Precio" min="1">
         </div>
 
-        <div style="display:flex; flex-direction:column;">
+        <div class="inline-field">
             <input type="file" name="imagen">
         </div>
 
-        <button type="submit" id="btnCrear" class="btn btn-create" style="margin-top: 23px;">
+        <button type="submit" id="btnCrear" class="btn btn-create">
             <span id="btnCrearText">Crear</span>
             <span id="btnCrearLoad" style="display:none;">Cargando...</span>
         </button>
