@@ -318,8 +318,8 @@ class MesaController extends Controller
     public function generarQR($id)
     {
         $mesa = Mesa::findOrFail($id);
-        $url = request()->getSchemeAndHttpHost() . ":5180?mesa=" . $mesa->id;
-
+        $host = request()->getHost(); // solo IP sin puerto
+    $url = "http://{$host}:5174?mesa=" . $mesa->id;
         return QrCode::format('svg')
             ->size(300)
             ->generate($url);
