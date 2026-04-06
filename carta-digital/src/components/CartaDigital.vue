@@ -12,7 +12,7 @@
 
       <div v-else class="user-info">
         <span class="user-name">👤 {{ cliente.nombres }}</span>
-        <button class="logout-btn" @click="logoutCliente">
+        <button class="logout-btn" @click="handleLogout">
           Cerrar sesión
         </button>
       </div>
@@ -161,6 +161,8 @@
         <button class="btn-secondary" @click="cerrarModal">Cerrar</button>
       </div>
     </div>
+
+    <ConfirmModal ref="logoutConfirmModalRef" />
   </div>
 </template>
 
@@ -170,6 +172,7 @@ import axios from 'axios'
 import { API_BASE } from '../api.js'
 import { addToCart, cart, removeFromCart, saveCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
+import ConfirmModal from './ConfirmModal.vue'
 
 const items = ref([])
 const selectedCategory = ref('todos')
@@ -191,6 +194,7 @@ const loadingLogin = ref(false)
 const showErrors = ref(false)
 const loginMessage = ref('')
 const registerMessage = ref('')
+const logoutConfirmModalRef = ref(null)
 
 const imageErrors = ref({})
 
@@ -261,6 +265,12 @@ function decrease(item) {
   }
 
   saveCart()
+}
+
+async function handleLogout() {
+  const ok = await logoutConfirmModalRef.value?.open('¿Seguro que deseas cerrar sesión?')
+  if (!ok) return
+  await logoutCliente()
 }
 
 async function login() {
