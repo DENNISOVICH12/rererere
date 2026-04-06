@@ -30,7 +30,32 @@ export function loadCliente() {
   }
 }
 
-export function logoutCliente() {
+function clearClienteState() {
   cliente.value = null
   localStorage.removeItem("cliente")
+}
+
+export async function logoutCliente() {
+  if (!confirm('¿Seguro que deseas cerrar sesión?')) return false
+
+  try {
+    const token = document
+      .querySelector('meta[name="csrf-token"]')
+      ?.getAttribute('content')
+
+    await fetch('/logout', {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+        Accept: 'application/json'
+      }
+    })
+
+    clearClienteState()
+    window.location.href = '/login'
+    return true
+  } catch (error) {
+    console.error('Error al cerrar sesión:', error)
+    return false
+  }
 }

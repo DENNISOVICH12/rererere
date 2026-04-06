@@ -100,9 +100,11 @@ function showToast(message, type = "success") {
 /* =====================================================
    🔥 LOGOUT
 ===================================================== */
-function handleLogout() {
-  logoutCliente()
-  alert("👋 Sesión cerrada correctamente")
+async function handleLogout() {
+  const loggedOut = await logoutCliente()
+  if (loggedOut) {
+    alert("👋 Sesión cerrada correctamente")
+  }
 }
 
 const cartImageErrors = ref({})
