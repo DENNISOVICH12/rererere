@@ -143,7 +143,7 @@
                                     <button type="submit" class="btn btn-secondary">Guardar cambios</button>
                                 </form>
                             </details>
-                            <form method="POST" action="{{ route('usuarios.delete', $u->id) }}" onsubmit="return confirm('¿Eliminar al usuario {{ $u->usuario }}?');" class="mt-1">
+                            <form method="POST" action="{{ route('usuarios.delete', $u->id) }}" data-confirm-message="¿Eliminar al usuario {{ $u->usuario }}?" data-confirm-title="Eliminar usuario" data-confirm-accept="Eliminar" data-confirm-cancel="Cancelar" class="mt-1">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger">Eliminar</button>

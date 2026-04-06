@@ -229,8 +229,16 @@ function editarPedido(pedidoId) {
 }
 
 // Función para cancelar un pedido
-function cancelarPedido(pedidoId) {
-    if (!confirm('¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.')) {
+async function cancelarPedido(pedidoId) {
+    const ok = typeof window.showConfirm === 'function'
+        ? await window.showConfirm('¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.', {
+            title: 'Cancelar pedido',
+            confirmText: 'Sí, cancelar',
+            cancelText: 'Volver',
+          })
+        : false;
+
+    if (!ok) {
         return;
     }
     

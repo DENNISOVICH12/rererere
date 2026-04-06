@@ -1386,6 +1386,7 @@ Vue.createApp({
   },
 }).mount('#app');
 </script>
+<script src="{{ asset('js/confirm-modal.js') }}" defer></script>
 <script src="{{ asset('js/logout.js') }}" defer></script>
 </body>
 </html>
