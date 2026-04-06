@@ -36,8 +36,6 @@ function clearClienteState() {
 }
 
 export async function logoutCliente() {
-  if (!confirm('¿Seguro que deseas cerrar sesión?')) return false
-
   try {
     const token = document
       .querySelector('meta[name="csrf-token"]')

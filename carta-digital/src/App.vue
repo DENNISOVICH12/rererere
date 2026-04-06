@@ -103,7 +103,7 @@ function showToast(message, type = "success") {
 async function handleLogout() {
   const loggedOut = await logoutCliente()
   if (loggedOut) {
-    alert("👋 Sesión cerrada correctamente")
+    showToast("👋 Sesión cerrada correctamente", "success")
   }
 }
 
