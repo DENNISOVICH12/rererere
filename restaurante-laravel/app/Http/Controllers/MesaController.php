@@ -129,14 +129,28 @@ class MesaController extends Controller
 
     // 🔥 FORZAMOS SIEMPRE JSON (para admin)
     return response()->json([
-        'data' => $mesas->map(function ($mesa) {
-            return [
-                'id' => $mesa->id,
-                'numero' => $mesa->numero,
-                'estado' => $mesa->estado ?? 'libre',
-            ];
-        })
-    ]);
+    'data' => $mesas->map(function ($mesa) use ($restaurantId) {
+
+        $pedidosActivos = Pedido::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('mesa_id', $mesa->id)
+            ->whereIn('estado', [
+                'retenido',
+                'modificacion_solicitada',
+                'pendiente',
+                'preparando',
+                'listo'
+            ])
+            ->count();
+
+        return [
+            'id' => $mesa->id,
+            'numero' => $mesa->numero,
+            'estado' => $pedidosActivos > 0 ? 'ocupada' : 'libre',
+            'pedidos_activos' => $pedidosActivos,
+        ];
+    })
+]);
 }
 
     public function show(Request $request, string $id): JsonResponse
