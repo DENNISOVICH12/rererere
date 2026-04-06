@@ -50,9 +50,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Cerrar sesión
-    logoutBtn.addEventListener('click', function() {
-        window.location.href = 'logout.php';
-    });
+    if (logoutBtn) {
+        logoutBtn.setAttribute('data-logout', '');
+        logoutBtn.addEventListener('click', function(event) {
+            event.preventDefault();
+            if (typeof window.logout === 'function') {
+                window.logout();
+            }
+        });
+    }
     
     // Manejo de pestañas en menú
     tabs.forEach(tab => {

@@ -348,7 +348,7 @@ body.has-admin-back .kds { padding-top: 64px; }
         @if(Route::has('logout'))
           <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="ghost">Cerrar sesión</button>
+            <button type="submit" class="ghost" data-logout>Cerrar sesión</button>
           </form>
         @endif
       </div>
@@ -1386,5 +1386,6 @@ Vue.createApp({
   },
 }).mount('#app');
 </script>
+<script src="{{ asset('js/logout.js') }}" defer></script>
 </body>
 </html>
