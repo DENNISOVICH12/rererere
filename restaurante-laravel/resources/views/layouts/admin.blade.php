@@ -23,7 +23,7 @@
 
         <form method="POST" action="{{ route('logout') }}" style="margin-top: 28px;">
             @csrf
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Cerrar Sesión</button>
+            <button type="submit" class="btn btn-primary" style="width: 100%;" data-logout>Cerrar Sesión</button>
         </form>
     </aside>
 
@@ -31,5 +31,6 @@
         @yield('content')
     </main>
 
+    <script src="{{ asset('js/logout.js') }}" defer></script>
 </body>
 </html>
