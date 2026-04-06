@@ -19,15 +19,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Añadir event listener al botón de cancelar pedido en el modal
     const btnCancelarPedido = document.getElementById('cancelar-pedido');
     if (btnCancelarPedido) {
-        btnCancelarPedido.addEventListener('click', function() {
+        btnCancelarPedido.addEventListener('click', async function() {
             const pedidoId = document.getElementById('pedido-id').textContent.replace('#', '');
-            // Usamos confirm() directamente para evitar problemas con modales anidados
-            if (confirm('¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.')) {
-                // Cerrar el modal de detalles
-                document.getElementById('modal-detalle-pedido').style.display = 'none';
-                // Cancelar el pedido
-                cancelarPedido(pedidoId);
+            const ok = typeof window.showConfirm === 'function'
+                ? await window.showConfirm('¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.', {
+                    title: 'Cancelar pedido',
+                    confirmText: 'Sí, cancelar',
+                    cancelText: 'Volver',
+                  })
+                : false;
+
+            if (!ok) {
+                return;
             }
+
+            // Cerrar el modal de detalles
+            document.getElementById('modal-detalle-pedido').style.display = 'none';
+            // Cancelar el pedido
+            cancelarPedido(pedidoId);
         });
     }
     
@@ -141,13 +150,29 @@ function cancelarPedido(pedidoId) {
 /**
  * Función para eliminar permanentemente un pedido
  */
-function eliminarPedido(pedidoId) {
-    if (!confirm('¿Estás COMPLETAMENTE SEGURO de eliminar permanentemente este pedido? Esta acción NO SE PUEDE DESHACER y eliminará todos los datos asociados al pedido.')) {
+async function eliminarPedido(pedidoId) {
+    const firstCheck = typeof window.showConfirm === 'function'
+        ? await window.showConfirm('¿Estás COMPLETAMENTE SEGURO de eliminar permanentemente este pedido? Esta acción NO SE PUEDE DESHACER y eliminará todos los datos asociados al pedido.', {
+            title: 'Eliminar pedido',
+            confirmText: 'Entiendo, eliminar',
+            cancelText: 'Cancelar',
+          })
+        : false;
+
+    if (!firstCheck) {
         return;
     }
-    
+
     // Segunda confirmación como medida de seguridad
-    if (!confirm('ADVERTENCIA: Esta acción eliminará el pedido de la base de datos permanentemente. ¿Deseas continuar?')) {
+    const secondCheck = typeof window.showConfirm === 'function'
+        ? await window.showConfirm('ADVERTENCIA: Esta acción eliminará el pedido de la base de datos permanentemente. ¿Deseas continuar?', {
+            title: 'Última confirmación',
+            confirmText: 'Sí, eliminar',
+            cancelText: 'No',
+          })
+        : false;
+
+    if (!secondCheck) {
         return;
     }
     

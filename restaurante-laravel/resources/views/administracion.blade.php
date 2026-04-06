@@ -434,6 +434,7 @@
     </footer>
   </div>
 
+  <script src="{{ asset('js/confirm-modal.js') }}" defer></script>
   <script src="{{ asset('js/logout.js') }}" defer></script>
   <script>
   (async () => {

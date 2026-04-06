@@ -31,6 +31,8 @@
         @yield('content')
     </main>
 
+    <script src="{{ asset('js/confirm-modal.js') }}" defer></script>
+    <script src="{{ asset('js/confirm-actions.js') }}" defer></script>
     <script src="{{ asset('js/logout.js') }}" defer></script>
 </body>
 </html>

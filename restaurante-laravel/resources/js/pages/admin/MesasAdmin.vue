@@ -81,7 +81,15 @@ const submitMesa = async () => {
 };
 
 const removeMesa = async (id) => {
-  if (!window.confirm('¿Seguro que deseas eliminar esta mesa?')) return;
+  const ok = typeof window.showConfirm === 'function'
+    ? await window.showConfirm('¿Seguro que deseas eliminar esta mesa?', {
+        title: 'Eliminar mesa',
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+      })
+    : false;
+
+  if (!ok) return;
   await deleteMesa(id);
   await loadMesas();
 };

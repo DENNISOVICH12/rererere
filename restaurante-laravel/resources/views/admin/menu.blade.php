@@ -59,7 +59,7 @@
                                 <form action="{{ route('admin.menu.delete', $item->id) }}" method="POST" style="display:inline;">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn btn-delete" onclick="return confirm('¿Seguro que deseas eliminar este plato?');">
+                                    <button class="btn btn-delete" type="submit" data-confirm-click="true" data-confirm-message="¿Seguro que deseas eliminar este plato?" data-confirm-title="Eliminar plato" data-confirm-accept="Eliminar" data-confirm-cancel="Cancelar">
                                         Eliminar
                                     </button>
                                 </form>
