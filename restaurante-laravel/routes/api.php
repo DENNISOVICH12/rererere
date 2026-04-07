@@ -39,6 +39,7 @@ Route::put('/pedidos/{pedido}/entregar/{grupo}', [PedidoController::class, 'entr
 Route::get('/mesas', [MesaController::class, 'index']);
 Route::get('/mesas/{mesa}/pedidos', [MesaController::class, 'pedidos']);
 Route::get('/mesas/{id}/qr', [MesaController::class, 'generarQR']);
+Route::get('/mesas/{id}', [MesaController::class, 'show']);
 Route::post('/mesas', [MesaController::class, 'store']);
 Route::delete('/mesas/{id}', [MesaController::class, 'destroy']);
 
