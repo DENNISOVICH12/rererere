@@ -15,7 +15,8 @@ use App\Http\Controllers\{
     KitchenOrderController,
     MeseroOrderController,
     ClienteAuthController,
-    MesaController
+    MesaController,
+    ClienteController
 };
 
 // Health Check
@@ -93,6 +94,8 @@ Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->grou
         Route::post('/menu-items', [MenuItemController::class, 'store']);
         Route::put('/menu-items/{id}', [MenuItemController::class, 'update']);
         Route::delete('/menu-items/{id}', [MenuItemController::class, 'destroy']);
+
+        Route::get('/admin/clientes/{id}/historial', [ClienteController::class, 'historial']);
 
         // 🔥 SOLO ESTAS DOS PROTEGIDAS
     });

@@ -61,9 +61,7 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
     Route::get('/admin/menu/{id}/edit', [MenuItemController::class, 'edit'])
         ->name('admin.menu.edit');
     Route::view('/admin/mesas', 'admin.mesas')->name('admin.mesas');
-
-
-
+    Route::view('/admin/clientes/historial', 'admin.clientes_historial')->name('admin.clientes.historial');
 
     // ✅ API interna para refresco en vivo del dashboard
     Route::get('/admin/dashboard/data', [AdminDashboardController::class, 'dashboardData'])
