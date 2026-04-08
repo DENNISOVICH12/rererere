@@ -6,6 +6,8 @@ use App\Models\Cliente;
 use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ClienteController extends Controller
 {
@@ -79,6 +81,150 @@ class ClienteController extends Controller
         if (!$cliente) return $this->notFound();
 
         return $this->okData('Cliente encontrado', $cliente);
+    }
+
+
+    /**
+     * Listado administrativo de clientes con métricas y filtros.
+     */
+    public function adminIndex(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'search' => 'nullable|string|max:120',
+            'registro_desde' => 'nullable|date',
+            'registro_hasta' => 'nullable|date|after_or_equal:registro_desde',
+            'ultima_visita_desde' => 'nullable|date',
+            'segmento' => 'nullable|in:vip,frecuente,nuevo,inactivo',
+            'nuevos_en' => 'nullable|in:7,30',
+            'min_pedidos' => 'nullable|integer|min:0',
+            'gasto_min' => 'nullable|numeric|min:0',
+            'gasto_max' => 'nullable|numeric|min:0|gte:gasto_min',
+            'sort' => 'nullable|in:nombre_asc,nombre_desc,registro_desc,registro_asc,pedidos_desc,pedidos_asc,gasto_desc,gasto_asc',
+        ]);
+
+        $query = Cliente::query()
+            ->select('clientes.*')
+            ->selectRaw('COALESCE(SUM(pedidos.total), 0) as total_gastado')
+            ->selectRaw('COUNT(pedidos.id) as cantidad_pedidos')
+            ->selectRaw('MAX(pedidos.created_at) as ultima_visita')
+            ->leftJoin('pedidos', function ($join) {
+                $join->on('pedidos.cliente_id', '=', 'clientes.id');
+            })
+            ->groupBy('clientes.id');
+
+        if (!empty($validated['search'])) {
+            $search = trim($validated['search']);
+            $query->where(function ($sub) use ($search) {
+                $sub->whereRaw("CONCAT(COALESCE(clientes.nombres,''), ' ', COALESCE(clientes.apellidos,'')) like ?", ["%{$search}%"])
+                    ->orWhere('clientes.correo', 'like', "%{$search}%");
+            });
+        }
+
+        if (!empty($validated['registro_desde'])) {
+            $query->whereDate('clientes.created_at', '>=', $validated['registro_desde']);
+        }
+        if (!empty($validated['registro_hasta'])) {
+            $query->whereDate('clientes.created_at', '<=', $validated['registro_hasta']);
+        }
+        if (!empty($validated['ultima_visita_desde'])) {
+            $query->havingRaw('MAX(pedidos.created_at) >= ?', [$validated['ultima_visita_desde']]);
+        }
+        if (!empty($validated['min_pedidos'])) {
+            $query->havingRaw('COUNT(pedidos.id) >= ?', [(int) $validated['min_pedidos']]);
+        }
+        if (array_key_exists('gasto_min', $validated) && $validated['gasto_min'] !== null) {
+            $query->havingRaw('COALESCE(SUM(pedidos.total), 0) >= ?', [(float) $validated['gasto_min']]);
+        }
+        if (array_key_exists('gasto_max', $validated) && $validated['gasto_max'] !== null) {
+            $query->havingRaw('COALESCE(SUM(pedidos.total), 0) <= ?', [(float) $validated['gasto_max']]);
+        }
+
+        $sortMap = [
+            'nombre_asc' => ['clientes.nombres', 'asc'],
+            'nombre_desc' => ['clientes.nombres', 'desc'],
+            'registro_desc' => ['clientes.created_at', 'desc'],
+            'registro_asc' => ['clientes.created_at', 'asc'],
+            'pedidos_desc' => [DB::raw('cantidad_pedidos'), 'desc'],
+            'pedidos_asc' => [DB::raw('cantidad_pedidos'), 'asc'],
+            'gasto_desc' => [DB::raw('total_gastado'), 'desc'],
+            'gasto_asc' => [DB::raw('total_gastado'), 'asc'],
+        ];
+        [$field, $direction] = $sortMap[$validated['sort'] ?? 'nombre_asc'];
+        $query->orderBy($field, $direction);
+
+        $rows = $query->limit(250)->get();
+        $now = now();
+
+        $clientes = $rows
+            ->map(function (Cliente $cliente) use ($now) {
+                $totalGastado = round((float) ($cliente->total_gastado ?? 0), 2);
+                $cantidadPedidos = (int) ($cliente->cantidad_pedidos ?? 0);
+                $promedio = $cantidadPedidos > 0 ? round($totalGastado / $cantidadPedidos, 2) : 0;
+                $ultimaVisita = $cliente->ultima_visita ? Carbon::parse($cliente->ultima_visita) : null;
+                $tipo = $this->resolveTipoCliente(
+                    $cliente->created_at,
+                    $ultimaVisita,
+                    $cantidadPedidos,
+                    $totalGastado,
+                    $now,
+                );
+
+                return [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'correo' => $cliente->correo,
+                    'fecha_registro' => optional($cliente->created_at)->toDateTimeString(),
+                    'total_gastado' => $totalGastado,
+                    'cantidad_pedidos' => $cantidadPedidos,
+                    'promedio' => $promedio,
+                    'ultima_visita' => optional($ultimaVisita)->toDateTimeString(),
+                    'tipo_cliente' => $tipo,
+                ];
+            })
+            ->filter(function (array $cliente) use ($validated, $now) {
+                if (!empty($validated['nuevos_en'])) {
+                    $days = (int) $validated['nuevos_en'];
+                    $created = $cliente['fecha_registro'] ? Carbon::parse($cliente['fecha_registro']) : null;
+                    if (!$created || $created->lt($now->copy()->subDays($days))) {
+                        return false;
+                    }
+                }
+
+                if (!empty($validated['segmento']) && $validated['segmento'] !== $cliente['tipo_cliente']) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->values();
+
+        return $this->okData('Listado analítico de clientes', $clientes->all(), [
+            'meta' => [
+                'total' => $clientes->count(),
+                'filtros_aplicados' => $validated,
+            ],
+        ]);
+    }
+
+    private function resolveTipoCliente($createdAt, $ultimaVisita, int $cantidadPedidos, float $totalGastado, Carbon $now): string
+    {
+        if ($totalGastado >= 400 || $cantidadPedidos >= 12) {
+            return 'vip';
+        }
+
+        if ($cantidadPedidos >= 5) {
+            return 'frecuente';
+        }
+
+        if ($createdAt && Carbon::parse($createdAt)->gte($now->copy()->subDays(30))) {
+            return 'nuevo';
+        }
+
+        if ($ultimaVisita && Carbon::parse($ultimaVisita)->lte($now->copy()->subDays(45))) {
+            return 'inactivo';
+        }
+
+        return 'ocasional';
     }
 
     /**
