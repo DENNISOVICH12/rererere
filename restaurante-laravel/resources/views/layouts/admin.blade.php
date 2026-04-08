@@ -19,6 +19,7 @@
         <a href="{{ route('barra.panel') }}" class="nav-link">Barra</a>
         <a href="{{ route('cocina.pedidos.todos') }}" class="nav-link">Pedidos / Mesas</a>
         <a href="{{ route('admin.mesas') }}" class="nav-link {{ request()->routeIs('admin.mesas') ? 'active' : '' }}">Gestión de Mesas</a>
+        <a href="{{ route('admin.clientes.historial') }}" class="nav-link {{ request()->routeIs('admin.clientes.historial') ? 'active' : '' }}">Historial de Clientes</a>
         <a href="{{ route('carta.digital') }}" class="nav-link">Carta Digital</a>
 
         <form method="POST" action="{{ route('logout') }}" style="margin-top: 28px;">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
+use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -40,7 +41,13 @@ class ClienteController extends Controller
 
         // Búsqueda opcional por nombre
         if ($search = $request->query('search')) {
-            $query->where('nombre_cliente', 'like', "%$search%");
+            $query->where(function ($sub) use ($search) {
+                $sub->where('nombres', 'like', "%{$search}%")
+                    ->orWhere('apellidos', 'like', "%{$search}%")
+                    ->orWhereRaw("CONCAT(COALESCE(nombres,''), ' ', COALESCE(apellidos,'')) like ?", ["%{$search}%"])
+                    ->orWhere('correo', 'like', "%{$search}%")
+                    ->orWhere('telefono', 'like', "%{$search}%");
+            });
         }
 
         $clientes = $query->orderBy('id', 'desc')->paginate(10);
@@ -72,6 +79,144 @@ class ClienteController extends Controller
         if (!$cliente) return $this->notFound();
 
         return $this->okData('Cliente encontrado', $cliente);
+    }
+
+    /**
+     * Historial y analítica de consumo para administración.
+     */
+    public function historial(Request $request, int $id): JsonResponse
+    {
+        $cliente = Cliente::find($id);
+        if (!$cliente) {
+            return $this->notFound();
+        }
+
+        $validated = $request->validate([
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+            'min_pedidos' => 'nullable|integer|min:1',
+        ]);
+
+        $ordersQuery = Pedido::query()
+            ->where('cliente_id', $cliente->id)
+            ->whereNotNull('cliente_id');
+
+        if (!empty($validated['date_from'])) {
+            $ordersQuery->whereDate('created_at', '>=', $validated['date_from']);
+        }
+
+        if (!empty($validated['date_to'])) {
+            $ordersQuery->whereDate('created_at', '<=', $validated['date_to']);
+        }
+
+        $pedidos = (clone $ordersQuery)
+            ->with([
+                'pedidoDetalles:id,pedido_id,menu_item_id,cantidad,precio_unitario,importe',
+                'pedidoDetalles.menuItem:id,nombre'
+            ])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $cantidadPedidos = $pedidos->count();
+        if (!empty($validated['min_pedidos']) && $cantidadPedidos < (int) $validated['min_pedidos']) {
+            return $this->okData('Historial de cliente obtenido', [
+                'cliente' => [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'correo' => $cliente->correo,
+                    'telefono' => $cliente->telefono,
+                ],
+                'resumen' => [
+                    'total_gastado' => 0,
+                    'cantidad_pedidos' => $cantidadPedidos,
+                    'ticket_promedio' => 0,
+                    'ultima_visita' => null,
+                ],
+                'analisis' => [
+                    'frecuencia_visitas_dias' => null,
+                    'productos_top' => [],
+                ],
+                'clasificacion' => 'ocasional',
+                'historial' => [],
+                'filtros_aplicados' => $validated,
+            ]);
+        }
+
+        $totalGastado = (float) $pedidos->sum(fn (Pedido $pedido) => (float) $pedido->total);
+        $ticketPromedio = $cantidadPedidos > 0 ? round($totalGastado / $cantidadPedidos, 2) : 0.0;
+        $ultimaVisita = optional($pedidos->first()?->created_at)->toDateTimeString();
+
+        $primeraFecha = $pedidos->last()?->created_at;
+        $ultimaFecha = $pedidos->first()?->created_at;
+        $frecuenciaDias = null;
+        if ($primeraFecha && $ultimaFecha && $cantidadPedidos > 1) {
+            $diasRango = max($primeraFecha->diffInDays($ultimaFecha), 1);
+            $frecuenciaDias = round($diasRango / ($cantidadPedidos - 1), 1);
+        }
+
+        $productosTop = (clone $ordersQuery)
+            ->join('pedido_detalles', 'pedidos.id', '=', 'pedido_detalles.pedido_id')
+            ->leftJoin('menu_items', 'pedido_detalles.menu_item_id', '=', 'menu_items.id')
+            ->selectRaw('pedido_detalles.menu_item_id, COALESCE(menu_items.nombre, "Producto eliminado") as producto, SUM(pedido_detalles.cantidad) as cantidad_total, SUM(pedido_detalles.importe) as total_producto')
+            ->groupBy('pedido_detalles.menu_item_id', 'menu_items.nombre')
+            ->orderByDesc('cantidad_total')
+            ->limit(5)
+            ->get()
+            ->map(fn ($item) => [
+                'menu_item_id' => $item->menu_item_id,
+                'producto' => $item->producto,
+                'cantidad_total' => (int) $item->cantidad_total,
+                'total_producto' => (float) $item->total_producto,
+            ]);
+
+        $clasificacion = 'ocasional';
+        if ($totalGastado >= 400 || $cantidadPedidos >= 12) {
+            $clasificacion = 'vip';
+        } elseif ($cantidadPedidos >= 5 || $frecuenciaDias !== null && $frecuenciaDias <= 14) {
+            $clasificacion = 'frecuente';
+        }
+
+        $historial = $pedidos->map(function (Pedido $pedido) {
+            return [
+                'id' => $pedido->id,
+                'fecha' => optional($pedido->created_at)->format('Y-m-d'),
+                'hora' => optional($pedido->created_at)->format('H:i:s'),
+                'total' => (float) $pedido->total,
+                'estado' => $pedido->estado,
+                'mesa_id' => $pedido->mesa_id,
+                'cliente_mesa_id' => $pedido->cliente_mesa_id,
+                'productos' => $pedido->pedidoDetalles->map(function ($detalle) {
+                    return [
+                        'nombre' => $detalle->menuItem?->nombre ?? 'Producto no disponible',
+                        'cantidad' => (int) $detalle->cantidad,
+                        'precio' => (float) ($detalle->precio_unitario ?? 0),
+                        'importe' => (float) ($detalle->importe ?? 0),
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return $this->okData('Historial de cliente obtenido', [
+            'cliente' => [
+                'id' => $cliente->id,
+                'nombre' => $cliente->nombre,
+                'correo' => $cliente->correo,
+                'telefono' => $cliente->telefono,
+            ],
+            'resumen' => [
+                'total_gastado' => round($totalGastado, 2),
+                'cantidad_pedidos' => $cantidadPedidos,
+                'ticket_promedio' => $ticketPromedio,
+                'ultima_visita' => $ultimaVisita,
+            ],
+            'analisis' => [
+                'frecuencia_visitas_dias' => $frecuenciaDias,
+                'productos_top' => $productosTop,
+            ],
+            'clasificacion' => $clasificacion,
+            'historial' => $historial,
+            'filtros_aplicados' => $validated,
+        ]);
     }
 
     // --- POST: Crear cliente ---
