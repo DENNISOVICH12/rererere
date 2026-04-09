@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Administrativo · Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -21,48 +22,13 @@
         }
         * { box-sizing: border-box; }
         body {
-            margin: 0;
-            font-family: Inter, sans-serif;
-            background: radial-gradient(circle at top right, rgba(156,32,48,.18) 0%, var(--bg) 45%);
+            background:
+                radial-gradient(circle at 0 0, rgba(156, 32, 48, 0.16), transparent 35%),
+                radial-gradient(circle at 100% 0, rgba(255, 215, 170, 0.08), transparent 24%),
+                linear-gradient(160deg, var(--bg-soft, #0f172a), var(--bg));
             color: var(--text);
-            display: flex;
-            min-height: 100vh;
         }
-        .sidebar {
-            width: 74px;
-            background: rgba(8, 12, 20, .88);
-            border-right: 1px solid var(--border);
-            backdrop-filter: blur(12px);
-            padding: 20px 10px;
-            position: fixed;
-            inset: 0 auto 0 0;
-            z-index: 10;
-            overflow: hidden;
-            transition: width .25s ease;
-        }
-        .sidebar:hover { width: 240px; }
-        .nav-item {
-            text-decoration: none;
-            color: #b9c3d8;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            padding: 12px 13px;
-            border-radius: 12px;
-            transition: .2s;
-            margin-bottom: 8px;
-            white-space: nowrap;
-        }
-        .nav-item span { opacity: 0; transform: translateX(-8px); transition: .2s; }
-        .sidebar:hover .nav-item span { opacity: 1; transform: translateX(0); }
-        .nav-item:hover, .nav-item.active { background: rgba(156, 32, 48, .24); color: #fff; }
-        .main {
-            margin-left: 84px;
-            padding: 28px;
-            width: 100%;
-            transition: margin-left .25s;
-        }
-        .sidebar:hover ~ .main { margin-left: 248px; }
+        .main { padding: 28px; }
         .topbar {
             display: flex;
             justify-content: space-between;
@@ -163,17 +129,9 @@
     </style>
 </head>
 <body>
-<div class="sidebar">
-    <a href="/admin" class="nav-item {{ request()->is('admin') ? 'active' : '' }}"><span>Dashboard</span></a>
-    <a href="/usuarios" class="nav-item {{ request()->is('usuarios*') ? 'active' : '' }}"><span>Usuarios</span></a>
-    <a href="/cocina" class="nav-item {{ request()->is('cocina') ? 'active' : '' }}"><span>Cocina</span></a>
-    <a href="/pedidos" class="nav-item {{ request()->is('pedidos*') ? 'active' : '' }}"><span>Pedidos</span></a>
-    <a href="{{ route('admin.mesas') }}" class="nav-item {{ request()->routeIs('admin.mesas') ? 'active' : '' }}"><span>Mesas</span></a>
-    <a href="{{ route('carta.digital') }}" class="nav-item"><span>Carta Digital</span></a>
-    <a href="{{ route('admin.menu') }}" class="nav-item"><span>Menú</span></a>
-</div>
+@include('layouts.partials.admin-sidebar')
 
-<div class="main" id="dashboardApp">
+<div class="main content" id="dashboardApp">
     <div class="topbar">
         <div class="title">
             <h1>Dashboard Estratégico</h1>
