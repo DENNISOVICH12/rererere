@@ -113,7 +113,7 @@
     <section class="segment-section" v-if="sectionedClientes.vip.length">
       <div class="segment-header">
         <h2>Clientes VIP</h2>
-        <span class="badge badge-vip">TOP {{ sectionedClientes.vip.length }}</span>
+        <span class="badge badge-vip">{{ sectionedClientes.vip.length }} VIP</span>
       </div>
       <div class="cards-grid vip-grid">
         <article
@@ -160,16 +160,16 @@
       </div>
     </section>
 
-    <section class="segment-section" v-if="sectionedClientes.nuevos.length">
+    <section class="segment-section" v-if="sectionedClientes.normales.length">
       <div class="segment-header">
-        <h2>Clientes nuevos</h2>
-        <span class="badge badge-nuevo">NUEVO</span>
+        <h2>Clientes normales</h2>
+        <span class="badge badge-normal">NORMAL</span>
       </div>
       <div class="cards-grid">
         <article
-          v-for="cliente in sectionedClientes.nuevos"
+          v-for="cliente in sectionedClientes.normales"
           :key="cliente.id"
-          class="card cliente-card cliente-nuevo"
+          class="card cliente-card cliente-normal"
           @click="openDetail(cliente)"
         >
           <div class="cliente-top">
@@ -382,23 +382,20 @@ const paginatedClientes = computed(() => {
 });
 
 const sectionedClientes = computed(() => {
-  const vipSorted = [...paginatedClientes.value]
-    .filter((cliente) => Boolean(cliente.vip))
-    .sort((a, b) => Number(b.total_gastado || 0) - Number(a.total_gastado || 0));
-
-  const vip = vipSorted.slice(0, 4);
-  const vipIds = new Set(vip.map((c) => c.id));
+  const vip = paginatedClientes.value.filter((cliente) => cliente.vip === true);
 
   const frecuentes = paginatedClientes.value.filter(
     (cliente) => (
       !cliente.vip
-      && (cliente.tipo_cliente === 'frecuente' || (Number(cliente.cantidad_pedidos || 0) > 1 && cliente.tipo_cliente !== 'nuevo'))
-    ) && !vipIds.has(cliente.id),
+      && (cliente.tipo_cliente === 'frecuente' || Number(cliente.cantidad_pedidos || 0) > 1)
+    ),
   );
 
-  const nuevos = paginatedClientes.value.filter((cliente) => !cliente.vip && cliente.tipo_cliente === 'nuevo' && !vipIds.has(cliente.id));
+  const normales = paginatedClientes.value.filter(
+    (cliente) => !cliente.vip && !frecuentes.some((frecuente) => frecuente.id === cliente.id),
+  );
 
-  return { vip, frecuentes, nuevos };
+  return { vip, frecuentes, normales };
 });
 
 const guestSummary = computed(() => {
@@ -424,7 +421,7 @@ const dashboardKPIs = computed(() => {
 });
 
 const hasVisibleData = computed(
-  () => sectionedClientes.value.vip.length || sectionedClientes.value.frecuentes.length || sectionedClientes.value.nuevos.length || guestSummary.value.totalPedidos,
+  () => sectionedClientes.value.vip.length || sectionedClientes.value.frecuentes.length || sectionedClientes.value.normales.length || guestSummary.value.totalPedidos,
 );
 
 const loadClientes = async () => {
@@ -509,19 +506,16 @@ const closeDetail = () => {
 
 const fmtMoney = (v) => Number(v || 0).toFixed(2);
 const badgeLabel = (cliente) => {
-  if (cliente?.vip) return 'VIP';
+  if (cliente?.vip === true) return 'VIP';
   const tipo = String(cliente?.tipo_cliente || '').toLowerCase();
-  if (tipo === 'nuevo') return 'NUEVO';
   if (tipo === 'frecuente') return 'FRECUENTE';
-  if (tipo === 'inactivo') return 'INACTIVO';
-  return (tipo || 'OCASIONAL').toUpperCase();
+  return 'NORMAL';
 };
 const badgeClass = (cliente) => {
-  if (cliente?.vip) return 'badge-vip';
+  if (cliente?.vip === true) return 'badge-vip';
   const tipo = String(cliente?.tipo_cliente || '').toLowerCase();
-  if (tipo === 'nuevo') return 'badge-nuevo';
   if (tipo === 'frecuente') return 'badge-frecuente';
-  return 'badge-frecuente';
+  return 'badge-normal';
 };
 const formatDate = (value) => {
   if (!value) return 'Sin datos';
@@ -562,8 +556,10 @@ input, select { border:1px solid rgba(148,163,184,.3); border-radius:10px; backg
 .badge-vip { background:rgba(245,158,11,.22); color:#fcd34d; }
 .badge-frecuente { background:rgba(59,130,246,.2); color:#93c5fd; }
 .badge-nuevo { background:rgba(34,197,94,.2); color:#86efac; }
+.badge-normal { background:rgba(148,163,184,.2); color:#cbd5e1; }
 .cliente-frecuente { border-color:rgba(59,130,246,.4); }
 .cliente-nuevo { border-color:rgba(34,197,94,.4); }
+.cliente-normal { border-color:rgba(148,163,184,.4); }
 .guest-card { display:flex; justify-content:space-between; align-items:end; flex-wrap:wrap; gap:12px; }
 .guest-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; width:min(100%,560px); }
 .guest-metrics dt { font-size:12px; color:#94a3b8; }
