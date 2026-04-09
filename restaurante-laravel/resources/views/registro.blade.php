@@ -108,11 +108,12 @@
       @if ($isAdmin)
         <label for="rol">Rol</label>
         <select id="rol" name="rol">
-          <option value="cliente" {{ old('rol')==='cliente' ? 'selected' : '' }}>Cliente</option>
+          <option value="admin"   {{ old('rol')==='admin'   ? 'selected' : '' }}>Administrador</option>
           <option value="mesero"  {{ old('rol')==='mesero'  ? 'selected' : '' }}>Mesero</option>
           <option value="cocinero"{{ old('rol')==='cocinero'? 'selected' : '' }}>Cocinero</option>
-          <option value="admin"   {{ old('rol')==='admin'   ? 'selected' : '' }}>Admin</option>
+          <option value="barra"   {{ old('rol')==='barra'   ? 'selected' : '' }}>Barra</option>
         </select>
+        <p class="meta">Los clientes se registran automáticamente desde la carta digital.</p>
       @endif
 
       <button class="btn" type="submit">Crear cuenta</button>

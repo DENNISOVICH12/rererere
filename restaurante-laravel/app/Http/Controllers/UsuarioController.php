@@ -37,7 +37,6 @@ class UsuarioController extends Controller
             'admin'    => 'Administrador',
             'mesero'   => 'Mesero',
             'cocinero' => 'Cocinero',
-            'cliente'  => 'Cliente',
             'barra'    => 'Barra',
         ];
 
