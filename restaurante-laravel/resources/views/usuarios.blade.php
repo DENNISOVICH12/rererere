@@ -3,7 +3,7 @@
 @section('content')
 <div class="card mb-2">
     <h1>👤 Gestión de usuarios</h1>
-    <p class="text-muted">Crea, actualiza o elimina cuentas para el personal y clientes del restaurante.</p>
+    <p class="text-muted">Crea, actualiza o elimina cuentas para el personal interno del restaurante.</p>
 </div>
 
     @if (session('status'))
@@ -24,6 +24,7 @@
 <div class="grid-two-cols">
     <section class="card">
         <h2>Agregar nuevo usuario</h2>
+        <p class="text-muted">Los clientes se registran automáticamente desde la carta digital.</p>
         <form method="POST" action="{{ route('usuarios.store') }}">
             @csrf
             <div class="form-group">

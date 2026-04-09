@@ -110,6 +110,12 @@ public function loginCliente(Request $request)
     // ✅ Crear usuarios del restaurante (admin)
     public function crearUsuario(Request $request)
     {
+        if (strtolower((string) $request->input('rol')) === 'cliente') {
+            return response()->json([
+                'message' => 'No está permitido crear usuarios con rol cliente desde administración.'
+            ], 422);
+        }
+
         $request->validate([
             'usuario' => 'required|unique:usuarios,usuario',
             'correo' => 'required|email|unique:usuarios,correo',
