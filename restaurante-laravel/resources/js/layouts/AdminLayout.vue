@@ -18,14 +18,13 @@ const props = defineProps({
   modules: {
     type: Array,
     default: () => ([
-      { label: 'Dashboard', icon: '📊', href: '/admin', match: ['/admin'] },
-      { label: 'Gestionar Usuarios', icon: '👥', href: '/usuarios', match: ['/usuarios'] },
-      { label: 'Cocina', icon: '👨‍🍳', href: '/cocina', match: ['/cocina'] },
-      { label: 'Barra', icon: '🍹', href: '/barra', match: ['/barra', '/bar'] },
-      { label: 'Pedidos / Mesas', icon: '🧾', href: '/cocina/pedidos', match: ['/cocina/pedidos', '/pedidos'] },
-      { label: 'Gestión de Mesas', icon: '🪑', href: '/admin/mesas', match: ['/admin/mesas'] },
-      { label: 'Historial de Clientes', icon: '🧠', href: '/admin/clientes/historial', match: ['/admin/clientes/historial'] },
-      { label: 'Carta Digital', icon: '📱', href: '/carta-digital', match: ['/carta-digital'] },
+      { section: 'GENERAL', label: 'Dashboard', icon: '📊', href: '/admin', match: ['/admin'] },
+      { section: 'GENERAL', label: 'Historial de Clientes', icon: '🧠', href: '/admin/clientes/historial', match: ['/admin/clientes/historial'] },
+      { section: 'OPERACIÓN', label: 'Gestión de Mesas', icon: '🪑', href: '/admin/mesas', match: ['/admin/mesas'] },
+      { section: 'PRODUCCIÓN', label: 'Cocina', icon: '👨‍🍳', href: '/cocina', match: ['/cocina'] },
+      { section: 'PRODUCCIÓN', label: 'Barra', icon: '🍹', href: '/barra', match: ['/barra', '/bar'] },
+      { section: 'CONFIGURACIÓN', label: 'Gestionar Usuarios', icon: '👥', href: '/usuarios', match: ['/usuarios'] },
+      { section: 'CONFIGURACIÓN', label: 'Carta Digital', icon: '📱', href: '/carta-digital', match: ['/carta-digital'] },
     ]),
   },
 });

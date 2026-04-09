@@ -309,10 +309,13 @@ body.note-modal-open { overflow: hidden; }
   display: flex; align-items: center; gap: 14px; border-radius: 14px; padding: 11px 12px; color: #94a3b8; text-decoration: none;
 }
 .global-sidebar__brand { color: #ffd7aa; font-weight: 700; border: 1px solid rgba(255, 215, 170, .2); background: rgba(156, 32, 48, 0.12); }
-.global-sidebar__nav { display: grid; gap: 8px; }
+.global-sidebar__nav { display: grid; gap: 16px; }
+.global-sidebar__section { display: grid; gap: 8px; }
+.global-sidebar__section-title { margin: 0; padding: 0 12px; color: rgba(148, 163, 184, 0.9); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.global-sidebar__section-links { display: grid; gap: 8px; }
 .global-sidebar__icon { width: 24px; text-align: center; flex-shrink: 0; }
-.global-sidebar__text { opacity: 0; transform: translateX(-8px); white-space: nowrap; transition: opacity .22s ease, transform .22s ease; }
-.global-sidebar:hover .global-sidebar__text { opacity: 1; transform: translateX(0); }
+.global-sidebar__text,.global-sidebar__section-title { opacity: 0; transform: translateX(-8px); white-space: nowrap; transition: opacity .22s ease, transform .22s ease; }
+.global-sidebar:hover .global-sidebar__text,.global-sidebar:hover .global-sidebar__section-title { opacity: 1; transform: translateX(0); }
 .global-sidebar__link,.global-sidebar__logout { border: 1px solid transparent; background: transparent; cursor: pointer; font: inherit; width: 100%; transition: all .24s ease; }
 .global-sidebar__link:hover,.global-sidebar__logout:hover { background: rgba(148, 163, 184, 0.14); color: #fff; transform: translateX(2px); }
 .global-sidebar__link.is-active { background: linear-gradient(145deg, rgba(156, 32, 48, 0.94), #7a1522); border-color: rgba(255, 215, 170, 0.45); color: #fff !important; box-shadow: 0 10px 24px rgba(156, 32, 48, 0.38), inset 3px 0 0 #ffd7aa; }
@@ -325,8 +328,8 @@ body.has-admin-sidebar .global-sidebar:hover ~ .kds { margin-left: 284px; width:
   body.has-admin-sidebar .global-sidebar:hover ~ .kds { margin-left: 0; width: 100%; padding-top: 84px; }
   .global-sidebar { width: 100%; height: auto; max-height: 72px; border-right: none; border-bottom: 1px solid rgba(148, 163, 184, 0.26); }
   .global-sidebar:hover { width: 100%; }
-  .global-sidebar__text { opacity: 1; transform: translateX(0); }
-  .global-sidebar__nav { grid-template-columns: repeat(4, minmax(0, 1fr)); overflow-x: auto; padding-bottom: 4px; }
+  .global-sidebar__text,.global-sidebar__section-title { opacity: 1; transform: translateX(0); }
+  .global-sidebar__nav { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow-x: auto; padding-bottom: 4px; gap: 12px; }
   .global-sidebar__brand,.global-sidebar__logout-form { display: none; }
 }
 
