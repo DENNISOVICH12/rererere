@@ -89,6 +89,8 @@ class ClienteController extends Controller
      */
     public function adminIndex(Request $request): JsonResponse
     {
+        $currentDate = now();
+
         $validated = $request->validate([
             'search' => 'nullable|string|max:120',
             'registro_desde' => 'nullable|date',
@@ -105,20 +107,25 @@ class ClienteController extends Controller
         $query = Cliente::query()
             ->select('clientes.*')
             ->selectRaw('COALESCE(SUM(pedidos.total), 0) as total_gastado')
-            ->selectRaw("
-                COALESCE(SUM(
-                    CASE
-                        WHEN YEAR(pedidos.created_at) = ? AND MONTH(pedidos.created_at) = ? THEN pedidos.total
-                        ELSE 0
-                    END
-                ), 0) as total_mensual
-            ", [now()->year, now()->month])
+            ->selectRaw('COALESCE(pedidos_mes.total_mensual, 0) as total_mensual')
             ->selectRaw('COUNT(pedidos.id) as cantidad_pedidos')
             ->selectRaw('MAX(pedidos.created_at) as ultima_visita')
             ->leftJoin('pedidos', function ($join) {
                 $join->on('pedidos.cliente_id', '=', 'clientes.id');
             })
-            ->groupBy('clientes.id');
+            ->leftJoinSub(
+                Pedido::query()
+                    ->selectRaw('cliente_id, COALESCE(SUM(total), 0) as total_mensual')
+                    ->whereNotNull('cliente_id')
+                    ->whereYear('created_at', $currentDate->year)
+                    ->whereMonth('created_at', $currentDate->month)
+                    ->groupBy('cliente_id'),
+                'pedidos_mes',
+                function ($join) {
+                    $join->on('pedidos_mes.cliente_id', '=', 'clientes.id');
+                }
+            )
+            ->groupBy('clientes.id', 'pedidos_mes.total_mensual');
 
         if (!empty($validated['search'])) {
             $search = trim($validated['search']);
@@ -161,7 +168,7 @@ class ClienteController extends Controller
         $query->orderBy($field, $direction);
 
         $rows = $query->limit(250)->get();
-        $now = now();
+        $now = $currentDate;
 
         $clientes = $rows
             ->map(function (Cliente $cliente) use ($now) {
@@ -259,6 +266,7 @@ if (!$cliente) {
         ],
         'resumen' => [
             'total_gastado' => 0,
+            'total_mensual' => 0,
             'cantidad_pedidos' => 0,
             'ticket_promedio' => 0,
             'ultima_visita' => null,
@@ -267,6 +275,7 @@ if (!$cliente) {
             'frecuencia_visitas_dias' => null,
             'productos_top' => [],
         ],
+        'vip' => false,
         'clasificacion' => 'ocasional',
         'historial' => [],
     ]);
@@ -308,6 +317,7 @@ if (!$cliente) {
                 ],
                 'resumen' => [
                     'total_gastado' => 0,
+                    'total_mensual' => 0,
                     'cantidad_pedidos' => $cantidadPedidos,
                     'ticket_promedio' => 0,
                     'ultima_visita' => null,
@@ -316,6 +326,7 @@ if (!$cliente) {
                     'frecuencia_visitas_dias' => null,
                     'productos_top' => [],
                 ],
+                'vip' => false,
                 'clasificacion' => 'ocasional',
                 'historial' => [],
                 'filtros_aplicados' => $validated,
@@ -323,6 +334,12 @@ if (!$cliente) {
         }
 
         $totalGastado = (float) $pedidos->sum(fn (Pedido $pedido) => (float) $pedido->total);
+        $totalMensual = (float) Pedido::query()
+            ->where('cliente_id', $cliente->id)
+            ->whereNotNull('cliente_id')
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->sum('total');
         $ticketPromedio = $cantidadPedidos > 0 ? round($totalGastado / $cantidadPedidos, 2) : 0.0;
         $ultimaVisita = optional($pedidos->first()?->created_at)->toDateTimeString();
 
@@ -354,8 +371,10 @@ if (!$cliente) {
         'total_producto' => (float) $item->total_producto,
     ]);
 
+        $isVip = $totalMensual > 5000000;
+
         $clasificacion = 'ocasional';
-        if ($totalGastado >= 400 || $cantidadPedidos >= 12) {
+        if ($isVip) {
             $clasificacion = 'vip';
         } elseif ($cantidadPedidos >= 5 || $frecuenciaDias !== null && $frecuenciaDias <= 14) {
             $clasificacion = 'frecuente';
@@ -390,6 +409,7 @@ if (!$cliente) {
             ],
             'resumen' => [
                 'total_gastado' => round($totalGastado, 2),
+                'total_mensual' => round($totalMensual, 2),
                 'cantidad_pedidos' => $cantidadPedidos,
                 'ticket_promedio' => $ticketPromedio,
                 'ultima_visita' => $ultimaVisita,
@@ -398,6 +418,7 @@ if (!$cliente) {
                 'frecuencia_visitas_dias' => $frecuenciaDias,
                 'productos_top' => $productosTop,
             ],
+            'vip' => $isVip,
             'clasificacion' => $clasificacion,
             'historial' => $historial,
             'filtros_aplicados' => $validated,
