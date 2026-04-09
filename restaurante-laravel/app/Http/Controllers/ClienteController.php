@@ -233,9 +233,30 @@ class ClienteController extends Controller
     public function historial(Request $request, int $id): JsonResponse
     {
         $cliente = Cliente::find($id);
-        if (!$cliente) {
-            return $this->notFound();
-        }
+
+if (!$cliente) {
+    // 🔥 CLIENTE INVITADO
+    return $this->okData('Cliente invitado', [
+        'cliente' => [
+            'id' => null,
+            'nombre' => 'Cliente Invitado',
+            'correo' => null,
+            'telefono' => null,
+        ],
+        'resumen' => [
+            'total_gastado' => 0,
+            'cantidad_pedidos' => 0,
+            'ticket_promedio' => 0,
+            'ultima_visita' => null,
+        ],
+        'analisis' => [
+            'frecuencia_visitas_dias' => null,
+            'productos_top' => [],
+        ],
+        'clasificacion' => 'ocasional',
+        'historial' => [],
+    ]);
+}
 
         $validated = $request->validate([
             'date_from' => 'nullable|date',
@@ -257,9 +278,8 @@ class ClienteController extends Controller
 
         $pedidos = (clone $ordersQuery)
             ->with([
-                'pedidoDetalles:id,pedido_id,menu_item_id,cantidad,precio_unitario,importe',
-                'pedidoDetalles.menuItem:id,nombre'
-            ])
+    'pedidoDetalles:id,pedido_id,menu_item_id,cantidad,precio_unitario,importe'
+])
             ->orderByDesc('created_at')
             ->get();
 
@@ -301,19 +321,24 @@ class ClienteController extends Controller
         }
 
         $productosTop = (clone $ordersQuery)
-            ->join('pedido_detalles', 'pedidos.id', '=', 'pedido_detalles.pedido_id')
-            ->leftJoin('menu_items', 'pedido_detalles.menu_item_id', '=', 'menu_items.id')
-            ->selectRaw('pedido_detalles.menu_item_id, COALESCE(menu_items.nombre, "Producto eliminado") as producto, SUM(pedido_detalles.cantidad) as cantidad_total, SUM(pedido_detalles.importe) as total_producto')
-            ->groupBy('pedido_detalles.menu_item_id', 'menu_items.nombre')
-            ->orderByDesc('cantidad_total')
-            ->limit(5)
-            ->get()
-            ->map(fn ($item) => [
-                'menu_item_id' => $item->menu_item_id,
-                'producto' => $item->producto,
-                'cantidad_total' => (int) $item->cantidad_total,
-                'total_producto' => (float) $item->total_producto,
-            ]);
+    ->join('pedido_detalles', 'pedidos.id', '=', 'pedido_detalles.pedido_id')
+    ->leftJoin('menu_items', 'pedido_detalles.menu_item_id', '=', 'menu_items.id')
+    ->selectRaw("
+        pedido_detalles.menu_item_id,
+        COALESCE(menu_items.nombre, 'Producto eliminado') as producto,
+        SUM(pedido_detalles.cantidad) as cantidad_total,
+        SUM(pedido_detalles.importe) as total_producto
+    ")
+    ->groupBy('pedido_detalles.menu_item_id', 'menu_items.nombre')
+    ->orderByDesc('cantidad_total')
+    ->limit(5)
+    ->get()
+    ->map(fn ($item) => [
+        'menu_item_id' => $item->menu_item_id,
+        'producto' => $item->producto,
+        'cantidad_total' => (int) $item->cantidad_total,
+        'total_producto' => (float) $item->total_producto,
+    ]);
 
         $clasificacion = 'ocasional';
         if ($totalGastado >= 400 || $cantidadPedidos >= 12) {

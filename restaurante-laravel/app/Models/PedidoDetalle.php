@@ -43,6 +43,6 @@ class PedidoDetalle extends Model
 
     public function menuItem()
     {
-        return $this->belongsTo(MenuItem::class, 'menu_item_id');
+        return $this->belongsTo(\App\Models\MenuItem::class, 'menu_item_id');
     }
 }

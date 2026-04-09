@@ -11,6 +11,7 @@ use App\Http\Controllers\MeseroOrderController;
 use App\Http\Controllers\MesaController;
 use App\Http\Controllers\KitchenOrderController;
 use App\Http\Controllers\WaiterNotificationController;
+use App\Http\Controllers\ClienteController;
 
 
 /*
@@ -66,6 +67,9 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
     // ✅ API interna para refresco en vivo del dashboard
     Route::get('/admin/dashboard/data', [AdminDashboardController::class, 'dashboardData'])
         ->name('admin.dashboard.data');
+    Route::get('/api/admin/clientes', [ClienteController::class, 'adminIndex']);
+    Route::get('/api/admin/clientes/{id}/historial', [ClienteController::class, 'historial']);
+
 });
 
 /*

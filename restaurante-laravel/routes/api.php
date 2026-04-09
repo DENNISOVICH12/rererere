@@ -95,8 +95,7 @@ Route::middleware(['auth:web', \App\Http\Middleware\SetRestaurant::class])->grou
         Route::put('/menu-items/{id}', [MenuItemController::class, 'update']);
         Route::delete('/menu-items/{id}', [MenuItemController::class, 'destroy']);
 
-        Route::get('/admin/clientes', [ClienteController::class, 'adminIndex']);
-        Route::get('/admin/clientes/{id}/historial', [ClienteController::class, 'historial']);
+
 
         // 🔥 SOLO ESTAS DOS PROTEGIDAS
     });

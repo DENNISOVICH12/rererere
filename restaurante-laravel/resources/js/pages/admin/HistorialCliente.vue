@@ -239,7 +239,10 @@ const loadClientes = async () => {
   error.value = '';
 
   try {
-    const response = await axios.get('/api/admin/clientes', { params: buildParams() });
+  const response = await axios.get('/api/admin/clientes', {
+  params: buildParams(),
+  withCredentials: true
+});
     clientes.value = response.data?.data ?? [];
 
     if (!selectedCliente.value && clientes.value.length > 0) {
@@ -281,7 +284,9 @@ const openDetail = async (cliente) => {
   loadingDetail.value = true;
 
   try {
-    const response = await axios.get(`/api/admin/clientes/${cliente.id}/historial`);
+    const response = await axios.get(`/api/admin/clientes/${cliente.id}/historial`, {
+  withCredentials: true
+});
     detailData.value = response.data?.data ?? null;
   } catch (e) {
     detailError.value = e?.response?.data?.error?.message ?? 'No se pudo cargar el detalle del cliente.';
