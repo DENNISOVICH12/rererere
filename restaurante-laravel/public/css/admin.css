@@ -77,6 +77,26 @@ body {
 
 .global-sidebar__nav {
   display: grid;
+  gap: 18px;
+}
+
+.global-sidebar__section {
+  display: grid;
+  gap: 8px;
+}
+
+.global-sidebar__section-title {
+  margin: 0;
+  padding: 0 12px;
+  color: rgba(148, 163, 184, 0.92);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.global-sidebar__section-links {
+  display: grid;
   gap: 8px;
 }
 
@@ -86,14 +106,16 @@ body {
   flex-shrink: 0;
 }
 
-.global-sidebar__text {
+.global-sidebar__text,
+.global-sidebar__section-title {
   opacity: 0;
   transform: translateX(-8px);
   white-space: nowrap;
   transition: opacity .22s ease, transform .22s ease;
 }
 
-.global-sidebar:hover .global-sidebar__text {
+.global-sidebar:hover .global-sidebar__text,
+.global-sidebar:hover .global-sidebar__section-title {
   opacity: 1;
   transform: translateX(0);
 }
