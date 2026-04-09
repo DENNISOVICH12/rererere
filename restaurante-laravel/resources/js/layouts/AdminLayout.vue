@@ -23,8 +23,9 @@ const props = defineProps({
       { section: 'OPERACIÓN', label: 'Gestión de Mesas', icon: '🪑', href: '/admin/mesas', match: ['/admin/mesas'] },
       { section: 'PRODUCCIÓN', label: 'Cocina', icon: '👨‍🍳', href: '/cocina', match: ['/cocina'] },
       { section: 'PRODUCCIÓN', label: 'Barra', icon: '🍹', href: '/barra', match: ['/barra', '/bar'] },
+      { section: 'PRODUCCIÓN', label: 'Carta Digital', icon: '📱', href: '/carta-digital', match: ['/carta-digital'] },
       { section: 'CONFIGURACIÓN', label: 'Gestionar Usuarios', icon: '👥', href: '/usuarios', match: ['/usuarios'] },
-      { section: 'CONFIGURACIÓN', label: 'Carta Digital', icon: '📱', href: '/carta-digital', match: ['/carta-digital'] },
+      { section: 'CONFIGURACIÓN', label: 'Gestión de Menú', icon: '🍽️', href: '/admin/menu', match: ['/admin/menu'] },
     ]),
   },
 });

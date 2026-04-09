@@ -43,6 +43,12 @@
                     'href' => route('barra.panel'),
                     'active' => request()->routeIs('barra.panel') || request()->routeIs('bar.panel') || request()->is('bar*') || request()->is('barra*'),
                 ],
+                [
+                    'label' => 'Carta Digital',
+                    'icon' => '📱',
+                    'href' => route('carta.digital'),
+                    'active' => request()->routeIs('carta.digital'),
+                ],
             ],
         ],
         [
@@ -55,10 +61,10 @@
                     'active' => request()->routeIs('usuarios.panel') || request()->is('usuarios*'),
                 ],
                 [
-                    'label' => 'Carta Digital',
-                    'icon' => '📱',
-                    'href' => route('carta.digital'),
-                    'active' => request()->routeIs('carta.digital'),
+                    'label' => 'Gestión de Menú',
+                    'icon' => '🍽️',
+                    'href' => route('admin.menu'),
+                    'active' => request()->routeIs('admin.menu') || request()->routeIs('admin.menu.*') || request()->is('admin/menu*'),
                 ],
             ],
         ],
