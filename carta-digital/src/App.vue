@@ -491,8 +491,11 @@ const changeRequestedMessage = computed(() => {
     ref="cartButton"
     class="cart-floating"
     @click="showCart = !showCart"
+    :aria-label="`Ver pedido. ${cart.length} productos en el carrito`"
   >
-    🛒 <span>{{ cart.length }}</span>
+    <span class="cart-floating__icon" aria-hidden="true">🛒</span>
+    <span class="cart-floating__label">Ver pedido</span>
+    <span class="cart-floating__count">{{ cart.length }}</span>
   </button>
 
   <CartaDigital />
@@ -746,24 +749,56 @@ const changeRequestedMessage = computed(() => {
 /* === BOTÓN CARRITO FLOTANTE === */
 .cart-floating {
   position: fixed;
-  bottom: 26px;
-  right: 26px;
-  background: rgba(255,255,255,0.18);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.35);
-  padding: 12px 18px;
-  border-radius: 14px;
-  font-size: 18px;
+  bottom: 18px;
+  right: 14px;
+  background: linear-gradient(135deg, #8f1e2f 0%, #be2a3f 100%);
+  border: 1px solid rgba(255,255,255,0.28);
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-size: 16px;
   cursor: pointer;
-  color: #F8ECE4;
+  color: #fff;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-  transition: .3s;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.38);
+  transition: transform .2s ease, box-shadow .2s ease;
   z-index: 3000;
+  min-height: 52px;
+  min-width: 152px;
+  font-weight: 700;
 }
-.cart-floating:hover { transform: translateY(-3px) scale(1.03); }
+
+.cart-floating__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.cart-floating__label {
+  font-size: 0.94rem;
+  line-height: 1;
+}
+
+.cart-floating__count {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  font-size: 0.84rem;
+  line-height: 1;
+}
+
+.cart-floating:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 18px 34px rgba(0,0,0,0.44);
+}
+
+.cart-floating:active {
+  transform: scale(0.98);
+}
 
 /* === PANEL CARRITO === */
 .cart-panel {
@@ -1778,6 +1813,11 @@ const changeRequestedMessage = computed(() => {
 }
 
 @media (max-width: 640px) {
+  .cart-floating {
+    right: 12px;
+    bottom: 12px;
+  }
+
   .cart-panel {
     width: min(100vw, 430px);
     padding: 14px 14px 0;
