@@ -2,7 +2,6 @@
 @php
   $user = Auth::user();
   $isAdmin = $user && ($user->rol ?? null) === 'admin';
-  $adminBackUrl = Route::has('admin.dashboard') ? route('admin.dashboard') : url('/admin');
   $serviceArea = strtolower($serviceArea ?? 'plato');
   $serviceAreaLabel = $serviceAreaLabel ?? ($serviceArea === 'bebida' ? 'Bar' : 'Cocina');
 @endphp
@@ -288,43 +287,57 @@ body.note-modal-open { overflow: hidden; }
 .col-list::-webkit-scrollbar,.drawer-items::-webkit-scrollbar{width:8px;height:8px;}
 .col-list::-webkit-scrollbar-thumb,.drawer-items::-webkit-scrollbar-thumb{background:rgba(111,123,145,.45);border-radius:999px;}
 .col-list::-webkit-scrollbar-track,.drawer-items::-webkit-scrollbar-track{background:transparent;}
-body.has-admin-back .kds { padding-top: 64px; }
-.back-admin-btn {
+.global-sidebar {
+  width: 86px;
+  height: 100vh;
+  background: rgba(2, 6, 23, 0.9);
+  backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(148, 163, 184, 0.26);
+  padding: 20px 12px;
   position: fixed;
-  top: 14px;
-  left: 18px;
-  z-index: 120;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid #3b475c;
-  background: #1b222d;
-  color: #d6c8ce;
-  text-decoration: none;
-  font-size: .82rem;
-  font-weight: 600;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  transition: width .26s ease, box-shadow .26s ease;
+  z-index: 130;
 }
-.back-admin-btn:hover { border-color: #7084a6; color: #f0e8eb; transform: translateY(-1px); }
-.back-admin-btn .back-admin-icon { font-size: .95rem; line-height: 1; opacity: .9; }
-@media (max-width: 840px) {
-  body.has-admin-back .kds { padding-top: 72px; }
-  .back-admin-btn { left: 12px; top: 10px; }
+.global-sidebar:hover { width: 268px; box-shadow: 18px 0 36px rgba(2, 6, 23, 0.42); }
+.global-sidebar__brand,.global-sidebar__link,.global-sidebar__logout {
+  display: flex; align-items: center; gap: 14px; border-radius: 14px; padding: 11px 12px; color: #94a3b8; text-decoration: none;
+}
+.global-sidebar__brand { color: #ffd7aa; font-weight: 700; border: 1px solid rgba(255, 215, 170, .2); background: rgba(156, 32, 48, 0.12); }
+.global-sidebar__nav { display: grid; gap: 8px; }
+.global-sidebar__icon { width: 24px; text-align: center; flex-shrink: 0; }
+.global-sidebar__text { opacity: 0; transform: translateX(-8px); white-space: nowrap; transition: opacity .22s ease, transform .22s ease; }
+.global-sidebar:hover .global-sidebar__text { opacity: 1; transform: translateX(0); }
+.global-sidebar__link,.global-sidebar__logout { border: 1px solid transparent; background: transparent; cursor: pointer; font: inherit; width: 100%; transition: all .24s ease; }
+.global-sidebar__link:hover,.global-sidebar__logout:hover { background: rgba(148, 163, 184, 0.14); color: #fff; transform: translateX(2px); }
+.global-sidebar__link.is-active { background: linear-gradient(145deg, rgba(156, 32, 48, 0.94), #7a1522); border-color: rgba(255, 215, 170, 0.45); color: #fff !important; box-shadow: 0 10px 24px rgba(156, 32, 48, 0.38), inset 3px 0 0 #ffd7aa; }
+.global-sidebar__logout-form { margin-top: auto; }
+.global-sidebar__logout { color: #fecaca; border-color: rgba(248, 113, 113, .22); background: rgba(127, 29, 29, .12); }
+body.has-admin-sidebar .kds { margin-left: 102px; width: calc(100% - 102px); transition: margin-left .26s ease, width .26s ease; }
+body.has-admin-sidebar .global-sidebar:hover ~ .kds { margin-left: 284px; width: calc(100% - 284px); }
+@media (max-width: 980px) {
+  body.has-admin-sidebar .kds,
+  body.has-admin-sidebar .global-sidebar:hover ~ .kds { margin-left: 0; width: 100%; padding-top: 84px; }
+  .global-sidebar { width: 100%; height: auto; max-height: 72px; border-right: none; border-bottom: 1px solid rgba(148, 163, 184, 0.26); }
+  .global-sidebar:hover { width: 100%; }
+  .global-sidebar__text { opacity: 1; transform: translateX(0); }
+  .global-sidebar__nav { grid-template-columns: repeat(4, minmax(0, 1fr)); overflow-x: auto; padding-bottom: 4px; }
+  .global-sidebar__brand,.global-sidebar__logout-form { display: none; }
 }
 
 </style>
 </head>
 
-<body class="{{ $isAdmin ? 'has-admin-back' : '' }}">
+<body class="{{ $isAdmin ? 'has-admin-sidebar' : '' }}">
+@if($isAdmin)
+  @include('layouts.partials.admin-sidebar')
+@endif
 <div id="app" class="kds">
-  @if($isAdmin)
-    <a href="{{ $adminBackUrl }}" class="back-admin-btn" aria-label="Volver al panel de administración">
-      <span class="back-admin-icon" aria-hidden="true">←</span>
-      <span>Volver al Admin</span>
-    </a>
-  @endif
-
   <header class="topbar">
     <h1 class="topbar-title">{{ $serviceAreaLabel }}</h1>
 
