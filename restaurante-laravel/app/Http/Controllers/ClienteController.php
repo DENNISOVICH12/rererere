@@ -105,6 +105,14 @@ class ClienteController extends Controller
         $query = Cliente::query()
             ->select('clientes.*')
             ->selectRaw('COALESCE(SUM(pedidos.total), 0) as total_gastado')
+            ->selectRaw("
+                COALESCE(SUM(
+                    CASE
+                        WHEN YEAR(pedidos.created_at) = ? AND MONTH(pedidos.created_at) = ? THEN pedidos.total
+                        ELSE 0
+                    END
+                ), 0) as total_mensual
+            ", [now()->year, now()->month])
             ->selectRaw('COUNT(pedidos.id) as cantidad_pedidos')
             ->selectRaw('MAX(pedidos.created_at) as ultima_visita')
             ->leftJoin('pedidos', function ($join) {
@@ -158,9 +166,11 @@ class ClienteController extends Controller
         $clientes = $rows
             ->map(function (Cliente $cliente) use ($now) {
                 $totalGastado = round((float) ($cliente->total_gastado ?? 0), 2);
+                $totalMensual = round((float) ($cliente->total_mensual ?? 0), 2);
                 $cantidadPedidos = (int) ($cliente->cantidad_pedidos ?? 0);
                 $promedio = $cantidadPedidos > 0 ? round($totalGastado / $cantidadPedidos, 2) : 0;
                 $ultimaVisita = $cliente->ultima_visita ? Carbon::parse($cliente->ultima_visita) : null;
+                $isVip = $totalMensual > 5000000;
                 $tipo = $this->resolveTipoCliente(
                     $cliente->created_at,
                     $ultimaVisita,
@@ -175,9 +185,11 @@ class ClienteController extends Controller
                     'correo' => $cliente->correo,
                     'fecha_registro' => optional($cliente->created_at)->toDateTimeString(),
                     'total_gastado' => $totalGastado,
+                    'total_mensual' => $totalMensual,
                     'cantidad_pedidos' => $cantidadPedidos,
                     'promedio' => $promedio,
                     'ultima_visita' => optional($ultimaVisita)->toDateTimeString(),
+                    'vip' => $isVip,
                     'tipo_cliente' => $tipo,
                 ];
             })
@@ -190,8 +202,14 @@ class ClienteController extends Controller
                     }
                 }
 
-                if (!empty($validated['segmento']) && $validated['segmento'] !== $cliente['tipo_cliente']) {
-                    return false;
+                if (!empty($validated['segmento'])) {
+                    if ($validated['segmento'] === 'vip') {
+                        if (!$cliente['vip']) {
+                            return false;
+                        }
+                    } elseif ($validated['segmento'] !== $cliente['tipo_cliente']) {
+                        return false;
+                    }
                 }
 
                 return true;
@@ -208,10 +226,6 @@ class ClienteController extends Controller
 
     private function resolveTipoCliente($createdAt, $ultimaVisita, int $cantidadPedidos, float $totalGastado, Carbon $now): string
     {
-        if ($totalGastado >= 400 || $cantidadPedidos >= 12) {
-            return 'vip';
-        }
-
         if ($cantidadPedidos >= 5) {
             return 'frecuente';
         }

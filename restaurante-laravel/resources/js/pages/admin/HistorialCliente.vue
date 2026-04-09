@@ -149,7 +149,7 @@
         >
           <div class="cliente-top">
             <h3>{{ cliente.nombre }}</h3>
-            <span class="badge badge-frecuente">Frecuente</span>
+            <span class="badge" :class="badgeClass(cliente)">{{ badgeLabel(cliente) }}</span>
           </div>
           <dl class="cliente-metrics">
             <div><dt>Total gastado</dt><dd>${{ fmtMoney(cliente.total_gastado) }}</dd></div>
@@ -174,7 +174,7 @@
         >
           <div class="cliente-top">
             <h3>{{ cliente.nombre }}</h3>
-            <span class="badge badge-nuevo">NUEVO</span>
+            <span class="badge" :class="badgeClass(cliente)">{{ badgeLabel(cliente) }}</span>
           </div>
           <dl class="cliente-metrics">
             <div><dt>Total gastado</dt><dd>${{ fmtMoney(cliente.total_gastado) }}</dd></div>
@@ -332,6 +332,7 @@ const isGuest = (cliente) => {
 const normalizedClientes = computed(() =>
   (clientes.value || []).map((cliente) => ({
     ...cliente,
+    vip: Boolean(cliente.vip),
     tipo_cliente: isGuest(cliente) ? 'invitado' : (cliente.tipo_cliente || 'frecuente'),
   })),
 );
@@ -382,17 +383,20 @@ const paginatedClientes = computed(() => {
 
 const sectionedClientes = computed(() => {
   const vipSorted = [...paginatedClientes.value]
-    .filter((cliente) => cliente.tipo_cliente === 'vip')
+    .filter((cliente) => Boolean(cliente.vip))
     .sort((a, b) => Number(b.total_gastado || 0) - Number(a.total_gastado || 0));
 
   const vip = vipSorted.slice(0, 4);
   const vipIds = new Set(vip.map((c) => c.id));
 
   const frecuentes = paginatedClientes.value.filter(
-    (cliente) => (cliente.tipo_cliente === 'frecuente' || (Number(cliente.cantidad_pedidos || 0) > 1 && cliente.tipo_cliente !== 'nuevo')) && !vipIds.has(cliente.id),
+    (cliente) => (
+      !cliente.vip
+      && (cliente.tipo_cliente === 'frecuente' || (Number(cliente.cantidad_pedidos || 0) > 1 && cliente.tipo_cliente !== 'nuevo'))
+    ) && !vipIds.has(cliente.id),
   );
 
-  const nuevos = paginatedClientes.value.filter((cliente) => cliente.tipo_cliente === 'nuevo' && !vipIds.has(cliente.id));
+  const nuevos = paginatedClientes.value.filter((cliente) => !cliente.vip && cliente.tipo_cliente === 'nuevo' && !vipIds.has(cliente.id));
 
   return { vip, frecuentes, nuevos };
 });
@@ -410,7 +414,7 @@ const guestSummary = computed(() => {
 const dashboardKPIs = computed(() => {
   const visibles = nonGuestClientes.value;
   const ingresoTotal = visibles.reduce((acc, c) => acc + Number(c.total_gastado || 0), 0);
-  const totalVip = visibles.filter((c) => c.tipo_cliente === 'vip').length;
+  const totalVip = visibles.filter((c) => Boolean(c.vip)).length;
   return {
     totalClientes: visibles.length,
     totalVip,
@@ -504,6 +508,21 @@ const closeDetail = () => {
 };
 
 const fmtMoney = (v) => Number(v || 0).toFixed(2);
+const badgeLabel = (cliente) => {
+  if (cliente?.vip) return 'VIP';
+  const tipo = String(cliente?.tipo_cliente || '').toLowerCase();
+  if (tipo === 'nuevo') return 'NUEVO';
+  if (tipo === 'frecuente') return 'FRECUENTE';
+  if (tipo === 'inactivo') return 'INACTIVO';
+  return (tipo || 'OCASIONAL').toUpperCase();
+};
+const badgeClass = (cliente) => {
+  if (cliente?.vip) return 'badge-vip';
+  const tipo = String(cliente?.tipo_cliente || '').toLowerCase();
+  if (tipo === 'nuevo') return 'badge-nuevo';
+  if (tipo === 'frecuente') return 'badge-frecuente';
+  return 'badge-frecuente';
+};
 const formatDate = (value) => {
   if (!value) return 'Sin datos';
   return new Date(value).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: '2-digit' });
