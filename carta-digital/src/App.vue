@@ -749,11 +749,11 @@ const changeRequestedMessage = computed(() => {
 /* === BOTÓN CARRITO FLOTANTE === */
 .cart-floating {
   position: fixed;
-  bottom: 18px;
-  right: 14px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  right: 12px;
   background: linear-gradient(135deg, #8f1e2f 0%, #be2a3f 100%);
   border: 1px solid rgba(255,255,255,0.28);
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 999px;
   font-size: 16px;
   cursor: pointer;
@@ -761,21 +761,21 @@ const changeRequestedMessage = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 14px 30px rgba(0,0,0,0.38);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.34);
   transition: transform .2s ease, box-shadow .2s ease;
   z-index: 3000;
-  min-height: 52px;
-  min-width: 152px;
+  min-height: 48px;
+  min-width: 136px;
   font-weight: 700;
 }
 
 .cart-floating__icon {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .cart-floating__label {
-  font-size: 0.94rem;
+  font-size: 0.86rem;
   line-height: 1;
 }
 
@@ -1814,8 +1814,8 @@ const changeRequestedMessage = computed(() => {
 
 @media (max-width: 640px) {
   .cart-floating {
-    right: 12px;
-    bottom: 12px;
+    right: 10px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
   }
 
   .cart-panel {

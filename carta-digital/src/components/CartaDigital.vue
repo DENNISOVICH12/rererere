@@ -398,7 +398,7 @@ onMounted(async () => {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 14px 12px 100px;
+  padding: 12px 10px 132px;
   color: var(--text-main);
   text-shadow: none;
   overflow-x: hidden;
@@ -473,15 +473,15 @@ onMounted(async () => {
 .grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 10px;
 }
 
 .card {
-  background: linear-gradient(170deg, var(--surface) 0%, #151a25 100%);
-  border-radius: 18px;
-  padding: 12px;
+  background: linear-gradient(170deg, rgba(22, 27, 39, 0.98) 0%, rgba(16, 20, 31, 0.98) 100%);
+  border-radius: 16px;
+  padding: 10px;
   border: 1px solid var(--line);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
   outline: none;
@@ -507,12 +507,12 @@ onMounted(async () => {
 .media {
   position: relative;
   width: 100%;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
-  aspect-ratio: 16 / 10;
+  height: clamp(150px, 36vw, 170px);
   background: #262b39;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .card-img {
@@ -536,17 +536,44 @@ onMounted(async () => {
   pointer-events: none;
 }
 
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .card-body h2 {
-  font-size: clamp(1rem, 4vw, 1.2rem);
+  font-size: clamp(0.95rem, 3.8vw, 1.1rem);
   margin: 0;
   line-height: 1.3;
+  min-height: 2.5em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-price {
-  margin: 8px 0 0;
-  font-size: clamp(1.05rem, 4.6vw, 1.3rem);
+  margin: 0;
+  font-size: clamp(1rem, 4.2vw, 1.16rem);
   font-weight: 800;
   color: var(--accent-soft);
+}
+
+
+
+@media (max-width: 639px) {
+  .card {
+    padding: 9px;
+  }
+
+  .media {
+    margin-bottom: 8px;
+  }
+
+  .media {
+    height: clamp(150px, 42vw, 180px);
+  }
 }
 
 .details-backdrop {
@@ -810,7 +837,7 @@ onMounted(async () => {
 
 @media (min-width: 640px) {
   .menu-container {
-    padding: 24px 16px 110px;
+    padding: 20px 14px 136px;
   }
 
   .grid {
