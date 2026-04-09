@@ -473,27 +473,37 @@ onMounted(async () => {
 .grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 12px;
+  align-items: stretch;
 }
 
 .card {
-  background: linear-gradient(170deg, rgba(22, 27, 39, 0.98) 0%, rgba(16, 20, 31, 0.98) 100%);
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 220, 168, 0.12) 0%, rgba(255, 220, 168, 0) 48%),
+    linear-gradient(165deg, rgba(29, 36, 52, 0.98) 0%, rgba(16, 20, 31, 0.98) 64%, rgba(13, 17, 27, 1) 100%);
   border-radius: 16px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 10px 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32), 0 2px 0 rgba(255, 255, 255, 0.05) inset;
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
   cursor: pointer;
   outline: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 100%;
+  will-change: transform;
 }
 
 .card:active {
-  transform: scale(0.985);
+  transform: scale(0.982);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.26);
 }
 
 .card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.34);
+  transform: translateY(-5px);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38), 0 2px 0 rgba(255, 255, 255, 0.08) inset;
+  border-color: rgba(255, 215, 170, 0.42);
 }
 
 .card:focus-visible,
@@ -507,12 +517,13 @@ onMounted(async () => {
 .media {
   position: relative;
   width: 100%;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  height: clamp(150px, 36vw, 170px);
+  height: clamp(168px, 39vw, 196px);
   background: #262b39;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  margin-bottom: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 8px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.36);
 }
 
 .card-img {
@@ -522,31 +533,35 @@ onMounted(async () => {
   object-position: center;
   display: block;
   transform: scale(1);
-  transition: transform 0.32s ease;
+  transition: transform 0.36s ease, filter 0.36s ease;
 }
 
 .card:hover .card-img {
-  transform: scale(1.04);
+  transform: scale(1.055);
+  filter: saturate(1.08) contrast(1.03);
 }
 
 .media-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.32));
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.34));
   pointer-events: none;
 }
 
 .card-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  padding: 0 2px;
 }
 
 .card-body h2 {
-  font-size: clamp(0.95rem, 3.8vw, 1.1rem);
+  font-size: clamp(0.92rem, 3.6vw, 1.02rem);
   margin: 0;
-  line-height: 1.3;
-  min-height: 2.5em;
+  line-height: 1.28;
+  min-height: 2.45em;
+  color: rgba(248, 236, 228, 0.96);
+  font-weight: 700;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -554,10 +569,12 @@ onMounted(async () => {
 }
 
 .card-price {
-  margin: 0;
-  font-size: clamp(1rem, 4.2vw, 1.16rem);
-  font-weight: 800;
-  color: var(--accent-soft);
+  margin: 4px 0 0;
+  font-size: clamp(1.1rem, 5vw, 1.35rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  color: #ffd28f;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
 }
 
 
@@ -572,7 +589,7 @@ onMounted(async () => {
   }
 
   .media {
-    height: clamp(150px, 42vw, 180px);
+    height: clamp(172px, 45vw, 198px);
   }
 }
 
@@ -842,7 +859,7 @@ onMounted(async () => {
 
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
+    gap: 16px;
   }
 
   .details-footer {
@@ -863,11 +880,11 @@ onMounted(async () => {
 
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 22px;
+    gap: 18px;
   }
 
   .card:hover {
-    transform: translateY(-6px);
+    transform: translateY(-7px);
   }
 }
 </style>
