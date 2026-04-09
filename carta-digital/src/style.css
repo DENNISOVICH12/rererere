@@ -1,13 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+:root {
+  --app-bg-base: #0f121a;
+  --app-bg-overlay-top: rgba(0, 0, 0, 0.75);
+  --app-bg-overlay-bottom: rgba(0, 0, 0, 0.85);
+}
+
 body {
     margin: 0;
-    padding: 0;
-    background:
-        radial-gradient(circle at 20% 0%, rgba(184, 33, 54, 0.12), transparent 45%),
-        linear-gradient(180deg, #0f121a 0%, #121722 55%, #0f121a 100%);
-    color: white;
-    font-family: 'Inter', sans-serif;
+  padding: 0;
+  background-color: var(--app-bg-base);
+  color: white;
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  position: relative;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      var(--app-bg-overlay-top),
+      var(--app-bg-overlay-bottom)
+    ),
+    url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+@media (max-width: 767px) {
+  body::before {
+    background-attachment: scroll;
+    background-position: center top;
+  }
 }
 
 
