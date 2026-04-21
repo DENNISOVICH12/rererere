@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\DB;
 
 use Illuminate\Support\Facades\Log;
 use App\Services\WaiterNotificationService;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class PedidoController extends Controller
 {
@@ -271,10 +270,9 @@ public function facturarCliente(int $clienteId)
     $total = $pedidos->sum('total');
 
     DB::transaction(function () use ($pedidos) {
-        foreach ($pedidos as $pedido) {
-            $pedido->estado = 'facturado';
-            $pedido->save();
-        }
+        Pedido::query()
+            ->whereIn('id', $pedidos->pluck('id'))
+            ->update(['estado' => 'facturado']);
     });
 
     return response()->json([
@@ -283,16 +281,6 @@ public function facturarCliente(int $clienteId)
         'total' => $total,
         'pedidos' => $pedidos,
     ]);
-    $total = $pedidos->sum('total');
-
-    // 🔥 generar PDF
-   $pdf = Pdf::loadView('factura', [
-    'pedidos' => $pedidos,
-    'total' => $total,
-    'clienteId' => $clienteId
-])->setPaper('a4');
-
-return $pdf->stream('factura.pdf'); 
 }
 
 }
