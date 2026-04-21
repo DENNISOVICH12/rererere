@@ -1,1 +1,1 @@
-export const API_BASE = window.location.origin + '/api';
+export const API_BASE = '/api';

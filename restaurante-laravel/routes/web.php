@@ -162,7 +162,7 @@ Route::get('/carta-digital', function () {
 
     // Enviamos el signed URL como query al front
     // (va codificado, el cliente normal no lo tendrá)
-    $cartaUrl = "{$scheme}://{$host}:5173/?admin_link=" . urlencode($signed);
+    $cartaUrl = "{$scheme}://{$host}:5180/?admin_link=" . urlencode($signed);
 
     return redirect()->away($cartaUrl);
 

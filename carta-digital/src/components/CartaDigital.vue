@@ -228,9 +228,16 @@ function normalizePath(path) {
 function getItemImage(item) {
   if (!item) return FOOD_PLACEHOLDER
   if (imageErrors.value[item.id]) return FOOD_PLACEHOLDER
-  if (item.image_url) return item.image_url
-  if (item.image_path) return `${backendBaseUrl()}/storage/${normalizePath(item.image_path)}`
+
+  if (item.image_url) {
+    return item.image_url.replace('localhost', window.location.hostname)
+  }
+
+  if (item.image_path) {
+    return `/storage/${normalizePath(item.image_path)}`  }
+
   if (item.imagen) return item.imagen
+
   return FOOD_PLACEHOLDER
 }
 
@@ -348,6 +355,7 @@ onMounted(async () => {
     items.value = data.data || data
   } catch (err) {
     console.error(err)
+    console.log(items.value)
   }
 
   const openLogin = () => {

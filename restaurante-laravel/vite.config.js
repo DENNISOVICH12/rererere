@@ -9,6 +9,7 @@ export default defineConfig({
         'resources/css/app.css',
         'resources/js/app.js',
         'resources/js/mesero/main.js',
+        'resources/js/admin/historial-cliente.js',
       ],
       refresh: true,
     }),
@@ -16,9 +17,12 @@ export default defineConfig({
   ],
 
   server: {
-    host: 'localhost',
+    host: '0.0.0.0',
     port: 5180,
     strictPort: true,
     cors: true,
+    hmr: {
+    host: 'localhost'
+  }
   },
 });  
