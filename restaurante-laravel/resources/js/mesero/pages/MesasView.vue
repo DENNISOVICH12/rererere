@@ -30,6 +30,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import MesaCard from '../components/MesaCard.vue';
 import { listMesas } from '../api.js';
+import { bindWaiterRealtime } from '../echo.js';
 
 const router = useRouter();
 
@@ -37,14 +38,30 @@ const mesas = ref([]);
 const loading = ref(false);
 const error = ref('');
 let refreshTimer = null;
+let stopRealtime = null;
+let lastFetchAt = 0;
+let lastSnapshot = '';
 
-const loadMesas = async () => {
+const snapshotMesas = (items = []) =>
+  JSON.stringify(items.map((mesa) => [mesa.id, mesa.estado, mesa.updated_at, mesa.pedidos_activos]));
+
+const loadMesas = async ({ force = false } = {}) => {
+  const now = Date.now();
   if (loading.value) return;
+  if (!force && now - lastFetchAt < 4000) return;
 
   try {
     loading.value = true;
     error.value = '';
-    mesas.value = await listMesas();
+    const response = await listMesas();
+    const nextSnapshot = snapshotMesas(response);
+
+    if (nextSnapshot !== lastSnapshot) {
+      mesas.value = response;
+      lastSnapshot = nextSnapshot;
+    }
+
+    lastFetchAt = Date.now();
   } catch (err) {
     error.value = err?.response?.data?.message || 'No se pudieron cargar las mesas.';
   } finally {
@@ -61,15 +78,24 @@ const openMesa = (mesa) => {
   });
 };
 
-onMounted(loadMesas);
+onMounted(() => loadMesas({ force: true }));
 
 onMounted(() => {
+  stopRealtime = bindWaiterRealtime(1, {
+    onNotification: () => {
+      if (document.hidden) return;
+      loadMesas({ force: true });
+    },
+  });
+
   refreshTimer = window.setInterval(() => {
     loadMesas();
-  }, 10000);
+  }, 25000);
 });
 
 onBeforeUnmount(() => {
+  if (stopRealtime) stopRealtime();
+
   if (!refreshTimer) return;
   window.clearInterval(refreshTimer);
   refreshTimer = null;

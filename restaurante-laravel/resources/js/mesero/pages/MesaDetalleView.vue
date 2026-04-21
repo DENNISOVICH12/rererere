@@ -63,6 +63,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ClientePedidoCard from '../components/ClientePedidoCard.vue';
+import { bindWaiterRealtime } from '../echo';
 import {
   deliverOrderGroup,
   facturarCliente,
@@ -90,6 +91,8 @@ const billingWholeTable = ref(false);
 const syncing = ref(false);
 let timerId = null;
 let refreshId = null;
+let stopRealtime = null;
+let lastSilentSyncAt = 0;
 
 const mesaId = computed(() => route.params.id);
 const mesaCodigo = computed(() => mesa.value?.codigo ?? mesaId.value);
@@ -211,21 +214,15 @@ const loadMesaData = async (silent = false) => {
     mesa.value = mesaData;
 
     const nuevos = mesaPedidos || [];
+    const nextHash = nuevos
+      .map((pedido) => `${pedido.id}:${pedido.updated_at || ''}:${pedido.estado || ''}:${pedido.status || ''}`)
+      .join('|');
+    const currentHash = pedidos.value
+      .map((pedido) => `${pedido.id}:${pedido.updated_at || ''}:${pedido.estado || ''}:${pedido.status || ''}`)
+      .join('|');
 
-    if (!pedidos.value.length) {
+    if (nextHash !== currentHash) {
       pedidos.value = nuevos;
-    } else {
-      nuevos.forEach((nuevo) => {
-        const index = pedidos.value.findIndex((p) => p.id === nuevo.id);
-
-        if (index !== -1) {
-          pedidos.value[index] = nuevo;
-        } else {
-          pedidos.value.push(nuevo);
-        }
-      });
-
-      pedidos.value = pedidos.value.filter((p) => nuevos.some((n) => n.id === p.id));
     }
 
     await loadMenu();
@@ -389,15 +386,33 @@ onMounted(() => {
   loadMesaData(false);
   timerId = window.setInterval(() => {
     now.value = Date.now();
-  }, 1000);
+  }, 2000);
+
+  stopRealtime = bindWaiterRealtime(1, {
+    onNotification: (event) => {
+      const payloadMesa = Number(event?.notification?.payload?.mesa_id || event?.notification?.payload?.mesa_numero);
+      const currentMesaId = Number(mesaId.value);
+      if (Number.isFinite(payloadMesa) && payloadMesa !== currentMesaId) return;
+
+      const ts = Date.now();
+      if (ts - lastSilentSyncAt < 1200) return;
+
+      lastSilentSyncAt = ts;
+      if (!editingClienteId.value && !document.hidden) {
+        loadMesaData(true);
+      }
+    },
+  });
+
   refreshId = window.setInterval(() => {
     if (!editingClienteId.value && !document.hidden) {
       loadMesaData(true);
     }
-  }, 5000);
+  }, 25000);
 });
 
 onUnmounted(() => {
+  if (stopRealtime) stopRealtime();
   if (timerId) window.clearInterval(timerId);
   if (refreshId) window.clearInterval(refreshId);
 });
