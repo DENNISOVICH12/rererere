@@ -127,30 +127,32 @@ class MesaController extends Controller
         ->orderBy('id')
         ->get();
 
-    // 🔥 FORZAMOS SIEMPRE JSON (para admin)
+    $pedidosActivosPorMesa = Pedido::query()
+        ->select('mesa_id')
+        ->selectRaw('COUNT(*) AS pedidos_activos')
+        ->where('restaurant_id', $restaurantId)
+        ->whereIn('estado', [
+            'retenido',
+            'modificacion_solicitada',
+            'pendiente',
+            'preparando',
+            'listo',
+        ])
+        ->groupBy('mesa_id')
+        ->pluck('pedidos_activos', 'mesa_id');
+
     return response()->json([
-    'data' => $mesas->map(function ($mesa) use ($restaurantId) {
+        'data' => $mesas->map(function ($mesa) use ($pedidosActivosPorMesa) {
+            $pedidosActivos = (int) ($pedidosActivosPorMesa[$mesa->id] ?? 0);
 
-        $pedidosActivos = Pedido::query()
-            ->where('restaurant_id', $restaurantId)
-            ->where('mesa_id', $mesa->id)
-            ->whereIn('estado', [
-                'retenido',
-                'modificacion_solicitada',
-                'pendiente',
-                'preparando',
-                'listo'
-            ])
-            ->count();
-
-        return [
-            'id' => $mesa->id,
-            'numero' => $mesa->numero,
-            'estado' => $pedidosActivos > 0 ? 'ocupada' : 'libre',
-            'pedidos_activos' => $pedidosActivos,
-        ];
-    })
-]);
+            return [
+                'id' => $mesa->id,
+                'numero' => $mesa->numero,
+                'estado' => $pedidosActivos > 0 ? 'ocupada' : 'libre',
+                'pedidos_activos' => $pedidosActivos,
+            ];
+        }),
+    ]);
 }
 
     public function show(Request $request, string $id): JsonResponse

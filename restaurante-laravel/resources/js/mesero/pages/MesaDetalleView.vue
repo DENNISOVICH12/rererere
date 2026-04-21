@@ -87,6 +87,7 @@ const menuItems = ref([]);
 const billingMap = ref({});
 const busyMap = ref({});
 const billingWholeTable = ref(false);
+const syncing = ref(false);
 let timerId = null;
 let refreshId = null;
 
@@ -193,6 +194,9 @@ const isWithinTime = (cliente) => {
 
 const loadMesaData = async (silent = false) => {
   if (!mesaId.value) return;
+  if (syncing.value) return;
+
+  syncing.value = true;
 
   if (!silent) {
     loading.value = true;
@@ -230,6 +234,7 @@ const loadMesaData = async (silent = false) => {
       error.value = err?.response?.data?.message || 'Error cargando datos';
     }
   } finally {
+    syncing.value = false;
     if (!silent) {
       loading.value = false;
     }
@@ -386,7 +391,7 @@ onMounted(() => {
     now.value = Date.now();
   }, 1000);
   refreshId = window.setInterval(() => {
-    if (!editingClienteId.value) {
+    if (!editingClienteId.value && !document.hidden) {
       loadMesaData(true);
     }
   }, 5000);
