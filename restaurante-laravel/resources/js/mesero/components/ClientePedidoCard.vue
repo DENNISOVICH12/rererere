@@ -69,9 +69,9 @@
 
     <section v-if="pedidos.length" class="pedidos-mini">
       <PedidoCliente
-        v-for="pedido in pedidos"
+        v-for="pedido in pedidosMini"
         :key="pedido.id"
-        :pedido="{ ...pedido, items: normalizeItems(pedido), total: pedido.total }"
+        :pedido="pedido"
         :show-order-id="false"
         title="Orden del cliente"
       />
@@ -179,15 +179,21 @@ const platos = computed(() => allItems.value.filter((item) => item.grupo !== 'be
 const bebidas = computed(() => allItems.value.filter((item) => item.grupo === 'bebida'));
 const totalCliente = computed(() => allItems.value.reduce((acc, item) => acc + item.importe, 0));
 
-const normalizeItems = (pedido) => {
-  const items = pedido?.detalle ?? pedido?.items ?? [];
-  return items.map((item, itemIndex) => ({
-    id: item.id ?? `${pedido.id}-${itemIndex}`,
-    nombre: item?.menu_item?.nombre ?? item?.menuItem?.nombre ?? item?.nombre ?? 'Ítem',
-    cantidad: Number(item?.cantidad ?? 1),
-    importe: Number(item?.importe ?? item?.precio_unitario ?? item?.precio ?? 0),
-  }));
-};
+const pedidosMini = computed(() =>
+  props.pedidos.map((pedido) => {
+    const items = pedido?.detalle ?? pedido?.items ?? [];
+    return {
+      ...pedido,
+      items: items.map((item, itemIndex) => ({
+        id: item.id ?? `${pedido.id}-${itemIndex}`,
+        nombre: item?.menu_item?.nombre ?? item?.menuItem?.nombre ?? item?.nombre ?? 'Ítem',
+        cantidad: Number(item?.cantidad ?? 1),
+        importe: Number(item?.importe ?? item?.precio_unitario ?? item?.precio ?? 0),
+      })),
+      total: pedido.total,
+    };
+  }),
+);
 
 const serviceOrder = computed(() => ({
   ...props.pedidos[0],
