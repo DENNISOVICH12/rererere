@@ -139,11 +139,11 @@
         </div>
 
         <div v-if="modalTab === 'register'">
-            <input class="input" placeholder="Nombres" v-model="register.nombres">
-            <input class="input" placeholder="Apellidos" v-model="register.apellidos">
-            <input class="input" type="email" placeholder="Correo" v-model="register.correo">
-            <input class="input" type="password" placeholder="Contraseña" v-model="register.password">
-            <input class="input" placeholder="Teléfono" v-model="register.telefono">
+            <input class="input" :class="{ error: registerErrors.nombres }" placeholder="Nombres" v-model="register.nombres">
+            <input class="input" :class="{ error: registerErrors.apellidos }" placeholder="Apellidos" v-model="register.apellidos">
+            <input class="input" :class="{ error: registerErrors.correo }" type="email" placeholder="Correo" v-model="register.correo">
+            <input class="input" :class="{ error: registerErrors.password }" type="password" placeholder="Contraseña" v-model="register.password">
+            <input class="input" :class="{ error: registerErrors.telefono }" placeholder="Teléfono" v-model="register.telefono">
 
           <p v-if="registerMessage" class="status-msg">{{ registerMessage }}</p>
 
@@ -188,6 +188,13 @@ const loadingLogin = ref(false)
 const showErrors = ref(false)
 const loginMessage = ref('')
 const registerMessage = ref('')
+const registerErrors = ref({
+  nombres: false,
+  apellidos: false,
+  correo: false,
+  password: false,
+  telefono: false
+})
 const logoutConfirmModalRef = ref(null)
 
 const imageErrors = ref({})
@@ -307,19 +314,48 @@ async function login() {
 async function registerUser() {
   registerMessage.value = ''
 
+  const nombres = register.value.nombres.trim()
+  const apellidos = register.value.apellidos.trim()
+  const correo = register.value.correo.trim()
+  const password = register.value.password
+  const telefono = register.value.telefono.trim()
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  registerErrors.value = {
+    nombres: !nombres,
+    apellidos: !apellidos,
+    correo: !correo || !emailRegex.test(correo),
+    password: !password || password.length < 6,
+    telefono: telefono.length > 20
+  }
+
+  const frontendErrors = []
+
+  if (registerErrors.value.nombres) frontendErrors.push('⚠️ Debes ingresar los nombres')
+  if (registerErrors.value.apellidos) frontendErrors.push('⚠️ Debes ingresar los apellidos')
+  if (registerErrors.value.correo) frontendErrors.push('⚠️ Ingresa un correo válido')
+  if (registerErrors.value.password) frontendErrors.push('⚠️ La contraseña debe tener al menos 6 caracteres')
+  if (registerErrors.value.telefono) frontendErrors.push('⚠️ El teléfono no puede superar 20 caracteres')
+
+  if (frontendErrors.length) {
+    registerMessage.value = frontendErrors.join('\n')
+    return
+  }
+
   try {
     await axios.post(`${API_BASE}/cliente/register`, {
-      nombres: register.value.nombres,
-      apellidos: register.value.apellidos,
-      correo: register.value.correo,
-      password: register.value.password,
-      telefono: register.value.telefono || null,
+      nombres,
+      apellidos,
+      correo,
+      password,
+      telefono: telefono || null,
       restaurant_id: 1
     })
 
     const loginRes = await axios.post(`${API_BASE}/cliente/login`, {
-      correo: register.value.correo,
-      password: register.value.password
+      correo,
+      password
     })
 
     setCliente({ ...loginRes.data.cliente, token: loginRes.data.token || null })
@@ -328,11 +364,21 @@ async function registerUser() {
     setTimeout(() => {
       showLogin.value = false
     }, 800)
-  } catch {
-    registerMessage.value = '❌ Error registrando cliente'
+  } catch (error) {
+    const backendErrors = error?.response?.data?.errors
+
+    if (backendErrors && typeof backendErrors === 'object') {
+      const messages = Object.values(backendErrors)
+        .flat()
+        .map(message => `⚠️ ${message}`)
+
+      registerMessage.value = messages.join('\n')
+      return
+    }
+
+    registerMessage.value = '❌ Error inesperado'
   }
 }
-
 function cerrarModal() {
   showLogin.value = false
 }
@@ -582,6 +628,10 @@ onMounted(async () => {
 .status-msg {
   color: var(--color-accent);
   font-weight: 800;
+}
+
+.status-msg {
+  white-space: pre-line;
 }
 
 .card-price {

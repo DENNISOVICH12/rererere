@@ -12,12 +12,12 @@ class ClienteAuthController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'nombres' => 'required|string|max:255',
-            'apellidos' => 'required|string|max:255',
+            'nombres' => 'required|string|max:100',
+            'apellidos' => 'required|string|max:100',
             'correo' => 'required|email|unique:clientes,correo',
-            'password' => 'required|string|min:6',
+            'password' => 'required|min:6',
             'restaurant_id' => 'required|exists:restaurants,id',
-            'telefono' => 'nullable|string|max:50',
+            'telefono' => 'nullable|string|max:20',
             'dni' => 'nullable|string|max:255',
             'edad' => 'nullable|integer|min:1',
         ]);
