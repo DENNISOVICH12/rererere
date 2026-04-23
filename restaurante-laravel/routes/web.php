@@ -37,7 +37,9 @@ Route::post('/logout', function () {
     request()->session()->invalidate();
     request()->session()->regenerateToken();
 
-    return redirect('/');
+    return response()->json([
+        'message' => 'Sesión cerrada correctamente'
+    ]);
 })->name('logout');
 
 /*
