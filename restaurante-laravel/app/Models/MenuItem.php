@@ -24,9 +24,7 @@ class MenuItem extends Model
         'restaurant_id',
     ];
 
-    protected $appends = [
-        'image_url',
-    ];
+    //protected $appends = [  'image_url',];
 
     protected $casts = [
         'disponible' => 'boolean',
@@ -34,19 +32,19 @@ class MenuItem extends Model
     ];
 
     public function getImageUrlAttribute(): ?string
-    {
-        // 1) Si ya guardaste URL completa en "imagen", úsala
-        if (!empty($this->imagen)) {
-            return $this->imagen;
-        }
+{
+    $imagen = $this->attributes['imagen'] ?? null;
+    $imagePath = $this->attributes['image_path'] ?? null;
 
-        // 2) Si hay image_path, construye URL pública
-        if (!empty($this->image_path)) {
-            return asset('storage/' . ltrim($this->image_path, '/'));
-            // Alternativa: return Storage::disk('public')->url($this->image_path);
-        }
-
-        return null;
+    if ($imagen && is_string($imagen)) {
+        return $imagen;
     }
+
+    if ($imagePath && is_string($imagePath)) {
+        return asset('storage/' . ltrim($imagePath, '/'));
+    }
+
+    return null;
+}
 
 }

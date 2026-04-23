@@ -183,14 +183,10 @@ class Pedido extends Model
     }
 
     public function detalle()
-    {
-        return $this->pedidoDetalles();
-    }
+{
+    return $this->hasMany(PedidoDetalle::class, 'pedido_id');
+}
 
-    public function detalles()
-    {
-        return $this->pedidoDetalles();
-    }
 
     public function cliente()
     {
@@ -208,18 +204,9 @@ class Pedido extends Model
     }
 
     public function getTotalAttribute(): float
-    {
-        if (array_key_exists('total', $this->attributes)) {
-            return (float) $this->attributes['total'];
-        }
-
-        if ($this->relationLoaded('detalle')) {
-            return (float) $this->detalle->sum('importe');
-        }
-
-        return (float) $this->detalle()->sum('importe');
-    }
-
+{
+    return (float) ($this->attributes['total'] ?? 0);
+}
     public function getFechaAttribute(): ?string
     {
         return $this->created_at ? $this->created_at->format('Y-m-d') : null;

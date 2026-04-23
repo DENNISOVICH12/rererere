@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\MenuItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 class MenuItemController extends Controller
 {
@@ -26,9 +25,21 @@ class MenuItemController extends Controller
     |--------------------------------------------------------------------------
     */
     public function index()
-    {
-        return response()->json(MenuItem::paginate(20));
-    }
+{
+    return response()->json([
+        'data' => MenuItem::all()
+    ]);
+}
+
+public function meseroMenuItems()
+{
+    return response()->json([
+        'data' => MenuItem::where('restaurant_id', 1)
+            ->where('disponible', true)
+            ->get()
+    ]);
+}
+
 
     /*
     |--------------------------------------------------------------------------

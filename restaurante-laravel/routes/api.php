@@ -16,12 +16,10 @@ use App\Http\Controllers\{
     MeseroOrderController,
     ClienteAuthController,
     MesaController,
-    ClienteController
 };
 
 // Health Check
 Route::get('/ping', [HealthController::class, 'ping']);
-
 
 // ============================
 // 🔥 KITCHEN / BAR (PÚBLICO)
@@ -72,13 +70,17 @@ Route::post('/clientes/{cliente}/facturar', [PedidoController::class, 'facturarC
 // ============================
 // 👨‍🍳 MESERO
 // ============================
+
 Route::prefix('mesero')->group(function () {
+
+    Route::get('/menu-items', [MenuItemController::class, 'index']);
+    Route::get('/mesero/menu-items', [MenuItemController::class, 'meseroMenuItems']);
     Route::get('/orders', [MeseroOrderController::class, 'index']);
     Route::get('/orders/{pedido}', [MeseroOrderController::class, 'show']);
     Route::put('/orders/{pedido}', [MeseroOrderController::class, 'update']);
     Route::post('/orders/{pedido}/send', [MeseroOrderController::class, 'sendToKitchen']);
-});
 
+});
 
 // ============================
 // 🔐 ZONA PROTEGIDA (ADMIN)

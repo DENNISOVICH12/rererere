@@ -21,6 +21,9 @@ use App\Http\Controllers\ClienteController;
 */
 Route::get('/', fn () => redirect()->route('login'));
 
+Route::get('/staff', function () {
+    return view('staff-login');
+});
 /*
 |--------------------------------------------------------------------------
 | LOGIN / LOGOUT
@@ -125,7 +128,6 @@ Route::middleware(['auth:web', 'role:mesero'])->group(function () {
         Route::post('/orders/{pedido}/request-change', [MeseroOrderController::class, 'requestChange']);
         Route::post('/orders/{pedido}/send-to-kitchen', [MeseroOrderController::class, 'sendToKitchen']);
         Route::delete('/orders/{pedido}', [MeseroOrderController::class, 'destroy']);
-        Route::get('/menu-items', [MeseroOrderController::class, 'menuItems']);
         Route::put('/pedidos/{id}/entregar-grupo/{grupo}', [PedidoController::class, 'entregarGrupo']);
         Route::get('/notifications', [WaiterNotificationController::class, 'index']);
         Route::post('/notifications/read-all', [WaiterNotificationController::class, 'markAllRead']);

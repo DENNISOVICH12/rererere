@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     plugins: [vue()],
   server: {
     host: true,
-    port: 5173,
+    port: 5174,
     strictPort: true,
     hmr: {
       host: 'localhost',

@@ -156,46 +156,82 @@ class MesaController extends Controller
 }
 
     public function show(Request $request, string $id): JsonResponse
-    {
-        $mesa = rawurldecode($id);
-        $restaurantId = 1;
+{
+    $mesa = rawurldecode($id);
+    $restaurantId = 1;
 
-        $clientes = ClienteMesa::query()
-            ->where('restaurant_id', $restaurantId)
-            ->where('mesa', $mesa)
-            ->where('activo', true)
-            ->orderBy('id')
-            ->get();
+    // 🔹 Clientes activos en la mesa
+    $clientes = ClienteMesa::query()
+        ->where('restaurant_id', $restaurantId)
+        ->where('mesa', $mesa)
+        ->where('activo', true)
+        ->orderBy('id')
+        ->get();
 
-        $pedidoQuery = Pedido::query()
-            ->where('restaurant_id', $restaurantId)
-            ->where('mesa_id', (int) $mesa)
-            ->whereIn('estado', ['retenido', 'modificacion_solicitada', 'pendiente', 'preparando', 'listo'])
-            ->with(['mesa:id,numero', 'detalle.menuItem:id,nombre,categoria,precio']);
+    // 🔥 Pedidos OPTIMIZADOS (sin N+1 y sin duplicados)
+    $pedidosPorCliente = Pedido::query()
+        ->select([
+            'id',
+            'estado',
+            'total',
+            'created_at',
+            'hold_expires_at',
+            'cliente_id',
+            'cliente_mesa_id'
+        ])
+        ->where('restaurant_id', $restaurantId)
+        ->where('mesa_id', (int) $mesa)
+        ->whereIn('estado', [
+            'retenido',
+            'modificacion_solicitada',
+            'pendiente',
+            'preparando',
+            'listo'
+        ])
+        ->with([
+            'detalle' => function ($q) {
+                $q->select([
+                    'id',
+                    'pedido_id',
+                    'menu_item_id',
+                    'cantidad',
+                    'precio_unitario',
+                    'importe',
+                    'grupo_servicio',
+                    'estado_servicio',
+                    'nota'
+                ])->with([
+                    'menuItem:id,nombre,categoria'
+                ]);
+            }
+        ])
+        ->get()
+        ->groupBy('cliente_mesa_id');
 
-        $pedidosPorCliente = $pedidoQuery
-            ->get()
-            ->groupBy('cliente_mesa_id');
+    return response()->json([
+        'data' => [
+            'id' => (int) $mesa,
+            'codigo' => $mesa,
+            'estado' => $pedidosPorCliente->flatten(1)->isNotEmpty() ? 'ocupada' : 'libre',
 
-        return response()->json([
-            'data' => [
-                'id' => (int) $mesa,
-                'codigo' => $mesa,
-                'estado' => $pedidosPorCliente->flatten(1)->isNotEmpty() ? 'ocupada' : 'libre',
-                'clientes' => $clientes->map(function (ClienteMesa $cliente) use ($pedidosPorCliente) {
-                    $pedidos = $pedidosPorCliente->get($cliente->id, collect());
+            'clientes' => $clientes->map(function (ClienteMesa $cliente) use ($pedidosPorCliente) {
 
-                    return [
-                        'id' => $cliente->id,
-                        'nombre' => $cliente->nombre ?: "Cliente #{$cliente->id}",
-                        'pedidos' => $pedidos->map(fn (Pedido $pedido) => $this->transformPedido($pedido))->values(),
-                        'total' => (float) $pedidos->sum('total'),
-                    ];
-                })->values(),
-            ],
-        ]);
-    }
+                $pedidos = $pedidosPorCliente->get($cliente->id, collect());
 
+                return [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre ?: "Cliente #{$cliente->id}",
+
+                    'pedidos' => $pedidos
+                        ->map(fn (Pedido $pedido) => $this->transformPedido($pedido))
+                        ->values(),
+
+                    'total' => (float) $pedidos->sum('total'),
+                ];
+            })->values(),
+        ],
+    ]);
+}
     public function clientes(Request $request, string $id): JsonResponse
     {
         return $this->show($request, $id);
@@ -270,10 +306,10 @@ class MesaController extends Controller
 
         $total = (float) $pedidos->sum('total');
 
-        foreach ($pedidos as $pedido) {
-            $pedido->estado = 'entregado';
-            $pedido->save();
-        }
+        Pedido::query()
+    ->where('restaurant_id', $restaurantId)
+    ->where('cliente_mesa_id', $cliente->id)
+    ->update(['estado' => 'entregado']);
 
         return response()->json([
             'message' => 'Cuenta individual facturada correctamente.',
@@ -292,7 +328,11 @@ class MesaController extends Controller
         $pedidos = Pedido::query()
             ->where('restaurant_id', $restaurantId)
             ->where('mesa_id', (int) rawurldecode($mesaId))
-            ->with(['detalle.menuItem', 'cliente:id,nombres,apellidos'])
+            ->with([
+    'detalle:id,pedido_id,menu_item_id,cantidad,precio_unitario,importe,grupo_servicio,estado_servicio,nota',
+    'detalle.menuItem:id,nombre,categoria',
+    'cliente:id,nombres,apellidos'
+])
             ->orderByDesc('created_at')
             ->get();
 
