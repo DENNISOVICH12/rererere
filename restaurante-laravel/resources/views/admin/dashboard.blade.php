@@ -145,6 +145,10 @@
             <input class="date-input" type="date" id="startDate" value="{{ $initialRange['start_date'] }}">
             <input class="date-input" type="date" id="endDate" value="{{ $initialRange['end_date'] }}">
             <button class="btn primary" id="applyCustom">Aplicar</button>
+            <form method="POST" action="{{ route('logout') }}" style="display:inline-block;">
+                @csrf
+                <button class="btn" type="submit" onclick="return confirm('¿Seguro que deseas cerrar sesión?')">Cerrar sesión</button>
+            </form>
         </div>
     </div>
 
