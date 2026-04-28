@@ -1,9 +1,7 @@
 <template>
   <main class="app-shell">
     <header class="app-header">
-      <button type="button" class="logout-btn" @click="confirmLogout">
-        Cerrar sesión
-      </button>
+
     </header>
     <WaiterNotifications :restaurant-id="1" />
     <router-view />

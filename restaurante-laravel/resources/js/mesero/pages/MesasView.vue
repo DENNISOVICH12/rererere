@@ -1,23 +1,26 @@
 <template>
   <section class="layout">
     <header class="topbar">
-      <div class="topbar-copy">
-        <h1>Mapa de Mesas</h1>
-        <p>Gestiona clientes y pedidos por mesa, con facturación individual.</p>
-      </div>
+  <div>
+    <h1>Mapa de Mesas</h1>
+    <p>Gestiona clientes y pedidos por mesa, con facturación individual.</p>
+  </div>
 
-      <div class="topbar-actions">
-        <button class="action-btn refresh" :disabled="loading" @click="loadMesas({ force: true })">
-          <span class="btn-icon" aria-hidden="true">↻</span>
-          <span class="btn-text">{{ loading ? 'Actualizando...' : 'Actualizar' }}</span>
-        </button>
+  <div class="actions">
 
-        <button class="action-btn logout" :disabled="logoutLoading" @click="openLogoutConfirm">
-          <span class="btn-icon" aria-hidden="true">🔒</span>
-          <span class="btn-text">{{ logoutLoading ? 'Saliendo...' : 'Salir' }}</span>
-        </button>
-      </div>
-    </header>
+    <!-- Botones -->
+    <div class="buttons">
+      <button class="refresh" :disabled="loading" @click="loadMesas">
+        ⟳ Actualizar
+      </button>
+
+      <button class="logout" @click="openLogoutConfirm">
+        🔒 Salir
+      </button>
+    </div>
+
+  </div>
+</header>
 
     <p v-if="error" class="error">{{ error }}</p>
 
@@ -167,10 +170,41 @@ onBeforeUnmount(() => {
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
+  flex-wrap: wrap; /* 👈 clave para responsive */
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
+.notify {
+  position: relative;
+  background: #2563eb;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}
 .topbar-copy {
   min-width: 0;
 }
@@ -215,15 +249,24 @@ onBeforeUnmount(() => {
 }
 
 .refresh {
-  border-color: rgba(248, 113, 113, 0.35);
+  border: none;
+  border-radius: 10px;
   background: linear-gradient(145deg, #9c2030, #7a1522);
-  box-shadow: 0 8px 18px rgba(122, 21, 34, 0.25);
+  color: #fff;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
+
 .logout {
-  border-color: rgba(248, 113, 113, 0.35);
+  border: none;
+  border-radius: 10px;
   background: linear-gradient(145deg, #dc2626, #991b1b);
-  box-shadow: 0 8px 18px rgba(153, 27, 27, 0.24);
+  color: #fff;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .btn-icon {
@@ -296,6 +339,17 @@ onBeforeUnmount(() => {
 @media (min-width: 1024px) {
   .grid {
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .buttons {
+    flex: 1;
+    justify-content: flex-end;
   }
 }
 </style>
