@@ -68,6 +68,9 @@ export const createMesaCliente = (mesaId, payload) =>
 export const getClientePedidos = (clienteId) =>
     floorHttp.get(`/clientes/${clienteId}/pedidos`).then((r) => r.data);
 
+export const facturarCliente = (clienteId) =>
+    floorHttp.post(`/clientes/${clienteId}/facturar`).then((r) => r.data);
+
 
 export const getMesaPedidos = (mesaId) =>
     dedupeGet(`mesa:${mesaId}:pedidos`, () => floorHttp.get(`/mesas/${mesaId}/pedidos`).then((r) => r.data.data));

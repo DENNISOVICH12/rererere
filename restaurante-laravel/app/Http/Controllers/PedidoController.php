@@ -257,7 +257,7 @@ public function facturarCliente(int $clienteId)
             $q->where('cliente_id', $clienteId)
               ->orWhere('cliente_mesa_id', $clienteId);
         })
-        ->whereIn('estado', ['listo', 'entregado'])
+        ->whereNotIn('estado', ['facturado', 'cancelado'])
         ->get();
 
     if ($pedidos->isEmpty()) {
@@ -265,6 +265,17 @@ public function facturarCliente(int $clienteId)
             'ok' => false,
             'message' => 'No hay pedidos para facturar.',
         ], 422);
+    }
+
+    $hasNotDeliveredOrders = $pedidos->contains(
+        fn (Pedido $pedido) => strtolower((string) $pedido->estado) !== 'entregado'
+    );
+
+    if ($hasNotDeliveredOrders) {
+        return response()->json([
+            'ok' => false,
+            'message' => 'No se puede marcar como pagado un pedido que no ha sido entregado.',
+        ], 400);
     }
 
     $total = $pedidos->sum('total');
