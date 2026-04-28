@@ -351,6 +351,29 @@ body.has-admin-sidebar .global-sidebar:hover ~ .kds { margin-left: 284px; width:
       <button type="button" class="status-chip" role="tab" :aria-selected="activeFilter === 'atrasados'" :class="{ active: activeFilter === 'atrasados' }" @click="activeFilter = 'atrasados'"><span class="status-chip-label">⏱ Atrasados</span><span class="status-chip-value">@{{ delayedCount }}</span></button>
     </div>
 
+    <div style="display:flex; align-items:center; gap:10px;">
+    
+    <form method="POST" action="/logout">
+        @csrf
+        <button 
+            type="submit"
+            style="
+                background: #c23a4a;
+                color: white;
+                border: none;
+                padding: 10px 14px;
+                border-radius: 10px;
+                cursor: pointer;
+                font-weight: bold;
+            "
+            onclick="return confirm('¿Seguro que deseas cerrar sesión?')"
+        >
+            🔒 Cerrar sesión
+        </button>
+    </form>
+
+</div>
+
     <div class="topbar-right">
       <div class="controls" aria-label="Acciones rápidas">
         <button type="button" class="ghost" @click="fetchOrders(false)"><span class="btn-icon">↻</span> Actualizar</button>

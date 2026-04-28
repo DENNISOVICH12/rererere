@@ -1,14 +1,23 @@
 <template>
   <section class="layout">
     <header class="topbar">
-      <div>
-        <h1>Mapa de Mesas</h1>
-        <p>Gestiona clientes y pedidos por mesa, con facturación individual.</p>
-      </div>
-      <button class="refresh" :disabled="loading" @click="loadMesas">
-        {{ loading ? 'Actualizando...' : 'Actualizar' }}
-      </button>
-    </header>
+  <div>
+    <h1>Mapa de Mesas</h1>
+    <p>Gestiona clientes y pedidos por mesa, con facturación individual.</p>
+  </div>
+
+  <div style="display:flex; gap:10px;">
+    
+    <button class="refresh" :disabled="loading" @click="loadMesas">
+      {{ loading ? 'Actualizando...' : 'Actualizar' }}
+    </button>
+
+    <button class="logout" @click="handleLogout">
+      🔒 Salir
+    </button>
+
+  </div>
+</header>
 
     <p v-if="error" class="error">{{ error }}</p>
 
@@ -68,6 +77,20 @@ const loadMesas = async ({ force = false } = {}) => {
     loading.value = false;
   }
 };
+
+const handleLogout = async () => {
+  const confirmLogout = confirm('¿Seguro que deseas cerrar sesión?')
+  if (!confirmLogout) return
+
+  await fetch('/logout', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    }
+  })
+
+  window.location.href = '/staff'
+}
 
 const openMesa = (mesa) => {
   if (!mesa?.id) return;
@@ -163,5 +186,14 @@ onBeforeUnmount(() => {
   .grid {
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   }
+}
+.logout {
+  border: none;
+  border-radius: 10px;
+  background: #c23a4a;
+  color: #fff;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>

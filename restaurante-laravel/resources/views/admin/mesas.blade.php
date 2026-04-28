@@ -8,7 +8,7 @@
             <h1>Gestión de Mesas</h1>
             <p class="subtitle">Visualiza estado, pedidos activos y administra tus mesas en tiempo real.</p>
         </div>
-
+        
         <div class="toolbar-actions">
             <div class="search-wrap">
                 <span aria-hidden="true">🔎</span>

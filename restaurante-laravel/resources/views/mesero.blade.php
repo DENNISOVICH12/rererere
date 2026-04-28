@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Mesero | Pedidos activos</title>
     @vite('resources/js/mesero/main.js')
-</head>
+</head> 
 <body>
     <div id="mesero-app"></div>
 </body>
