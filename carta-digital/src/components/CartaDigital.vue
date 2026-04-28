@@ -56,6 +56,7 @@
 
         <div class="card-body">
           <h2>{{ item.nombre }}</h2>
+          <span v-if="getItemQuantity(item.id) === 0" class="card-hint">Toca para agregar</span>
           <p class="card-price">${{ Number(item.precio || 0).toLocaleString() }}</p>
         </div>
       </div>
@@ -97,7 +98,7 @@
                   v-if="getItemQuantity(activeItem.id) === 0"
                   key="add"
                   class="details-add-btn"
-                  @click="addToCart(activeItem)"
+                  @click="startAddFlow(activeItem)"
                 >
                   Agregar 🛒
                 </button>
@@ -105,7 +106,7 @@
                 <div v-else key="counter" class="details-counter" aria-label="Control de cantidad">
                   <button class="counter-btn" @click="decrease(activeItem)">−</button>
                   <span class="counter-value">{{ getItemQuantity(activeItem.id) }}</span>
-                  <button class="counter-btn" @click="addToCart(activeItem)">+</button>
+                  <button class="counter-btn" @click="addOne(activeItem)">+</button>
                 </div>
               </transition>
             </div>
@@ -157,6 +158,8 @@
     </div>
 
     <ConfirmModal ref="logoutConfirmModalRef" />
+    <QuantityConfirmModal ref="quantityConfirmModalRef" />
+    <ToastStack :toasts="toasts" />
   </div>
 </template>
 
@@ -164,9 +167,11 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import { API_BASE } from '../api.js'
-import { addToCart, cart, removeFromCart, saveCart } from '../cart.js'
+import { addToCart as addItemToCart, cart, removeFromCart, saveCart } from '../cart.js'
 import { cliente, setCliente, logoutCliente } from '../cliente.js'
 import ConfirmModal from './ConfirmModal.vue'
+import QuantityConfirmModal from './QuantityConfirmModal.vue'
+import ToastStack from './ToastStack.vue'
 
 const items = ref([])
 const selectedCategory = ref('todos')
@@ -196,8 +201,11 @@ const registerErrors = ref({
   telefono: false
 })
 const logoutConfirmModalRef = ref(null)
+const quantityConfirmModalRef = ref(null)
 
 const imageErrors = ref({})
+const toasts = ref([])
+let toastCounter = 0
 const FOOD_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 600'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0%25' stop-color='%23222834'/%3E%3Cstop offset='100%25' stop-color='%2332354a'/%3E%3C/linearGradient%3E%3ClinearGradient id='plate' x1='0' x2='1'%3E%3Cstop offset='0%25' stop-color='%23f5d7a5'/%3E%3Cstop offset='100%25' stop-color='%23e2b96f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='900' height='600' fill='url(%23bg)'/%3E%3Ccircle cx='450' cy='315' r='170' fill='url(%23plate)' opacity='.92'/%3E%3Ccircle cx='450' cy='315' r='126' fill='%23fff7ea' opacity='.9'/%3E%3Cg fill='%23b2463d'%3E%3Ccircle cx='395' cy='285' r='24'/%3E%3Ccircle cx='472' cy='278' r='21'/%3E%3Ccircle cx='441' cy='342' r='22'/%3E%3C/g%3E%3Cg fill='%2368a357'%3E%3Cellipse cx='506' cy='329' rx='26' ry='14' transform='rotate(-22 506 329)'/%3E%3Cellipse cx='378' cy='334' rx='24' ry='13' transform='rotate(20 378 334)'/%3E%3C/g%3E%3Ctext x='50%25' y='520' text-anchor='middle' fill='%23f8ece4' font-family='Inter,Arial,sans-serif' font-size='44' font-weight='700'%3EDelicioso y reci%C3%A9n preparado%3C/text%3E%3C/svg%3E"
 
 function openDetails(item) {
@@ -254,6 +262,31 @@ function markImageError(itemId) {
 
 function getItemQuantity(itemId) {
   return cart.value.find(i => i.id === itemId)?.quantity || 0
+}
+
+function showToast(message, type = 'success', duration = 2600) {
+  const id = ++toastCounter
+  toasts.value = [...toasts.value, { id, message, type }]
+
+  window.setTimeout(() => {
+    toasts.value = toasts.value.filter(toast => toast.id !== id)
+  }, duration)
+}
+
+async function startAddFlow(item) {
+  const response = await quantityConfirmModalRef.value?.open(item?.nombre, 1)
+  if (!response?.confirmed) return
+
+  for (let index = 0; index < response.quantity; index += 1) {
+    addItemToCart(item)
+  }
+
+  showToast(`Se agregaron ${response.quantity} unidades correctamente ✅`)
+}
+
+function addOne(item) {
+  addItemToCart(item)
+  showToast('Producto agregado al carrito 🛒', 'info', 2400)
 }
 
 function decrease(item) {
@@ -637,6 +670,20 @@ onMounted(async () => {
 .card-price {
   margin: 2px 0 0;
   font-size: clamp(1.08rem, 4.8vw, 1.3rem);
+}
+
+.card-hint {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 246, 248, 0.12);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  color: rgba(244, 246, 248, 0.58);
+  background: rgba(11, 16, 24, 0.32);
 }
 
 .details-backdrop,
