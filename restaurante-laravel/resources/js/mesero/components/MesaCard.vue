@@ -3,7 +3,7 @@
     <span class="mesa-numero">{{ mesaNumero }}</span>
     <span class="mesa-titulo">Mesa {{ mesaNumero }}</span>
     <span class="mesa-estado">{{ estadoLabel }}</span>
-    <span class="mesa-meta">{{ mesa.pedidos_activos_count ?? 0 }} pedidos activos</span>
+    <span class="mesa-meta">{{ pedidosActivosCount }} pedidos activos</span>
   </button>
 </template>
 
@@ -16,7 +16,8 @@ const props = defineProps({
 
 defineEmits(['select']);
 
-const isLibre = computed(() => props.mesa.estado === 'libre');
+const pedidosActivosCount = computed(() => props.mesa.pedidos_activos_count ?? 0);
+const isLibre = computed(() => pedidosActivosCount.value === 0);
 const mesaNumero = computed(() => props.mesa.numero ?? props.mesa.codigo ?? props.mesa.id ?? '-');
 
 const stateClass = computed(() => (isLibre.value ? 'estado-libre' : 'estado-ocupada'));

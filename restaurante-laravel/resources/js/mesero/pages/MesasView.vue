@@ -69,7 +69,7 @@ let lastFetchAt = 0;
 let lastSnapshot = '';
 
 const snapshotMesas = (items = []) =>
-  JSON.stringify(items.map((mesa) => [mesa.id, mesa.estado, mesa.updated_at, mesa.pedidos_activos]));
+  JSON.stringify(items.map((mesa) => [mesa.id, mesa.estado, mesa.updated_at, mesa.pedidos_activos_count ?? 0]));
 
 const loadMesas = async ({ force = false } = {}) => {
   const now = Date.now();

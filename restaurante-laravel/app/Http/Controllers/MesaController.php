@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 class MesaController extends Controller
 {
     private const PEDIDO_ESTADOS_INACTIVOS = ['facturado', 'cancelado'];
+    private const PEDIDO_ESTADOS_ACTIVOS = ['pendiente', 'preparando', 'listo'];
 
     public function store(Request $request): JsonResponse
 {
@@ -129,17 +130,11 @@ class MesaController extends Controller
 
     $pedidosActivosPorMesa = Pedido::query()
         ->select('mesa_id')
-        ->selectRaw('COUNT(*) AS pedidos_activos')
+        ->selectRaw('COUNT(*) AS pedidos_activos_count')
         ->where('restaurant_id', $restaurantId)
-        ->whereIn('estado', [
-            'retenido',
-            'modificacion_solicitada',
-            'pendiente',
-            'preparando',
-            'listo',
-        ])
+        ->whereIn('estado', self::PEDIDO_ESTADOS_ACTIVOS)
         ->groupBy('mesa_id')
-        ->pluck('pedidos_activos', 'mesa_id');
+        ->pluck('pedidos_activos_count', 'mesa_id');
 
     return response()->json([
         'data' => $mesas->map(function ($mesa) use ($pedidosActivosPorMesa) {
@@ -149,7 +144,7 @@ class MesaController extends Controller
                 'id' => $mesa->id,
                 'numero' => $mesa->numero,
                 'estado' => $pedidosActivos > 0 ? 'ocupada' : 'libre',
-                'pedidos_activos' => $pedidosActivos,
+                'pedidos_activos_count' => $pedidosActivos,
             ];
         }),
     ]);
