@@ -1,23 +1,23 @@
 <template>
   <section class="layout">
     <header class="topbar">
-  <div>
-    <h1>Mapa de Mesas</h1>
-    <p>Gestiona clientes y pedidos por mesa, con facturación individual.</p>
-  </div>
+      <div class="topbar-copy">
+        <h1>Mapa de Mesas</h1>
+        <p>Gestiona clientes y pedidos por mesa, con facturación individual.</p>
+      </div>
 
-  <div style="display:flex; gap:10px;">
-    
-    <button class="refresh" :disabled="loading" @click="loadMesas">
-      {{ loading ? 'Actualizando...' : 'Actualizar' }}
-    </button>
+      <div class="topbar-actions">
+        <button class="action-btn refresh" :disabled="loading" @click="loadMesas({ force: true })">
+          <span class="btn-icon" aria-hidden="true">↻</span>
+          <span class="btn-text">{{ loading ? 'Actualizando...' : 'Actualizar' }}</span>
+        </button>
 
-    <button class="logout" @click="handleLogout">
-      🔒 Salir
-    </button>
-
-  </div>
-</header>
+        <button class="action-btn logout" :disabled="logoutLoading" @click="openLogoutConfirm">
+          <span class="btn-icon" aria-hidden="true">🔒</span>
+          <span class="btn-text">{{ logoutLoading ? 'Saliendo...' : 'Salir' }}</span>
+        </button>
+      </div>
+    </header>
 
     <p v-if="error" class="error">{{ error }}</p>
 
@@ -31,6 +31,17 @@
     </div>
 
     <p v-if="!loading && !mesas.length" class="empty">No hay mesas disponibles.</p>
+
+    <ConfirmDialog
+      :open="showLogoutModal"
+      title="Cerrar sesión"
+      message="¿Seguro que deseas cerrar sesión?"
+      confirm-text="Confirmar"
+      cancel-text="Cancelar"
+      :loading="logoutLoading"
+      @cancel="closeLogoutConfirm"
+      @confirm="confirmLogout"
+    />
   </section>
 </template>
 
@@ -38,6 +49,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import MesaCard from '../components/MesaCard.vue';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { listMesas } from '../api.js';
 import { bindWaiterRealtime } from '../echo.js';
 
@@ -46,6 +58,8 @@ const router = useRouter();
 const mesas = ref([]);
 const loading = ref(false);
 const error = ref('');
+const showLogoutModal = ref(false);
+const logoutLoading = ref(false);
 let refreshTimer = null;
 let stopRealtime = null;
 let lastFetchAt = 0;
@@ -78,19 +92,38 @@ const loadMesas = async ({ force = false } = {}) => {
   }
 };
 
-const handleLogout = async () => {
-  const confirmLogout = confirm('¿Seguro que deseas cerrar sesión?')
-  if (!confirmLogout) return
+const openLogoutConfirm = () => {
+  if (logoutLoading.value) return;
+  showLogoutModal.value = true;
+};
 
-  await fetch('/logout', {
-    method: 'POST',
-    headers: {
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-    }
-  })
+const closeLogoutConfirm = () => {
+  if (logoutLoading.value) return;
+  showLogoutModal.value = false;
+};
 
-  window.location.href = '/staff'
-}
+const confirmLogout = async () => {
+  if (logoutLoading.value) return;
+
+  try {
+    logoutLoading.value = true;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    await fetch('/logout', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': csrfToken,
+        'Content-Type': 'application/json',
+      },
+      credentials: 'same-origin',
+    });
+
+    window.location.href = '/staff';
+  } finally {
+    logoutLoading.value = false;
+    showLogoutModal.value = false;
+  }
+};
 
 const openMesa = (mesa) => {
   if (!mesa?.id) return;
@@ -126,13 +159,20 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.layout { display: grid; gap: 16px; }
+.layout {
+  display: grid;
+  gap: 16px;
+}
 
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
+}
+
+.topbar-copy {
+  min-width: 0;
 }
 
 .topbar p {
@@ -140,18 +180,55 @@ onBeforeUnmount(() => {
   color: #94a3b8;
 }
 
-.refresh {
-  border: 1px solid rgba(248, 113, 113, 0.35);
-  border-radius: 10px;
-  background: linear-gradient(145deg, #9c2030, #7a1522);
-  color: #fff;
-  padding: 10px 14px;
-  font-weight: 600;
+.topbar-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
-.refresh:disabled {
+.action-btn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #fff;
+  padding: 10px 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.action-btn:focus-visible {
+  outline: 2px solid rgba(251, 191, 36, 0.8);
+  outline-offset: 2px;
+}
+
+.action-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.refresh {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: linear-gradient(145deg, #9c2030, #7a1522);
+  box-shadow: 0 8px 18px rgba(122, 21, 34, 0.25);
+}
+
+.logout {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: linear-gradient(145deg, #dc2626, #991b1b);
+  box-shadow: 0 8px 18px rgba(153, 27, 27, 0.24);
+}
+
+.btn-icon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .grid {
@@ -176,6 +253,40 @@ onBeforeUnmount(() => {
   color: #94a3b8;
 }
 
+@media (max-width: 767px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-actions {
+    justify-content: space-between;
+  }
+
+  .action-btn {
+    padding: 10px;
+  }
+
+  .logout .btn-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
 @media (min-width: 768px) {
   .grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -186,14 +297,5 @@ onBeforeUnmount(() => {
   .grid {
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   }
-}
-.logout {
-  border: none;
-  border-radius: 10px;
-  background: #c23a4a;
-  color: #fff;
-  padding: 10px 14px;
-  font-weight: 600;
-  cursor: pointer;
 }
 </style>
