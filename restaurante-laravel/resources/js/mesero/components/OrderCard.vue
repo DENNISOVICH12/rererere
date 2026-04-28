@@ -2,7 +2,7 @@
   <article class="card" :class="[{ overdue: order.change_request_overdue }, { billed: isBilled }]">
     <header class="row">
       <strong>{{ cardTitle }}</strong>
-      <span v-if="isBilled" class="badge-facturado">Facturado</span>
+      <span v-if="isBilled" class="badge-pagado">Pagado</span>
     </header>
 
     <ServiceStatusTracker
@@ -93,7 +93,7 @@ defineEmits(['edit', 'delete', 'request-change', 'deliver-group', 'send']);
   align-items: center;
   gap: 10px;
 }
-.badge-facturado {
+.badge-pagado {
   font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;

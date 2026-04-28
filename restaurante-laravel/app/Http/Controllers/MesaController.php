@@ -332,7 +332,7 @@ class MesaController extends Controller
             ->get();
 
         return response()->json([
-            'data' => $pedidos,
+            'data' => $pedidos->map(fn (Pedido $pedido) => $this->transformPedido($pedido))->values(),
         ]);
     }
 

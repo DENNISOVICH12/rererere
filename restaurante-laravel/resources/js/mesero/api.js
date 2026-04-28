@@ -68,20 +68,6 @@ export const createMesaCliente = (mesaId, payload) =>
 export const getClientePedidos = (clienteId) =>
     floorHttp.get(`/clientes/${clienteId}/pedidos`).then((r) => r.data);
 
-export const facturarCliente = (clienteId) => {
-    return axios({
-        url: `/api/clientes/${clienteId}/facturar`,
-        method: 'POST',
-        responseType: 'blob'
-    }).then((response) => {
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'factura.pdf');
-        document.body.appendChild(link);
-        link.click();
-    });
-};
 
 export const getMesaPedidos = (mesaId) =>
     dedupeGet(`mesa:${mesaId}:pedidos`, () => floorHttp.get(`/mesas/${mesaId}/pedidos`).then((r) => r.data.data));
