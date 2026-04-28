@@ -17,10 +17,10 @@
         </button>
         <button
           class="btn btn-success"
-          :disabled="loading || !clientesConPedidos.length || billingWholeTable"
-          @click="billWholeTable"
+          :disabled="loading || !clientesConPedidos.length"
+          @click="openCuentaModal()"
         >
-          {{ billingWholeTable ? 'Facturando mesa...' : 'Facturar mesa completa' }}
+          💰 Ver cuenta de mesa
         </button>
       </div>
     </header>
@@ -40,7 +40,6 @@
           :pedidos="cliente.pedidos"
           :elapsed-text="elapsedMap[cliente.id] || '00:00 min'"
           :timer-tone="timerToneMap[cliente.id] || 'ok'"
-          :billing="Boolean(billingMap[cliente.id])"
           :busy="Boolean(busyMap[cliente.id])"
           :can-edit="canEditCliente(cliente)"
           :can-send-to-kitchen="canSendToKitchenCliente(cliente)"
@@ -48,7 +47,7 @@
           :draft-items="draftMap[cliente.id] || []"
           :menu-options="menuItems"
           @deliver-group="deliverGroupForCliente"
-          @facturar-cliente="billCliente"
+          @ver-cuenta="openCuentaModal"
           @edit="startEdit"
           @save-edit="handleEditAction(cliente, $event)"
           @cancel-edit="cancelEdit"
@@ -56,6 +55,16 @@
         />
       </div>
     </template>
+
+    <CuentaModal
+      :open="showCuentaModal"
+      :cliente="selectedCliente"
+      :pedidos="selectedPedidos"
+      :paid="selectedPaid"
+      @close="closeCuentaModal"
+      @mark-paid="markCuentaPagada"
+    />
+
   </section>
 </template>
 
@@ -63,10 +72,10 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ClientePedidoCard from '../components/ClientePedidoCard.vue';
+import CuentaModal from '../components/CuentaModal.vue';
 import { bindWaiterRealtime } from '../echo';
 import {
   deliverOrderGroup,
-  facturarCliente,
   getMesa,
   getMesaPedidos,
   searchMenuItems,
@@ -86,9 +95,11 @@ const now = ref(Date.now());
 const editingClienteId = ref(null);
 const draftMap = ref({});
 const menuItems = ref([]);
-const billingMap = ref({});
 const busyMap = ref({});
-const billingWholeTable = ref(false);
+const paidMap = ref({});
+const showCuentaModal = ref(false);
+const selectedCliente = ref(null);
+const selectedPedidos = ref([]);
 
 const syncing = ref(false);
 let timerId = null;
@@ -130,31 +141,33 @@ const deliverGroupForCliente = async ({ cliente, order, group }) => {
   }
 };
 
-const billCliente = async (cliente) => {
-  billingMap.value = { ...billingMap.value, [cliente.id]: true };
-
-  try {
-    await facturarCliente(cliente.id);
-    loadMesaData();
-  } finally {
-    billingMap.value = { ...billingMap.value, [cliente.id]: false };
+const openCuentaModal = (cliente = null) => {
+  if (cliente) {
+    selectedCliente.value = cliente;
+    selectedPedidos.value = cliente?.pedidos ?? [];
+  } else {
+    selectedCliente.value = { id: `mesa-${mesaId.value}`, nombre: `Mesa ${mesaCodigo.value}` };
+    selectedPedidos.value = clientesConPedidos.value.flatMap((item) => item.pedidos || []);
   }
+
+  showCuentaModal.value = true;
 };
 
-const billWholeTable = async () => {
-  const clientes = clientesConPedidos.value;
-  if (!clientes.length) return;
-
-  billingWholeTable.value = true;
-
-  try {
-    await Promise.all(clientes.map(c => facturarCliente(c.id)));
-    loadMesaData();
-  } finally {
-    billingWholeTable.value = false;
-  }
+const closeCuentaModal = () => {
+  showCuentaModal.value = false;
 };
 
+const selectedPaid = computed(() => {
+  const id = selectedCliente.value?.id;
+  return Boolean(id && paidMap.value[id]);
+});
+
+const markCuentaPagada = () => {
+  const id = selectedCliente.value?.id;
+  if (!id) return;
+
+  paidMap.value = { ...paidMap.value, [id]: true };
+};
 
 
 const canEditCliente = (cliente) => {

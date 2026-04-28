@@ -3,7 +3,7 @@
     <header class="topbar">
   <div>
     <h1>Mapa de Mesas</h1>
-    <p>Gestiona clientes y pedidos por mesa, con facturación individual.</p>
+    <p>Gestiona clientes y pedidos por mesa, con resumen claro de cuenta.</p>
   </div>
 
   <div class="actions">

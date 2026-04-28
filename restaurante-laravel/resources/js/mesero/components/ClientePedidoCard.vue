@@ -30,7 +30,7 @@
           </button>
         </div>
 
-        <p v-if="isBilled" class="state state--billed">Facturado</p>
+        <p v-if="isBilled" class="state state--billed">Pagado</p>
         <p v-else-if="!canEdit" class="state">Pedido en cocina, no editable</p>
       </div>
     </header>
@@ -113,8 +113,8 @@
     </section>
 
     <footer class="footer-actions">
-      <button class="btn btn-success" :disabled="isActionDisabled || billing || isBilled" @click="$emit('facturar-cliente', cliente)">
-        {{ billing ? 'Facturando...' : 'Facturar cliente' }}
+      <button class="btn btn-success" :disabled="isActionDisabled" @click="$emit('ver-cuenta', cliente)">
+        💰 Ver cuenta
       </button>
     </footer>
   </article>
@@ -132,7 +132,6 @@ const props = defineProps({
   elapsedText: { type: String, required: true },
   timerTone: { type: String, default: 'ok' },
   busy: { type: Boolean, default: false },
-  billing: { type: Boolean, default: false },
   canEdit: { type: Boolean, default: false },
   canSendToKitchen: { type: Boolean, default: false },
   editing: { type: Boolean, default: false },
@@ -140,7 +139,7 @@ const props = defineProps({
   menuOptions: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['deliver-group', 'facturar-cliente', 'edit', 'save-edit', 'cancel-edit', 'send-to-kitchen']);
+const emit = defineEmits(['deliver-group', 'ver-cuenta', 'edit', 'save-edit', 'cancel-edit', 'send-to-kitchen']);
 
 const newItemId = ref(null);
 
@@ -161,7 +160,7 @@ const isBilled = computed(() => props.pedidos.some((pedido) => {
   return hasFlag || statusFlags.includes(estado);
 }));
 
-const isActionDisabled = computed(() => props.busy || props.billing || isBilled.value);
+const isActionDisabled = computed(() => props.busy || isBilled.value);
 
 const allItems = computed(() => props.pedidos.flatMap((pedido, pedidoIndex) => {
   const items = pedido.detalle ?? pedido.items ?? [];

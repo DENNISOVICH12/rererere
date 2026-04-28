@@ -2,8 +2,8 @@
   <section class="cliente-card">
     <header>
       <h3>{{ cliente.nombre }}</h3>
-      <button class="facturar" :disabled="loading" @click="$emit('facturar', cliente)">
-        {{ loading ? 'Facturando...' : 'Facturar cliente' }}
+      <button class="cuenta" :disabled="loading" @click="$emit('ver-cuenta', cliente)">
+        {{ loading ? 'Abriendo...' : '💰 Ver cuenta' }}
       </button>
     </header>
 
@@ -24,7 +24,7 @@ defineProps({
   loading: { type: Boolean, default: false },
 });
 
-defineEmits(['facturar']);
+defineEmits(['ver-cuenta']);
 
 const money = (value) => Number(value || 0).toFixed(2);
 </script>
@@ -33,8 +33,8 @@ const money = (value) => Number(value || 0).toFixed(2);
 .cliente-card { background: #0f1a30; border: 1px solid #243457; border-radius: 14px; padding: 14px; display: grid; gap: 12px; }
 header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 h3 { margin: 0; }
-.facturar { border: 0; border-radius: 10px; background: #2563eb; color: #fff; padding: 8px 12px; font-weight: 600; cursor: pointer; }
-.facturar:disabled { opacity: .6; cursor: wait; }
+.cuenta { border: 0; border-radius: 10px; background: #2563eb; color: #fff; padding: 8px 12px; font-weight: 600; cursor: pointer; }
+.cuenta:disabled { opacity: .6; cursor: wait; }
 .pedidos-grid { display: grid; gap: 10px; }
 .empty { color: #9fb3d9; margin: 0; }
 footer { border-top: 1px solid #223355; padding-top: 10px; }
