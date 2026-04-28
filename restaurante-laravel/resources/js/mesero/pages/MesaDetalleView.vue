@@ -76,6 +76,7 @@ import CuentaModal from '../components/CuentaModal.vue';
 import { bindWaiterRealtime } from '../echo';
 import {
   deliverOrderGroup,
+  facturarCliente,
   getMesa,
   getMesaPedidos,
   searchMenuItems,
@@ -162,11 +163,18 @@ const selectedPaid = computed(() => {
   return Boolean(id && paidMap.value[id]);
 });
 
-const markCuentaPagada = () => {
+const markCuentaPagada = async () => {
   const id = selectedCliente.value?.id;
   if (!id) return;
 
+  const isNumericId = Number.isInteger(Number(id));
+
+  if (isNumericId) {
+    await facturarCliente(id);
+  }
+
   paidMap.value = { ...paidMap.value, [id]: true };
+  await loadMesaData({ silent: true });
 };
 
 

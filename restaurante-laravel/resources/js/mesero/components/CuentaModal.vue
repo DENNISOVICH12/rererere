@@ -30,11 +30,14 @@
           </div>
 
           <div class="actions">
-            <button class="btn btn-pay" :disabled="paid" @click="emit('mark-paid')">
+            <button class="btn btn-pay" :disabled="paid || !canMarkPaid" @click="emit('mark-paid')">
               {{ paid ? '✅ Pagado' : 'Marcar como pagado' }}
             </button>
             <button class="btn btn-close" @click="emit('close')">Cerrar</button>
           </div>
+          <p v-if="!paid && !canMarkPaid" class="warning">
+            ⚠️ Solo puedes marcar como pagado cuando el pedido ha sido entregado.
+          </p>
         </footer>
       </article>
     </div>
@@ -75,6 +78,9 @@ const items = computed(() =>
 );
 
 const total = computed(() => items.value.reduce((sum, item) => sum + item.subtotal, 0));
+const canMarkPaid = computed(() =>
+  props.pedidos.length > 0 && props.pedidos.every((pedido) => String(pedido?.estado || '').toLowerCase() === 'entregado')
+);
 
 const money = (value) => Number(value || 0).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 </script>
@@ -131,6 +137,8 @@ const money = (value) => Number(value || 0).toLocaleString('es-CO', { minimumFra
 .actions { display: flex; justify-content: flex-end; gap: 8px; }
 .btn { border: 0; border-radius: 11px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
 .btn-pay { background: #10b981; color: #052e2b; }
+.btn-pay:disabled { opacity: 0.5; cursor: not-allowed; background: #6b7280; color: #e5e7eb; }
 .btn-close { background: #334155; color: #f8fafc; }
-.btn:disabled { opacity: 0.7; cursor: not-allowed; }
+.btn:disabled { cursor: not-allowed; }
+.warning { margin: 0; color: #fbbf24; font-size: 0.9rem; }
 </style>
