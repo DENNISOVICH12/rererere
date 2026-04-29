@@ -123,10 +123,11 @@ class MesaController extends Controller
     $restaurantId = 1;
 
     $mesas = Mesa::query()
-        ->where('restaurant_id', $restaurantId)
-        ->orderBy('numero')
-        ->orderBy('id')
-        ->get();
+    ->select('id', 'numero') // 👈 solo lo necesario
+    ->where('restaurant_id', $restaurantId)
+    ->orderBy('numero')
+    ->orderBy('id')
+    ->get();
 
     $pedidosActivosPorMesa = Pedido::query()
         ->select('mesa_id')

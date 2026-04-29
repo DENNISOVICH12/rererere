@@ -74,19 +74,13 @@ const snapshotMesas = (items = []) =>
 const loadMesas = async ({ force = false } = {}) => {
   const now = Date.now();
   if (loading.value) return;
-  if (!force && now - lastFetchAt < 4000) return;
 
   try {
     loading.value = true;
     error.value = '';
     const response = await listMesas();
     const nextSnapshot = snapshotMesas(response);
-
-    if (nextSnapshot !== lastSnapshot) {
-      mesas.value = response;
-      lastSnapshot = nextSnapshot;
-    }
-
+    mesas.value = response;
     lastFetchAt = Date.now();
   } catch (err) {
     error.value = err?.response?.data?.message || 'No se pudieron cargar las mesas.';
@@ -149,7 +143,7 @@ onMounted(() => {
 
   refreshTimer = window.setInterval(() => {
     loadMesas();
-  }, 25000);
+  }, 5000);
 });
 
 onBeforeUnmount(() => {

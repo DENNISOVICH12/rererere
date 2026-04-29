@@ -54,7 +54,7 @@ export const deleteOrder = (orderId, payload = {}) =>
 export const searchMenuItems = (query = '') =>
     dedupeGet(`menu:${query}`, () => meseroHttp.get('/menu-items', { params: { q: query } }).then((r) => r.data.data));
 
-export const listMesas = () => dedupeGet('mesas:list', () => floorHttp.get('/mesas').then((r) => r.data.data));
+export const listMesas = () => floorHttp.get('/mesas').then((r) => r.data.data);
 export const createMesa = (payload) => floorHttp.post('/mesas', payload).then((r) => r.data);
 export const deleteMesa = (id) => floorHttp.delete(`/mesas/${id}`).then((r) => r.data);
 
@@ -73,7 +73,7 @@ export const facturarCliente = (clienteId) =>
 
 
 export const getMesaPedidos = (mesaId) =>
-    dedupeGet(`mesa:${mesaId}:pedidos`, () => floorHttp.get(`/mesas/${mesaId}/pedidos`).then((r) => r.data.data));
+    floorHttp.get(`/mesas/${mesaId}/pedidos`).then((r) => r.data.data);
 
 export const getNotifications = () =>
     meseroHttp.get('/notifications').then((r) => r.data);
