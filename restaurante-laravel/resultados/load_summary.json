@@ -1,0 +1,372 @@
+{
+  "state": {
+    "isStdOutTTY": true,
+    "isStdErrTTY": true,
+    "testRunDurationMs": 240162.6084
+  },
+  "metrics": {
+    "orders_created": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 1299,
+        "rate": 5.40883532475824
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 2149,
+        "rate": 8.948104013014209
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 70.41990734265728,
+        "min": 4.1566,
+        "med": 20.14715,
+        "max": 6721.66,
+        "p(90)": 44.447829999999996,
+        "p(95)": 49.303924999999985
+      },
+      "thresholds": {
+        "p(95)<1500": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 4290
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 0.7729,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.0018052447552447549,
+        "min": 0,
+        "med": 0
+      }
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.004981958041958042,
+        "min": 0,
+        "med": 0,
+        "max": 1.5147,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 49.23099499999999,
+        "avg": 70.38021296037297,
+        "min": 4.1566,
+        "med": 20.13315,
+        "max": 6721.66,
+        "p(90)": 44.39041999999999
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.03471242424242426,
+        "min": 0,
+        "med": 0,
+        "max": 2.2991,
+        "p(90)": 0,
+        "p(95)": 0.5101049999999997
+      }
+    },
+    "iteration_duration": {
+      "contains": "time",
+      "values": {
+        "p(90)": 1564.68212,
+        "p(95)": 1584.4651,
+        "avg": 1641.3464528152654,
+        "min": 1522.767,
+        "med": 1541.2715,
+        "max": 8226.8952
+      },
+      "type": "trend"
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.9965885330692198,
+        "passes": 9056,
+        "fails": 31
+      }
+    },
+    "data_received": {
+      "contains": "data",
+      "values": {
+        "rate": 27262.736874904793,
+        "count": 6547490
+      },
+      "type": "counter"
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 20
+      }
+    },
+    "mesas_load_ms": {
+      "values": {
+        "avg": 23.55907429963459,
+        "min": 4,
+        "med": 7,
+        "max": 5686,
+        "p(90)": 14,
+        "p(95)": 27
+      },
+      "thresholds": {
+        "p(95)<1000": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "group_duration": {
+      "values": {
+        "p(90)": 1564.68212,
+        "p(95)": 1584.4651,
+        "avg": 1641.3361375988854,
+        "min": 1522.767,
+        "med": 1541.2715,
+        "max": 8226.8952
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "error_rate": {
+      "values": {
+        "passes": 29,
+        "fails": 2619,
+        "rate": 0.01095166163141994
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": false
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.004063659673659674,
+        "min": 0,
+        "med": 0,
+        "max": 3.751,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "vus_max": {
+      "values": {
+        "value": 20,
+        "min": 20,
+        "max": 20
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "order_create_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 113.4719696969697,
+        "min": 16,
+        "med": 23,
+        "max": 6722,
+        "p(90)": 35,
+        "p(95)": 46
+      },
+      "thresholds": {
+        "p(95)<2000": {
+          "ok": true
+        }
+      }
+    },
+    "menu_load_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 42.16189759036145,
+        "min": 4,
+        "med": 7,
+        "max": 6413,
+        "p(90)": 15,
+        "p(95)": 27
+      },
+      "thresholds": {
+        "p(95)<800": {
+          "ok": true
+        }
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 4290,
+        "rate": 17.862897261903655
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 4.1566,
+        "med": 20.14715,
+        "max": 6721.66,
+        "p(90)": 44.447829999999996,
+        "p(95)": 49.303924999999985,
+        "avg": 70.41990734265728
+      }
+    },
+    "data_sent": {
+      "values": {
+        "count": 593144,
+        "rate": 2469.7599845022337
+      },
+      "type": "counter",
+      "contains": "data"
+    }
+  },
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "name": "Cliente — carga carta digital",
+        "path": "::Cliente — carga carta digital",
+        "id": "28ad9834dca1f30cb23bf536dd276e12",
+        "groups": [],
+        "checks": [
+            {
+              "id": "3a3bbbd631856acf8022d58c77d3aa77",
+              "passes": 1328,
+              "fails": 0,
+              "name": "menú: status 200",
+              "path": "::Cliente — carga carta digital::menú: status 200"
+            },
+            {
+              "id": "c06b6dd1c66c098954db180b6d71b9de",
+              "passes": 1328,
+              "fails": 0,
+              "name": "menú: tiene items",
+              "path": "::Cliente — carga carta digital::menú: tiene items"
+            },
+            {
+              "name": "menú: responde < 1s",
+              "path": "::Cliente — carga carta digital::menú: responde < 1s",
+              "id": "4fc83483c11d125ec71991fcd93838de",
+              "passes": 1320,
+              "fails": 8
+            },
+            {
+              "name": "pedido: creado (200/201)",
+              "path": "::Cliente — carga carta digital::pedido: creado (200/201)",
+              "id": "ff7d7245b23b936afd33fe47cca5d24d",
+              "passes": 1320,
+              "fails": 0
+            },
+            {
+              "id": "f240d62dd70150ab6dff6f1257f503e2",
+              "passes": 1299,
+              "fails": 21,
+              "name": "pedido: responde < 2s",
+              "path": "::Cliente — carga carta digital::pedido: responde < 2s"
+            }
+          ]
+      },
+      {
+        "id": "22e73ed394bcafbb67e344ccceb1a0fb",
+        "groups": [],
+        "checks": [
+            {
+              "fails": 0,
+              "name": "mesas: status 200",
+              "path": "::Mesero — consulta mapa de mesas::mesas: status 200",
+              "id": "b00f21f5014cc8b99005d540c930c726",
+              "passes": 821
+            },
+            {
+              "name": "mesas: responde < 1s",
+              "path": "::Mesero — consulta mapa de mesas::mesas: responde < 1s",
+              "id": "5b94459275a2f52b176b531c5d53ca16",
+              "passes": 819,
+              "fails": 2
+            },
+            {
+              "fails": 0,
+              "name": "mesa detalle: status 200",
+              "path": "::Mesero — consulta mapa de mesas::mesa detalle: status 200",
+              "id": "e5bad3faaef6a883db807d58fbeb2db1",
+              "passes": 821
+            }
+          ],
+        "name": "Mesero — consulta mapa de mesas",
+        "path": "::Mesero — consulta mapa de mesas"
+      }
+    ],
+    "checks": []
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  }
+}

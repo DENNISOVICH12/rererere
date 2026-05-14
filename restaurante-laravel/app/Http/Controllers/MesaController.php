@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
 
 
 class MesaController extends Controller
@@ -122,30 +124,36 @@ class MesaController extends Controller
 {
     $restaurantId = 1;
 
-    $mesas = Mesa::query()
-    ->select('id', 'numero') // 👈 solo lo necesario
-    ->where('restaurant_id', $restaurantId)
-    ->orderBy('numero')
-    ->orderBy('id')
-    ->get();
-
-    $pedidosActivosPorMesa = Pedido::query()
-        ->select('mesa_id')
-        ->selectRaw('COUNT(*) AS pedidos_activos_count')
-        ->where('restaurant_id', $restaurantId)
-        ->whereIn('estado', self::PEDIDO_ESTADOS_ACTIVOS)
-        ->groupBy('mesa_id')
-        ->pluck('pedidos_activos_count', 'mesa_id');
+    $mesas = DB::table('mesas')
+        ->leftJoin('pedidos', function ($join) use ($restaurantId) {
+            $join->on('mesas.id', '=', 'pedidos.mesa_id')
+                ->where('pedidos.restaurant_id', $restaurantId)
+                ->whereIn('pedidos.estado', ['pendiente', 'preparando', 'listo', 'retenido', 'modificacion_solicitada']);
+        })
+        ->where('mesas.restaurant_id', $restaurantId)
+        ->groupBy('mesas.id', 'mesas.numero', 'mesas.mesero_id')
+        ->select(
+            'mesas.id',
+            'mesas.numero',
+            'mesas.mesero_id',
+            DB::raw('COUNT(pedidos.id) as pedidos_activos_count')
+        )
+        ->orderByRaw('mesas.numero::integer')
+        ->get();
 
     return response()->json([
-        'data' => $mesas->map(function ($mesa) use ($pedidosActivosPorMesa) {
-            $pedidosActivos = (int) ($pedidosActivosPorMesa[$mesa->id] ?? 0);
+        'data' => $mesas->map(function ($mesa) {
+            $mesero = $mesa->mesero_id
+                ? \App\Models\Usuario::find($mesa->mesero_id)
+                : null;
 
             return [
                 'id' => $mesa->id,
                 'numero' => $mesa->numero,
-                'estado' => $pedidosActivos > 0 ? 'ocupada' : 'libre',
-                'pedidos_activos_count' => $pedidosActivos,
+                'estado' => $mesa->pedidos_activos_count > 0 ? 'ocupada' : 'libre',
+                'pedidos_activos_count' => (int) $mesa->pedidos_activos_count,
+                'mesero_id' => $mesa->mesero_id,
+                'mesero_nombre' => $mesero ? trim($mesero->nombre . ' ' . $mesero->apellido) : null,
             ];
         }),
     ]);
@@ -153,13 +161,21 @@ class MesaController extends Controller
 
     public function show(Request $request, string $id): JsonResponse
 {
-    $mesa = rawurldecode($id);
+    $mesaNumero = rawurldecode($id);
     $restaurantId = 1;
+
+    // Resolver el ID real de la mesa a partir del número
+    $mesaRecord = \App\Models\Mesa::query()
+        ->where('restaurant_id', $restaurantId)
+        ->where('numero', $mesaNumero)
+        ->first();
+
+    $mesaId = $mesaRecord?->id ?? (int) $mesaNumero;
 
     // 🔹 Clientes activos en la mesa
     $clientes = ClienteMesa::query()
         ->where('restaurant_id', $restaurantId)
-        ->where('mesa', $mesa)
+        ->where('mesa', $mesaNumero)
         ->where('activo', true)
         ->orderBy('id')
         ->get();
@@ -176,7 +192,7 @@ class MesaController extends Controller
             'cliente_mesa_id'
         ])
         ->where('restaurant_id', $restaurantId)
-        ->where('mesa_id', (int) $mesa)
+        ->where('mesa_id', $mesaId)
         ->whereIn('estado', [
             'retenido',
             'modificacion_solicitada',
@@ -204,11 +220,18 @@ class MesaController extends Controller
         ->get()
         ->groupBy('cliente_mesa_id');
 
+    $mesaModel = $mesaRecord;
+    $mesaModel?->load('mesero:id,nombre,apellido');
+
     return response()->json([
         'data' => [
-            'id' => (int) $mesa,
-            'codigo' => $mesa,
+            'id' => (int) $mesaNumero,
+            'codigo' => $mesaNumero,
             'estado' => $pedidosPorCliente->flatten(1)->isNotEmpty() ? 'ocupada' : 'libre',
+            'mesero_id' => $mesaModel?->mesero_id,
+            'mesero_nombre' => $mesaModel?->mesero
+                ? trim($mesaModel->mesero->nombre . ' ' . $mesaModel->mesero->apellido)
+                : null,
 
             'clientes' => $clientes->map(function (ClienteMesa $cliente) use ($pedidosPorCliente) {
 
@@ -290,40 +313,132 @@ class MesaController extends Controller
     {
         $restaurantId = (int) $request->user()->restaurant_id;
 
-        $cliente = ClienteMesa::query()
+        $cliente = \App\Models\Cliente::query()
             ->where('restaurant_id', $restaurantId)
             ->findOrFail($id);
 
         $pedidos = Pedido::query()
             ->where('restaurant_id', $restaurantId)
-            ->where('cliente_mesa_id', $cliente->id)
-            ->whereIn('estado', ['retenido', 'modificacion_solicitada', 'pendiente', 'preparando', 'listo'])
+            ->where('cliente_id', $cliente->id)
+            ->whereNotIn('estado', ['facturado', 'cancelado'])
             ->get();
+
+        if ($pedidos->isEmpty()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No hay pedidos pendientes de facturar para este cliente.',
+            ], 400);
+        }
+
+        $hayPendientes = $pedidos->contains(
+            fn ($p) => !in_array($p->estado, ['entregado', 'facturado', 'cancelado'])
+        );
+
+        if ($hayPendientes) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No se puede cobrar mientras hay pedidos que aún no han sido entregados.',
+            ], 400);
+        }
 
         $total = (float) $pedidos->sum('total');
 
         Pedido::query()
-    ->where('restaurant_id', $restaurantId)
-    ->where('cliente_mesa_id', $cliente->id)
-    ->update(['estado' => 'entregado']);
+            ->where('restaurant_id', $restaurantId)
+            ->where('cliente_id', $cliente->id)
+            ->whereNotIn('estado', ['facturado', 'cancelado'])
+            ->update(['estado' => 'facturado']);
+
+        // ── Generar comprobante ───────────────────────────────────────
+        $pedidosConDetalle = Pedido::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('cliente_id', $cliente->id)
+            ->where('estado', 'facturado')
+            ->with(['detalle.menuItem', 'mesa'])
+            ->orderBy('created_at')
+            ->get();
+
+        // Buscar mesero del primer pedido
+        $meseroNombre = null;
+        $meseroId = $pedidosConDetalle->first()?->mesero_id;
+        if ($meseroId) {
+            $mesero = \App\Models\Usuario::find($meseroId);
+            $meseroNombre = $mesero ? trim($mesero->nombre . ' ' . $mesero->apellido) : null;
+        }
+
+        // Construir snapshot de ítems
+        $detalleSnapshot = [];
+        foreach ($pedidosConDetalle as $pedido) {
+            foreach ($pedido->detalle as $item) {
+                $nombre = $item->menuItem?->nombre ?? 'Ítem';
+                $key = $nombre . '|' . ($item->nota ?? '');
+                if (isset($detalleSnapshot[$key])) {
+                    $detalleSnapshot[$key]['cantidad'] += (int) $item->cantidad;
+                    $detalleSnapshot[$key]['subtotal'] += (float) $item->importe;
+                } else {
+                    $detalleSnapshot[$key] = [
+                        'nombre'   => $nombre,
+                        'cantidad' => (int) $item->cantidad,
+                        'precio'   => (float) $item->precio_unitario,
+                        'subtotal' => (float) $item->importe,
+                        'nota'     => $item->nota ?? null,
+                    ];
+                }
+            }
+        }
+
+        $mesaNumero = $pedidosConDetalle->first()?->mesa?->numero;
+
+        $comprobante = \App\Models\Comprobante::create([
+            'token'          => \App\Models\Comprobante::generarToken(),
+            'cliente_id'     => $cliente->id,
+            'restaurant_id'  => $restaurantId,
+            'mesa_numero'    => $mesaNumero,
+            'pedidos_ids'    => $pedidosConDetalle->pluck('id')->toArray(),
+            'detalle'        => array_values($detalleSnapshot),
+            'total'          => $total,
+            'mesero_nombre'  => $meseroNombre,
+            'pagado_at'      => now(),
+        ]);
+
+        // Marcar cliente como inactivo para que el próximo pedido cree uno nuevo
+        \App\Models\Cliente::where('id', $cliente->id)
+            ->update(['activo' => false]);
 
         return response()->json([
-            'message' => 'Cuenta individual facturada correctamente.',
-            'data' => [
-                'cliente_id' => $cliente->id,
-                'total_facturado' => $total,
-                'pedidos_facturados' => $pedidos->count(),
-            ],
+            'ok' => true,
+            'message' => 'Comprobante generado correctamente.',
+            'total' => $total,
+            'pedidos' => $pedidos->pluck('id'),
+            'comprobante_url' => route('comprobante.show', $comprobante->token),
+            'comprobante_token' => $comprobante->token,
         ]);
     }
-
+    
     public function pedidos(Request $request, string $mesaId): JsonResponse
     {
         $restaurantId = (int) ($request->user()->restaurant_id ?? 1);
+        $mesaNumero = rawurldecode($mesaId);
+
+        // Resolver el ID real de la mesa a partir del número
+        $mesaRecord = \App\Models\Mesa::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('numero', $mesaNumero)
+            ->first();
+
+        $mesaRealId = $mesaRecord?->id ?? (int) $mesaNumero;
 
         $pedidos = Pedido::query()
             ->where('restaurant_id', $restaurantId)
-            ->where('mesa_id', (int) rawurldecode($mesaId))
+            ->where('mesa_id', $mesaRealId)
+            ->whereIn('estado', [
+                'retenido',
+                'modificacion_solicitada',
+                'pendiente',
+                'preparando',
+                'listo',
+                'entregado',
+            ])
             ->with([
     'detalle:id,pedido_id,menu_item_id,cantidad,precio_unitario,importe,grupo_servicio,estado_servicio,nota',
     'detalle.menuItem:id,nombre,categoria',
@@ -367,14 +482,109 @@ class MesaController extends Controller
             })->values(),
         ];
     }
+
+    public function asignarMesero(Request $request, string $mesaNumero): JsonResponse
+    {
+        $restaurantId = (int) ($request->user()->restaurant_id ?? 1);
+        $usuarioId = (int) $request->user()->id;
+
+        $mesa = \App\Models\Mesa::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('numero', rawurldecode($mesaNumero))
+            ->first();
+
+        if (!$mesa) {
+            return response()->json(['ok' => false, 'message' => 'Mesa no encontrada.'], 404);
+        }
+
+        // Si ya tiene un mesero diferente asignado, devolver info para mostrar alerta
+        if ($mesa->mesero_id && $mesa->mesero_id !== $usuarioId) {
+            $meseroActual = \App\Models\Usuario::find($mesa->mesero_id);
+            return response()->json([
+                'ok' => false,
+                'already_assigned' => true,
+                'mesero_id' => $mesa->mesero_id,
+                'mesero_nombre' => $meseroActual
+                    ? trim($meseroActual->nombre . ' ' . $meseroActual->apellido)
+                    : 'Otro mesero',
+            ], 409);
+        }
+
+        $mesa->mesero_id = $usuarioId;
+        $mesa->save();
+
+        // Estampar mesero_id en todos los pedidos activos de esta mesa
+        Pedido::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('mesa_id', $mesa->id)
+            ->whereNotIn('estado', ['facturado', 'cancelado'])
+            ->whereNull('mesero_id')
+            ->update(['mesero_id' => $usuarioId]);
+
+        $usuario = $request->user();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Mesa asignada correctamente.',
+            'mesero_id' => $usuarioId,
+            'mesero_nombre' => trim($usuario->nombre . ' ' . $usuario->apellido),
+        ]);
+    }
+
+    public function liberarMesero(Request $request, string $mesaNumero): JsonResponse
+    {
+        $restaurantId = (int) ($request->user()->restaurant_id ?? 1);
+        $usuarioId = (int) $request->user()->id;
+
+        $mesa = \App\Models\Mesa::query()
+            ->where('restaurant_id', $restaurantId)
+            ->where('numero', rawurldecode($mesaNumero))
+            ->first();
+
+        if (!$mesa) {
+            return response()->json(['ok' => false, 'message' => 'Mesa no encontrada.'], 404);
+        }
+
+        // Solo el mesero asignado o un admin puede liberar
+        if ($mesa->mesero_id && $mesa->mesero_id !== $usuarioId) {
+            $rol = $request->user()->rol ?? '';
+            if ($rol !== 'admin') {
+                return response()->json(['ok' => false, 'message' => 'No tienes permiso para liberar esta mesa.'], 403);
+            }
+        }
+
+        $mesa->mesero_id = null;
+        $mesa->save();
+
+        return response()->json(['ok' => true, 'message' => 'Mesa liberada.']);
+    }
+
     public function generarQR($id)
     {
         $mesa = Mesa::findOrFail($id);
-        $host = request()->getHost(); // solo IP sin puerto
-    $url = "http://{$host}:5174?mesa=" . $mesa->id;
-        return QrCode::format('svg')
-            ->size(300)
-            ->generate($url);
+        $restaurant = \App\Models\Restaurant::find(1);
+        $host = request()->getHost();
+        $cartaUrl = "http://{$host}:5174?mesa={$mesa->id}";
+
+        $wifiSsid     = $restaurant->wifi_ssid ?? '';
+        $wifiPassword = $restaurant->wifi_password ?? '';
+        $wifiSecurity = $restaurant->wifi_security ?? 'WPA';
+
+        if ($wifiSsid) {
+            $wifiStr = $wifiSecurity === 'nopass'
+                ? "WIFI:T:nopass;S:{$wifiSsid};;"
+                : "WIFI:T:{$wifiSecurity};S:{$wifiSsid};P:{$wifiPassword};;";
+        } else {
+            $wifiStr = '';
+        }
+
+        $restaurantName = $restaurant->nombre ?? 'Restaurante';
+        $mesaNumero     = $mesa->numero ?? $mesa->id;
+
+        return response()->view('admin.mesa_qr', compact(
+            'mesa', 'mesaNumero', 'restaurantName',
+            'cartaUrl', 'wifiStr', 'wifiSsid'
+        ))->header('Content-Type', 'text/html');
     }
 
 }

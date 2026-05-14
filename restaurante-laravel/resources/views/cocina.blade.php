@@ -5,1418 +5,959 @@
   $serviceArea = strtolower($serviceArea ?? 'plato');
   $serviceAreaLabel = $serviceAreaLabel ?? ($serviceArea === 'bebida' ? 'Bar' : 'Cocina');
 @endphp
-
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KDS {{ $serviceAreaLabel }}</title>
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('css/admin.css') }}">
 <style>
-
 :root {
-  --bg: #111418;
-  --panel: #1a2028;
-  --panel-soft: #202734;
-  --text: #f1f5fb;
-  --muted: #a9b3c3;
-  --line: #313b4d;
-  --pending: #6b7280;
-  --cooking: #f97316;
-  --ready: #5ac887;
-  --danger: #ff4d4d;
+  --bg: #0a0c0f;
+  --surface: #111418;
+  --surface2: #181c22;
+  --border: #252b36;
+  --border-bright: #3a4455;
+  --text: #f0f4ff;
+  --muted: #8892a4;
+  --pending-color: #f5c542;
+  --cooking-color: #ff7c2a;
+  --ready-color: #2ecc71;
+  --danger-color: #ff3b3b;
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body: 'Barlow', sans-serif;
 }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  margin: 0;
-  min-height: 100vh;
-  font-family: Inter, "Segoe UI", system-ui, sans-serif;
-  color: var(--text);
   background: var(--bg);
-}
-.kds { min-height: 100vh; padding: 14px 16px; max-width: 1700px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
-.topbar {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
-  align-items: center;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 8px 12px;
-}
-.topbar-title { margin: 0; font-size: 1.12rem; font-weight: 700; }
-.status-chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 4px 9px;
-  background: #242d3a;
-  font-size: .82rem;
-  color: #e5edf8;
-  min-height: 30px;
-  cursor: pointer;
-  transition: all .2s ease;
-}
-.status-chip:hover { border-color: #6f819f; transform: translateY(-1px); }
-.status-chip.active { background: #3a465c; border-color: #8aa2ca; color: #ffffff; box-shadow: 0 6px 16px rgba(0,0,0,.22); }
-.status-chip:not(.active) { background: transparent; }
-.status-chip[type="button"] { appearance: none; -webkit-appearance: none; font: inherit; }
-.status-chip-label { color: #bec8da; font-weight: 600; }
-.status-chip-value { font-weight: 800; }
-.status-chip--pending { border-color: rgba(107,114,128,.85); }
-.status-chip--cooking { border-color: rgba(249,115,22,.85); }
-.status-chip--ready { border-color: rgba(90,200,135,.85); }
-.topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-.controls { display: flex; gap: 6px; justify-content: flex-end; }
-.user-panel { display: inline-flex; align-items: center; gap: 6px; }
-.user-label {
-  font-size: .78rem;
-  color: #d6dfef;
-  border: 1px solid #3b475c;
-  border-radius: 999px;
-  padding: 6px 10px;
-  background: #242d3a;
-  white-space: nowrap;
-}
-.btn-icon { opacity: .85; margin-right: 4px; }
-.ghost {
-  border: 1px solid #42506a;
-  background: #242d3a;
   color: var(--text);
-  border-radius: 999px;
-  padding: 7px 11px;
-  min-height: 34px;
-  cursor: pointer;
-  transition: all .2s ease;
-  font-size: .82rem;
-  line-height: 1;
+  font-family: var(--font-body);
+  min-height: 100vh;
+}
+
+/* ─── TOPBAR ─── */
+.kds { min-height: 100vh; display: flex; flex-direction: column; }
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text);
   white-space: nowrap;
 }
-.ghost:hover { border-color: #6f819f; }
-.error { margin: 0; padding: 10px; border-radius: 12px; color: #ffd9df; border: 1px solid rgba(240,142,160,.5); background: rgba(91,42,53,.30); }
-.toast { position: fixed; right: 16px; bottom: 16px; background: #19202a; border: 1px solid #3c4860; color: #f9e9ee; padding: 10px 12px; border-radius: 10px; z-index: 80; }
-.kds-grid { flex: 1; min-height: 0; }
-.kds-grid-inner { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
-.kds-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px;
-  display: grid;
-  gap: 8px;
-  cursor: pointer;
-  transition: all .2s ease;
-}
-.kds-card:hover { transform: scale(1.02); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
-.card-selected { border-color: #8194b3; }
-.card-new { animation: glowPremium 1.6s ease; }
-.card-critical { border: 2px solid var(--danger); box-shadow: 0 0 0 2px rgba(255,77,77,.12); }
-.kds-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-.kds-card-head-main { display: grid; gap: 4px; }
-.card-action-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 1px solid #445169;
-  color: #cdd9ed;
-  font-size: 1.1rem;
-  background: rgba(116, 138, 170, .12);
-}
-.card-footer-hint {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-self: end;
-  color: #b9c6dc;
-  font-size: .78rem;
-  border: 1px dashed rgba(143, 162, 189, .45);
-  border-radius: 999px;
-  padding: 4px 10px;
-}
-.num { font-weight: 900; font-size: 1.42rem; margin: 0; line-height: 1.1; }
-.kds-meta { margin: 2px 0 0; color: var(--muted); font-size: .78rem; }
-.timer { border-radius: 999px; padding: 3px 8px; font-size: .72rem; font-weight: 800; border: 1px solid #3a4558; background: #242d3a; color: #dbe5f6; }
-.t-ok, .t-warn, .t-critical { color: #dbe5f6; background: #242d3a; animation: none; }
-.service-block { border-radius: 10px; border: 1px solid var(--line); background: var(--panel-soft); padding: 8px; display: grid; gap: 8px; }
-.service-block-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.service-block--pendiente { border-color: rgba(107,114,128,.9); }
-.service-block--preparando { border-color: rgba(249,115,22,.9); }
-.service-block--listo { border-color: rgba(90,200,135,.9); }
-.service-block--entregado { border-color: rgba(89,165,255,.8); }
-.badge { border: 1px solid transparent; border-radius: 999px; font-size: .75rem; font-weight: 700; padding: 3px 8px; }
-.b-pendiente { background: rgba(107,114,128,.2); color: #e2e8f0; border-color: rgba(107,114,128,.45); }
-.b-preparando { background: rgba(249,115,22,.2); color: #ffd8b5; border-color: rgba(249,115,22,.5); }
-.b-listo { background: rgba(90,200,135,.18); color: #d5ffe7; border-color: rgba(90,200,135,.45); }
-.b-entregado { background: rgba(89,165,255,.18); color: #d6e7ff; border-color: rgba(89,165,255,.45); }
-.items { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.items li { display: flex; gap: 8px; align-items: baseline; }
-.qty { min-width: 40px; color: #ffffff; font-weight: 900; font-size: 1.2rem; }
-.name { font-weight: 700; font-size: 1.04rem; color: #eff4ff; text-transform: uppercase; letter-spacing: .01em; }
-.card-note-preview { margin: 0; color: #b9c3d5; font-size: .8rem; line-height: 1.3; }
-.card-actions {
+.chips {
   display: flex;
-  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
-  margin-top: 4px;
-}
-.action {
-  appearance: none;
-  -webkit-appearance: none;
-  border-radius: 10px;
-  padding: 8px 13px;
-  font-size: .84rem;
-  font-weight: 800;
-  letter-spacing: .01em;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: var(--surface2);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: transform .14s ease, box-shadow .14s ease, filter .16s ease, background .2s ease, border-color .2s ease;
+  transition: all .18s ease;
+  color: var(--muted);
 }
-.action:hover { transform: translateY(-1px); filter: brightness(1.03); }
-.action:active { transform: translateY(0); filter: brightness(.97); }
-.action:focus-visible { outline: 2px solid rgba(255, 255, 255, .42); outline-offset: 2px; }
-.action[disabled] { opacity: .62; cursor: not-allowed; transform: none; filter: none; }
-.action-secondary {
-  border-color: rgba(129, 148, 179, .7);
-  background: rgba(39, 48, 63, .45);
-  color: #deebff;
-  box-shadow: inset 0 0 0 1px rgba(129, 148, 179, .1);
+.chip:hover { color: var(--text); border-color: var(--border-bright); }
+.chip.active.chip--pending { background: rgba(245,197,66,.14); border-color: var(--pending-color); color: var(--pending-color); }
+.chip.active.chip--cooking { background: rgba(255,124,42,.14); border-color: var(--cooking-color); color: var(--cooking-color); }
+.chip.active.chip--ready { background: rgba(46,204,113,.14); border-color: var(--ready-color); color: var(--ready-color); }
+.chip.active.chip--delayed { background: rgba(255,59,59,.14); border-color: var(--danger-color); color: var(--danger-color); }
+.chip-count {
+  background: rgba(255,255,255,.12);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: .9rem;
+  font-weight: 900;
 }
-.action-secondary:hover,
-.action-secondary:focus-visible {
-  border-color: rgba(190, 208, 236, .9);
-  background: rgba(58, 72, 94, .62);
+.topbar-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+.btn-ghost {
+  border: 1.5px solid var(--border-bright);
+  background: var(--surface2);
+  color: var(--muted);
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s ease;
+  white-space: nowrap;
 }
-.action-primary {
-  color: #1a1a1a;
-  border: none;
+.btn-ghost:hover { color: var(--text); border-color: #6b7d96; }
+.btn-logout {
+  border: 1.5px solid rgba(255,59,59,.4);
+  background: rgba(255,59,59,.1);
+  color: #ff8080;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s ease;
 }
-.action-next-pendiente {
-  background: linear-gradient(135deg, #f5c451, #eab308);
-  box-shadow: 0 6px 18px rgba(245, 196, 81, .35);
+.btn-logout:hover { background: rgba(255,59,59,.22); color: #ffaaaa; }
+
+/* ─── GRID ─── */
+.kds-body { flex: 1; padding: 14px 16px; }
+.kds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
 }
-.action-next-preparando {
-  background: linear-gradient(135deg, #fb923c, #f97316);
-  box-shadow: 0 6px 18px rgba(249, 115, 22, .32);
+.empty-state {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 60px 20px;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
 }
-.action-next-listo {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #f3fff8;
-  box-shadow: 0 6px 18px rgba(34, 197, 94, .33);
-}
-.fade-enter-active, .fade-leave-active, .fade-move { transition: all .28s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(8px); }
-.drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .52); display: flex; justify-content: flex-end; z-index: 90; }
-.drawer { width: min(560px, 100vw); height: 100%; background: #151b23; border-left: 1px solid var(--line); padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-.drawer-head { display: flex; justify-content: space-between; align-items: center; }
-.drawer-title { margin: 0; font-size: 1.45rem; }
-.ticket { background: #1d2530; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
-.ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ticket-grid p { margin: 0; color: #eadddf; }
-.priority-pill { margin-top: 6px; display: inline-block; border-radius: 999px; background: rgba(255,77,77,.12); color: #ffb4b4; border: 1px solid rgba(255,77,77,.55); font-size: .8rem; padding: 4px 9px; }
-.item-row { border-bottom: 1px dashed rgba(255,255,255,.18); padding: 8px 0; }
-.item-row:last-child { border-bottom: 0; }
-.item-main { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
-.item-left { display:flex; gap:8px; align-items:baseline; min-width:0; }
-.item-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.item-extra, .item-note { margin: 4px 0 0 0; color: #b8c0cf; font-size: .88rem; }
-.notes-section { display: grid; gap: 10px; padding: 12px; }
-.notes-title { margin: 0; display: inline-flex; align-items: center; gap: 8px; color: #e6dde4; font-size: .95rem; letter-spacing: .01em; }
-.notes-block { margin: 0; border: 1px solid rgba(180, 192, 214, .26); background: #222b38; color: #e2e9f4; border-radius: 12px; padding: 12px; font-size: .93rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
-.item-note-chip { max-width: 52%; display: inline-flex; align-items: flex-start; gap: 6px; border: 1px solid rgba(180, 192, 214, .30); background: rgba(180, 192, 214, .12); color: #dce4f0; border-radius: 999px; padding: 4px 10px; font-size: .79rem; line-height: 1.2; flex-shrink: 0; }
-.item-note-chip--button { text-align: left; cursor: pointer; }
-.item-note-chip--button:hover,.item-note-chip--button:focus-visible { border-color: rgba(212, 222, 240, .65); background: rgba(180, 192, 214, .18); outline: none; }
-.item-note-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-break: break-word; }
-.drawer-items { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
-.items-summary { margin: 0 0 8px 0; color: #d3c3cb; font-size: .87rem; }
-.category-title { margin: 10px 0 4px 0; color: #f4d6de; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
-.empty-items { margin: 8px 0 0; padding: 10px; border-radius: 10px; border: 1px dashed rgba(143,79,93,.42); background: rgba(91,42,53,.22); color: #d7b9c1; }
-.drawer-actions { display: grid; gap: 8px; }
-.drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .25s ease; }
-.drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
-.drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(28px); }
-.note-modal-overlay { position: fixed; inset: 0; background: rgba(3, 6, 14, .72); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 120; }
-.note-modal { width: min(540px, 100%); background: #161d27; border: 1px solid rgba(180, 192, 214, .24); border-radius: 16px; display: grid; gap: 10px; padding: 14px; max-height: min(78vh, 640px); }
-.note-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.note-modal-title { margin: 0; font-size: 1rem; color: #e5edf8; }
-.note-modal-context { margin: 0; color: #b8c4d9; font-size: .88rem; }
-.note-modal-content { overflow-y: auto; border-radius: 12px; border: 1px solid rgba(180, 192, 214, .18); background: rgba(18, 24, 37, .8); padding: 12px; }
-.note-modal-content p { margin: 0; color: #eaf1fb; line-height: 1.58; white-space: pre-wrap; word-break: break-word; }
-.note-modal-footer { display: flex; justify-content: flex-end; }
-.note-modal-close { border: 1px solid rgba(180, 192, 214, .28); background: rgba(180, 192, 214, .1); color: #e5edf8; border-radius: 10px; padding: 8px 14px; cursor: pointer; }
-.note-modal-close-ghost { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; }
-.note-modal-enter-active, .note-modal-leave-active { transition: opacity .18s ease; }
-.note-modal-enter-active .note-modal,.note-modal-leave-active .note-modal { transition: transform .22s ease, opacity .22s ease; }
-.note-modal-enter-from, .note-modal-leave-to { opacity: 0; }
-.note-modal-enter-from .note-modal,.note-modal-leave-to .note-modal { transform: translateY(10px) scale(.98); opacity: 0; }
-body.note-modal-open { overflow: hidden; }
-@keyframes glowPremium {
-  0% { box-shadow: 0 0 0 rgba(90,200,135,0); }
-  45% { box-shadow: 0 0 16px rgba(90,200,135,.24); }
-  100% { box-shadow: 0 0 0 rgba(90,200,135,0); }
-}
-@media (max-width: 1280px) {
-  .topbar { grid-template-columns: 1fr; gap: 8px; }
-  .topbar-right { justify-content: space-between; }
-}
-@media (max-width: 900px) {
-  .kds-grid-inner { grid-template-columns: 1fr; }
-}
-@media (max-width: 840px) {
-  .topbar { padding: 8px 10px; }
-  .topbar-title { font-size: 1.06rem; }
-  .status-chip { font-size: .8rem; min-height: 32px; }
-  .topbar-right { justify-content: flex-start; }
-  .controls { width: 100%; }
-  .controls .ghost { flex: 1; justify-content: center; }
-  .user-panel { width: 100%; justify-content: space-between; }
-  .drawer { width: 100vw; }
-  .item-note-chip { font-size: .76rem; }
-}
-@media (max-width: 520px) {
-  .item-main { flex-direction: column; align-items: stretch; }
-  .item-note-chip { max-width: 100%; width: fit-content; }
-}
-.col-list::-webkit-scrollbar,.drawer-items::-webkit-scrollbar{width:8px;height:8px;}
-.col-list::-webkit-scrollbar-thumb,.drawer-items::-webkit-scrollbar-thumb{background:rgba(111,123,145,.45);border-radius:999px;}
-.col-list::-webkit-scrollbar-track,.drawer-items::-webkit-scrollbar-track{background:transparent;}
-.global-sidebar {
-  width: 86px;
-  height: 100vh;
-  background: rgba(2, 6, 23, 0.9);
-  backdrop-filter: blur(16px);
-  border-right: 1px solid rgba(148, 163, 184, 0.26);
-  padding: 20px 12px;
-  position: fixed;
-  top: 0;
-  left: 0;
+
+/* ─── CARD ─── */
+.kds-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0;
   overflow: hidden;
-  transition: width .26s ease, box-shadow .26s ease;
-  z-index: 130;
+  transition: transform .18s ease, box-shadow .18s ease;
 }
-.global-sidebar:hover { width: 268px; box-shadow: 18px 0 36px rgba(2, 6, 23, 0.42); }
-.global-sidebar__brand,.global-sidebar__link,.global-sidebar__logout {
-  display: flex; align-items: center; gap: 14px; border-radius: 14px; padding: 11px 12px; color: #94a3b8; text-decoration: none;
-}
-.global-sidebar__brand { color: #ffd7aa; font-weight: 700; border: 1px solid rgba(255, 215, 170, .2); background: rgba(156, 32, 48, 0.12); }
-.global-sidebar__nav { display: grid; gap: 16px; }
-.global-sidebar__section { display: grid; gap: 8px; }
-.global-sidebar__section-title { margin: 0; padding: 0 12px; color: rgba(148, 163, 184, 0.9); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.global-sidebar__section-links { display: grid; gap: 8px; }
-.global-sidebar__icon { width: 24px; text-align: center; flex-shrink: 0; }
-.global-sidebar__text,.global-sidebar__section-title { opacity: 0; transform: translateX(-8px); white-space: nowrap; transition: opacity .22s ease, transform .22s ease; }
-.global-sidebar:hover .global-sidebar__text,.global-sidebar:hover .global-sidebar__section-title { opacity: 1; transform: translateX(0); }
-.global-sidebar__link,.global-sidebar__logout { border: 1px solid transparent; background: transparent; cursor: pointer; font: inherit; width: 100%; transition: all .24s ease; }
-.global-sidebar__link:hover,.global-sidebar__logout:hover { background: rgba(148, 163, 184, 0.14); color: #fff; transform: translateX(2px); }
-.global-sidebar__link.is-active { background: linear-gradient(145deg, rgba(156, 32, 48, 0.94), #7a1522); border-color: rgba(255, 215, 170, 0.45); color: #fff !important; box-shadow: 0 10px 24px rgba(156, 32, 48, 0.38), inset 3px 0 0 #ffd7aa; }
-.global-sidebar__logout-form { margin-top: auto; }
-.global-sidebar__logout { color: #fecaca; border-color: rgba(248, 113, 113, .22); background: rgba(127, 29, 29, .12); }
-body.has-admin-sidebar .kds { margin-left: 102px; width: calc(100% - 102px); transition: margin-left .26s ease, width .26s ease; }
-body.has-admin-sidebar .global-sidebar:hover ~ .kds { margin-left: 284px; width: calc(100% - 284px); }
-@media (max-width: 980px) {
-  body.has-admin-sidebar .kds,
-  body.has-admin-sidebar .global-sidebar:hover ~ .kds { margin-left: 0; width: 100%; padding-top: 84px; }
-  .global-sidebar { width: 100%; height: auto; max-height: 72px; border-right: none; border-bottom: 1px solid rgba(148, 163, 184, 0.26); }
-  .global-sidebar:hover { width: 100%; }
-  .global-sidebar__text,.global-sidebar__section-title { opacity: 1; transform: translateX(0); }
-  .global-sidebar__nav { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow-x: auto; padding-bottom: 4px; gap: 12px; }
-  .global-sidebar__brand,.global-sidebar__logout-form { display: none; }
+.kds-card:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(0,0,0,.45); }
+.kds-card.is-critical { border-color: var(--danger-color); box-shadow: 0 0 0 2px rgba(255,59,59,.18); }
+.kds-card.is-new { animation: cardPop .4s ease; }
+
+@keyframes cardPop {
+  0% { transform: scale(.97); opacity: .7; }
+  60% { transform: scale(1.015); }
+  100% { transform: scale(1); opacity: 1; }
 }
 
+/* Card header */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.card-head-left { display: flex; flex-direction: column; gap: 2px; }
+.card-order-num {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: .03em;
+  line-height: 1;
+  color: var(--text);
+}
+.card-meta {
+  font-size: .78rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.card-meta strong { color: #c8d8f0; }
+.card-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.timer {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+}
+.timer.t-warn { color: var(--pending-color); border-color: rgba(245,197,66,.5); background: rgba(245,197,66,.08); }
+.timer.t-critical {
+  color: var(--danger-color);
+  border-color: rgba(255,59,59,.6);
+  background: rgba(255,59,59,.1);
+  animation: timerPulse 1.2s ease infinite;
+}
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .6; }
+}
+.status-badge {
+  font-family: var(--font-display);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1.5px solid transparent;
+}
+.badge-pendiente { background: rgba(245,197,66,.14); border-color: rgba(245,197,66,.5); color: var(--pending-color); }
+.badge-preparando { background: rgba(255,124,42,.14); border-color: rgba(255,124,42,.5); color: var(--cooking-color); }
+.badge-listo { background: rgba(46,204,113,.14); border-color: rgba(46,204,113,.5); color: var(--ready-color); }
+
+/* Items block */
+.items-block {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  flex: 1;
+}
+.items-block-title {
+  font-family: var(--font-display);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.item-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.item-qty {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text);
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.item-qty-unit {
+  font-family: var(--font-display);
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-left: -4px;
+  align-self: flex-end;
+  padding-bottom: 3px;
+}
+.item-name {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1.1;
+}
+.item-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(245,197,66,.07);
+  border: 1px solid rgba(245,197,66,.25);
+  border-radius: 8px;
+  margin-top: 2px;
+  margin-left: 46px;
+}
+.item-note-icon { font-size: .85rem; flex-shrink: 0; margin-top: 1px; }
+.item-note-text {
+  font-size: .82rem;
+  font-weight: 500;
+  color: #e8d8a0;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+/* Card action */
+.card-action {
+  padding: 10px 14px;
+}
+.btn-action {
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn-action:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.btn-action:active { transform: translateY(1px); filter: brightness(.94); }
+.btn-action:disabled { opacity: .55; cursor: not-allowed; transform: none; filter: none; }
+.btn-start {
+  background: linear-gradient(135deg, #f5c542, #e8a800);
+  color: #1a1200;
+  box-shadow: 0 6px 20px rgba(245,197,66,.3);
+}
+.btn-ready {
+  background: linear-gradient(135deg, #ff7c2a, #e85a00);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(255,124,42,.3);
+}
+.btn-done {
+  background: linear-gradient(135deg, #2ecc71, #1a8a47);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(46,204,113,.3);
+}
+
+/* Details drawer */
+.drawer-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.65);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+}
+.drawer {
+  width: min(520px, 100vw);
+  height: 100%;
+  background: #0f1318;
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 2px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.drawer-title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+.drawer-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; }
+.drawer-section {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.drawer-section-title {
+  font-family: var(--font-display);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.drawer-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.drawer-info-cell {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+.drawer-info-cell:nth-child(even) { border-right: none; }
+.drawer-info-cell:nth-last-child(-n+2) { border-bottom: none; }
+.drawer-info-label {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.drawer-info-value {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.drawer-items-list {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.drawer-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.drawer-item-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.drawer-item-qty {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1;
+  min-width: 40px;
+  text-align: right;
+}
+.drawer-item-qunit {
+  font-family: var(--font-display);
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--muted);
+  align-self: flex-end;
+  padding-bottom: 3px;
+  margin-left: -4px;
+}
+.drawer-item-name {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  color: var(--text);
+}
+.drawer-item-note {
+  display: flex;
+  gap: 8px;
+  margin-left: 50px;
+  padding: 8px 12px;
+  background: rgba(245,197,66,.08);
+  border: 1px solid rgba(245,197,66,.28);
+  border-radius: 8px;
+  font-size: .88rem;
+  color: #e8d8a0;
+  line-height: 1.4;
+}
+.drawer-order-note {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: .92rem;
+  color: #e8d8a0;
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+}
+.critical-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: rgba(255,59,59,.14);
+  border: 1.5px solid rgba(255,59,59,.5);
+  color: #ff8080;
+  font-family: var(--font-display);
+  font-size: .85rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border-bright);
+  color: var(--text);
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: .9rem;
+  z-index: 300;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+}
+
+/* Error */
+.error-bar {
+  margin: 10px 16px 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255,59,59,.12);
+  border: 1.5px solid rgba(255,59,59,.4);
+  color: #ffaaaa;
+  font-size: .88rem;
+  font-weight: 500;
+}
+
+/* Transitions */
+.fade-enter-active, .fade-leave-active, .fade-move { transition: all .25s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(6px); }
+.drawer-slide-enter-active, .drawer-slide-leave-active { transition: all .22s ease; }
+.drawer-slide-enter-from, .drawer-slide-leave-to { opacity: 0; }
+.drawer-slide-enter-from .drawer, .drawer-slide-leave-to .drawer { transform: translateX(24px); }
+
+/* Admin sidebar compat */
+.global-sidebar { /* keep existing if admin */ }
+body.has-admin-sidebar .kds { margin-left: 102px; }
+
+@media (max-width: 700px) {
+  .kds-grid { grid-template-columns: 1fr; }
+  .topbar { gap: 8px; }
+  .topbar-title { font-size: 1.3rem; }
+  body.has-admin-sidebar .kds { margin-left: 0; padding-top: 80px; }
+}
+@media (max-width: 500px) {
+  .item-qty { font-size: 1.6rem; }
+  .item-name { font-size: 1.2rem; }
+}
 </style>
 </head>
-
 <body class="{{ $isAdmin ? 'has-admin-sidebar' : '' }}">
 @if($isAdmin)
   @include('layouts.partials.admin-sidebar')
 @endif
+
 <div id="app" class="kds">
+
+  <!-- TOPBAR -->
   <header class="topbar">
     <h1 class="topbar-title">{{ $serviceAreaLabel }}</h1>
 
-    <div class="status-chips" role="tablist" aria-live="polite" aria-label="Filtro por estado">
-      <button type="button" class="status-chip status-chip--pending" role="tab" :aria-selected="activeFilter === 'pendiente'" :class="{ active: activeFilter === 'pendiente' }" @click="activeFilter = 'pendiente'"><span class="status-chip-label">🧾 Pendientes</span><span class="status-chip-value">@{{ activeServiceSummary.pendiente }}</span></button>
-      <button type="button" class="status-chip status-chip--cooking" role="tab" :aria-selected="activeFilter === 'preparando'" :class="{ active: activeFilter === 'preparando' }" @click="activeFilter = 'preparando'"><span class="status-chip-label">👨‍🍳 Preparando</span><span class="status-chip-value">@{{ activeServiceSummary.preparando }}</span></button>
-      <button type="button" class="status-chip status-chip--ready" role="tab" :aria-selected="activeFilter === 'listo'" :class="{ active: activeFilter === 'listo' }" @click="activeFilter = 'listo'"><span class="status-chip-label">✅ Listos</span><span class="status-chip-value">@{{ activeServiceSummary.listo }}</span></button>
-      <button type="button" class="status-chip" role="tab" :aria-selected="activeFilter === 'atrasados'" :class="{ active: activeFilter === 'atrasados' }" @click="activeFilter = 'atrasados'"><span class="status-chip-label">⏱ Atrasados</span><span class="status-chip-value">@{{ delayedCount }}</span></button>
+    <div class="chips">
+      <button type="button" class="chip chip--pending" :class="{ active: activeFilter === 'pendiente' }" @click="activeFilter = 'pendiente'">
+        🧾 Pendientes <span class="chip-count">@{{ activeServiceSummary.pendiente }}</span>
+      </button>
+      <button type="button" class="chip chip--cooking" :class="{ active: activeFilter === 'preparando' }" @click="activeFilter = 'preparando'">
+        🔥 Preparando <span class="chip-count">@{{ activeServiceSummary.preparando }}</span>
+      </button>
+      <button type="button" class="chip chip--ready" :class="{ active: activeFilter === 'listo' }" @click="activeFilter = 'listo'">
+        ✅ Listos <span class="chip-count">@{{ activeServiceSummary.listo }}</span>
+      </button>
+      <button type="button" class="chip chip--delayed" :class="{ active: activeFilter === 'atrasados' }" @click="activeFilter = 'atrasados'">
+        ⏱ Atrasados <span class="chip-count">@{{ delayedCount }}</span>
+      </button>
     </div>
 
-    <div style="display:flex; align-items:center; gap:10px;">
-    
-    <form method="POST" action="/logout">
-        @csrf
-        <button 
-            type="submit"
-            style="
-                background: #c23a4a;
-                color: white;
-                border: none;
-                padding: 10px 14px;
-                border-radius: 10px;
-                cursor: pointer;
-                font-weight: bold;
-            "
-            onclick="return confirm('¿Seguro que deseas cerrar sesión?')"
-        >
-            🔒 Cerrar sesión
-        </button>
-    </form>
+    <div class="topbar-actions">
+      <button type="button" class="btn-ghost" @click="fetchOrders(false)">↻ Actualizar</button>
+      <button type="button" class="btn-ghost" @click="toggleFullscreen">⤢ Pantalla completa</button>
+      @if($user)
+        <span style="font-size:.8rem;color:var(--muted);white-space:nowrap;">{{ $user->usuario ?? $user->name ?? '' }}</span>
+      @endif
+      <button type="button" class="btn-logout" @click="showLogoutModal = true">🔒 Salir</button>
 
+<!-- Modal confirmación -->
+<div v-if="showLogoutModal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#111418;border:2px solid #252b36;border-radius:16px;padding:28px 24px;width:min(360px,90vw);display:flex;flex-direction:column;gap:16px;">
+    <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin:0;">¿Cerrar sesión?</h3>
+    <p style="color:#8892a4;font-size:.95rem;margin:0;">Tu sesión se cerrará y serás redirigido al login.</p>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button type="button" class="btn-ghost" style="flex:1;" @click="showLogoutModal = false">Cancelar</button>
+      <button type="button" class="btn-logout" style="flex:2;padding:10px 16px;font-size:1rem;" @click="confirmLogout">
+        🔒 Confirmar salida
+      </button>
+    </div>
+  </div>
 </div>
-
-    <div class="topbar-right">
-      <div class="controls" aria-label="Acciones rápidas">
-        <button type="button" class="ghost" @click="fetchOrders(false)"><span class="btn-icon">↻</span> Actualizar</button>
-        <button type="button" class="ghost" @click="toggleFullscreen"><span class="btn-icon">⤢</span> Pantalla completa</button>
-      </div>
-
-      <div class="user-panel">
-        @if($user)
-          <span class="user-label">{{ ($user->rol ?? 'usuario') . ': ' . ($user->name ?? $user->usuario ?? 'sin-nombre') }}</span>
-        @endif
-        @if(Route::has('logout'))
-          <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" class="ghost" data-logout>Cerrar sesión</button>
-          </form>
-        @endif
-      </div>
-    </div>
   </header>
 
-  <p v-if="error" class="error">@{{ error }}</p>
+  <p v-if="error" class="error-bar">@{{ error }}</p>
 
-  <div class="kds-grid">
-    <transition-group name="fade" tag="div" class="kds-grid-inner">
+  <!-- GRID -->
+  <main class="kds-body">
+    <transition-group name="fade" tag="div" class="kds-grid">
+
+      <div v-if="!filteredOrders.length" key="empty" class="empty-state">
+        @{{ activeFilter === 'pendiente' ? '✓ Sin pedidos pendientes' : activeFilter === 'preparando' ? 'Nada en preparación' : activeFilter === 'listo' ? 'Nada listo aún' : 'Sin pedidos atrasados' }}
+      </div>
+
       <article
         v-for="order in filteredOrders"
         :key="order.id"
-        :id="`order-${order.id}`"
         class="kds-card"
         :class="{
-          'card-new': highlightedIds.has(order.id),
-          'card-critical': order._elapsedMin > 6,
-          'card-selected': selectedOrderId === order.id,
+          'is-critical': order._elapsedMin > 6,
+          'is-new': highlightedIds.has(order.id),
         }"
-        @click="openOrderDetails(order)"
       >
-        <header class="kds-card-head">
-          <div class="kds-card-head-main">
-            <h2 class="num">Pedido #@{{ order.id }}</h2>
-            <p class="kds-meta">Mesa @{{ order.mesa_numero || order.mesa_id || '-' }} · @{{ fmtTime(order.created_at) }}</p>
+        <!-- HEAD -->
+        <header class="card-head">
+          <div class="card-head-left">
+            <span class="card-order-num">Pedido #@{{ order.id }}</span>
+            <span class="card-meta">Mesa <strong>@{{ order.mesa_numero || order.mesa_id || '—' }}</strong> · @{{ fmtTime(order.created_at) }}</span>
           </div>
-          <span class="card-action-icon" aria-hidden="true">›</span>
-          <span class="timer" :class="timerClass(order)">@{{ formatElapsed(order._elapsedMs) }}</span>
+          <div class="card-head-right">
+            <span class="timer" :class="timerClass(order)">@{{ formatElapsed(order._elapsedMs) }}</span>
+            <span class="status-badge" :class="`badge-${order.estado}`">@{{ statusLabel(order.estado) }}</span>
+          </div>
         </header>
 
-
+        <!-- ITEMS -->
         <section
           v-for="group in serviceGroupsFor(order)"
           :key="`${order.id}-${group.key}`"
-          class="service-block"
-          :class="`service-block--${group.status}`"
-          @click.stop
+          class="items-block"
         >
-          <header class="service-block-head">
-            <strong>@{{ group.emoji }} @{{ group.label }}</strong>
-            <span class="badge" :class="serviceBadgeClass(group.status)">@{{ statusLabel(group.status) }}</span>
-          </header>
-
-          <ul class="items">
-            <li v-for="item in group.items" :key="item._k">
-              <span class="qty">@{{ item._qty }}x</span>
-              <span class="name">@{{ item._name }}</span>
-            </li>
-          </ul>
-
-          <div class="card-actions">
-            <button
-              v-if="canStartService(group.status)"
-              class="action action-primary"
-              :class="serviceActionClass(group.status)"
-              :disabled="isGroupProcessing(order.id, group.key)"
-              @click.stop="updateGroupStatus(order.id, group.key)"
-            >
-              @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : (group.status === 'pendiente' ? 'Iniciar' : group.status === 'preparando' ? 'Listo' : serviceActionLabel(group.status, group.key)) }}
-            </button>
-
-            <button
-              type="button"
-              class="action action-secondary"
-              @click.stop="openOrderDetails(order)"
-            >
-              Ver detalles
-            </button>
+          <p class="items-block-title">@{{ group.emoji }} @{{ group.label }}</p>
+          <div v-for="item in group.items" :key="item._k">
+            <div class="item-row">
+              <span class="item-qty">@{{ item._qty }}</span>
+              <span class="item-qty-unit">x</span>
+              <span class="item-name">@{{ item._name }}</span>
+            </div>
+            <div v-if="item._note" class="item-note">
+              <span class="item-note-icon">📝</span>
+              <span class="item-note-text">@{{ item._note }}</span>
+            </div>
           </div>
         </section>
 
-        <p v-if="orderPreviewNote(order)" class="card-note-preview" :title="orderPreviewNote(order)">@{{ orderPreviewNote(order) }}</p>
-        <p class="card-footer-hint">👁 Toca la tarjeta para ver resumen completo</p>
+        <!-- ACTION -->
+        <div class="card-action">
+          <template v-for="group in serviceGroupsFor(order)" :key="`btn-${order.id}-${group.key}`">
+            <button
+              v-if="group.status === 'pendiente'"
+              class="btn-action btn-start"
+              :disabled="isGroupProcessing(order.id, group.key)"
+              @click="updateGroupStatus(order.id, group.key)"
+            >
+              <span>🔥</span>
+              @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : 'Iniciar' }}
+            </button>
+            <button
+              v-else-if="group.status === 'preparando'"
+              class="btn-action btn-ready"
+              :disabled="isGroupProcessing(order.id, group.key)"
+              @click="updateGroupStatus(order.id, group.key)"
+            >
+              <span>✅</span>
+              @{{ isGroupProcessing(order.id, group.key) ? 'Guardando…' : 'Marcar listo' }}
+            </button>
+            <button
+              v-else-if="group.status === 'listo'"
+              class="btn-action btn-done"
+              disabled
+            >
+              ✓ Listo para entregar
+            </button>
+          </template>
+        </div>
+
       </article>
     </transition-group>
-  </div>
+  </main>
 
-  <order-details-drawer
-    :open="drawerOpen"
-    :order="selectedOrder"
-    :priority-overrides="priorityOverrides"
-    @close="closeOrderDetails"
-    @toast="showToast"
-  />
+  <!-- DRAWER DETALLE -->
+  <transition name="drawer-slide">
+    <div v-if="drawerOpen && selectedOrder" class="drawer-overlay" @click.self="drawerOpen = false">
+      <aside class="drawer">
+        <header class="drawer-head">
+          <h2 class="drawer-title">Pedido #@{{ selectedOrder.id }}</h2>
+          <button class="btn-ghost" @click="drawerOpen = false">✕ Cerrar</button>
+        </header>
+        <div class="drawer-body">
+
+          <!-- Info -->
+          <div class="drawer-section">
+            <p class="drawer-section-title">Información</p>
+            <div class="drawer-info-grid">
+              <div class="drawer-info-cell">
+                <p class="drawer-info-label">Mesa</p>
+                <p class="drawer-info-value">@{{ selectedOrder.mesa_numero || selectedOrder.mesa_id || '—' }}</p>
+              </div>
+              <div class="drawer-info-cell">
+                <p class="drawer-info-label">Hora</p>
+                <p class="drawer-info-value">@{{ fmtTime(selectedOrder.created_at) }}</p>
+              </div>
+              <div class="drawer-info-cell">
+                <p class="drawer-info-label">Estado</p>
+                <p class="drawer-info-value">@{{ statusLabel(selectedOrder.estado) }}</p>
+              </div>
+              <div class="drawer-info-cell">
+                <p class="drawer-info-label">Tiempo</p>
+                <p class="drawer-info-value" :style="selectedOrder._elapsedMin > 6 ? 'color:var(--danger-color)' : ''">@{{ formatElapsed(selectedOrder._elapsedMs) }}</p>
+              </div>
+            </div>
+            <div v-if="selectedOrder._elapsedMin > 6" style="padding:10px 14px;border-top:1px solid var(--border);">
+              <span class="critical-pill">⚠ Atrasado +@{{ Math.floor(selectedOrder._elapsedMin - 6) }} min</span>
+            </div>
+          </div>
+
+          <!-- Items -->
+          <div class="drawer-section">
+            <p class="drawer-section-title">Items del pedido</p>
+            <div class="drawer-items-list">
+              <div v-for="(item, idx) in getOrderItems(selectedOrder)" :key="idx" class="drawer-item">
+                <div class="drawer-item-main">
+                  <span class="drawer-item-qty">@{{ item._qty }}</span>
+                  <span class="drawer-item-qunit">x</span>
+                  <span class="drawer-item-name">@{{ item._name }}</span>
+                </div>
+                <div v-if="item._note" class="drawer-item-note">
+                  📝 @{{ item._note }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+    </div>
+  </transition>
 
   <div v-if="toastMessage" class="toast">@{{ toastMessage }}</div>
 </div>
 
-<script src="https://unpkg.com/vue@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.min.js"></script>
 <script>
 const POLLING_MS = 4000;
-const DELIVERED_HIDE_MS = 15 * 60 * 1000;
 const SERVICE_AREA = @json($serviceArea ?? 'plato');
 const ACTIVE_SERVICE_LABEL = @json($serviceAreaLabel);
-const STATUS_LABELS = {
-  pendiente: 'Pendiente',
-  preparando: 'En preparación',
-  listo: 'Listo',
-  entregado: 'Entregado',
-};
-const REQUESTED_WITH = 'XMLHttpRequest';
+const STATUS_LABELS = { pendiente:'Pendiente', preparando:'En preparación', listo:'Listo', entregado:'Entregado' };
 
-function normalizeStatus(status) {
-  return String(status || '').trim().toLowerCase();
+function statusLabelFor(s) {
+  const n = String(s||'').trim().toLowerCase();
+  return STATUS_LABELS[n] || (n ? n.charAt(0).toUpperCase()+n.slice(1) : '-');
 }
+function asText(v) { return (v===null||v===undefined)?'':Array.isArray(v)?v.join(' · '):String(v); }
+function deepGet(obj,path) { try { return path.split('.').reduce((a,k)=>a&&a[k]!==undefined?a[k]:undefined,obj); } catch{return undefined;} }
+function pickFirst(obj,paths) { for(const p of paths){const v=asText(deepGet(obj,p)).trim();if(v)return v;} return ''; }
+function pickFirstNum(obj,paths,fb=1) { for(const p of paths){const n=Number(deepGet(obj,p));if(Number.isFinite(n)&&n>0)return n;} return fb; }
 
-function statusLabelFor(status) {
-  const normalized = normalizeStatus(status);
-  return STATUS_LABELS[normalized] || (normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : '-');
-}
-
-function buildJsonHeaders(csrfToken = '', includeBody = false) {
-  const headers = {
-    'Accept': 'application/json',
-    'X-Requested-With': REQUESTED_WITH,
-  };
-
-  if (csrfToken) headers['X-CSRF-TOKEN'] = csrfToken;
-  if (includeBody) headers['Content-Type'] = 'application/json';
-
-  return headers;
-}
-
-/* =========================================================
-   ✅ HELPERS "DEEP" PARA NOTAS / CANTIDAD / NOMBRE / CATEGORÍA
-   (tu API puede mandar item.pivot.nota, item.detalle.nota, etc.)
-========================================================= */
-function asText(v) {
-  if (Array.isArray(v)) return v.join(' · ');
-  if (v === null || v === undefined) return '';
-  return String(v);
-}
-function deepGet(obj, path) {
-  try {
-    return path.split('.').reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : undefined), obj);
-  } catch { return undefined; }
-}
-function pickFirst(obj, paths) {
-  for (const p of paths) {
-    const val = deepGet(obj, p);
-    const txt = asText(val).trim();
-    if (txt) return txt;
-  }
-  return '';
-}
-function pickFirstNum(obj, paths, fallback = 1) {
-  for (const p of paths) {
-    const val = deepGet(obj, p);
-    const n = Number(val);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-  return fallback;
-}
 function normalizeAndDedupeOrders(list) {
   const map = new Map();
-
-  for (const raw of (Array.isArray(list) ? list : [])) {
-    const idNum = Number(raw?.id);
-    if (!Number.isFinite(idNum)) continue;
-
-    // normaliza ID siempre a number
-    const normalized = { ...raw, id: idNum };
-    map.set(idNum, normalized);
+  for(const raw of (Array.isArray(list)?list:[])) {
+    const id=Number(raw?.id);
+    if(!Number.isFinite(id)) continue;
+    map.set(id,{...raw,id});
   }
-
   return [...map.values()];
 }
+
 function normalizeOrderItems(order) {
-  const source =
-    order?.items ||
-    order?.detalles ||
-    order?.detalle ||
-    order?.pedido_detalles ||
-    order?.order_items ||
-    [];
-
-  const arr = Array.isArray(source) ? source : [];
-
-  return arr.map((raw, idx) => {
-    // merge "pivot" o "detalle" si vienen así
-    const merged = {
-      ...raw,
-      ...(raw?.pivot || {}),
-      ...(raw?.detalle || {}),
-      ...(raw?.pedido_detalle || {}),
-      ...(raw?.order_item || {}),
-    };
-
-    const qty = pickFirstNum(merged, [
-      'cantidad','quantity','qty',
-      'pivot.cantidad','pivot.quantity','pivot.qty',
-      'detalle.cantidad','pedido_detalle.cantidad','order_item.cantidad',
-    ], 1);
-
-    const name = pickFirst(merged, [
-      'nombre',
-      'menu_item.nombre',
-      'menuItem.nombre',
-      'producto.nombre',
-      'product.nombre',
-      'item.nombre',
-    ]) || 'Item';
-
-    const category = pickFirst(merged, [
-      'categoria','category','tipo',
-      'menu_item.categoria','menuItem.categoria'
-    ]) || 'General';
-
-    const note = pickFirst(merged, [
-      // comunes
-      'nota','observacion','comentario','note','notas',
-      // nombres típicos en apps
-      'instrucciones','instrucciones_especiales','instruccionesEspeciales',
-      'special_instructions','specialInstructions',
-      'comentarios_cliente','comentario_cliente','customer_note','customerNote',
-      // anidados
-      'pivot.nota','pivot.observacion','pivot.comentario','pivot.note','pivot.notas',
-      'detalle.nota','pedido_detalle.nota','order_item.nota',
-      'detalle.observacion','pedido_detalle.observacion','order_item.observacion',
-      'detalle.comentario','pedido_detalle.comentario','order_item.comentario',
-    ]);
-
-    const extras = pickFirst(merged, [
-      'extras','opciones','options','adiciones',
-      'pivot.extras','pivot.opciones','detalle.extras'
-    ]);
-
-const serviceGroupRaw =
-  merged.grupo_servicio ||
-  merged.grupoServicio ||
-  merged.service_group ||
-  merged.serviceGroup ||
-  'plato';
-      const serviceStatusRaw = pickFirst(merged, ['estado_servicio','estadoServicio','service_status','serviceStatus']) || order?.estado || 'pendiente';
-
-    return {
-      ...raw,
-      _k: raw?.id || `${order?.id || 'o'}-${idx}`,
-      _qty: qty,
-      _name: name,
-      _category: category,
-      _note: note,
-      _extras: extras,
-      _serviceGroup: String(serviceGroupRaw).toLowerCase(),
-      _serviceStatus: String(serviceStatusRaw).toLowerCase(),
-    };
+  const source = order?.items||order?.detalles||order?.detalle||order?.pedido_detalles||order?.order_items||[];
+  return (Array.isArray(source)?source:[]).map((raw,idx)=>{
+    const merged={...raw,...(raw?.pivot||{}),...(raw?.detalle||{}),...(raw?.pedido_detalle||{})};
+    const qty=pickFirstNum(merged,['cantidad','quantity','qty','pivot.cantidad'],1);
+    const name=pickFirst(merged,['nombre','menu_item.nombre','menuItem.nombre','producto.nombre'])||'Item';
+    const note=pickFirst(merged,['nota','observacion','comentario','note','notas','special_instructions','pivot.nota','detalle.nota','pedido_detalle.nota']);
+    const sg=String(merged.grupo_servicio||merged.grupoServicio||merged.service_group||'plato').toLowerCase();
+    const ss=String(pickFirst(merged,['estado_servicio','estadoServicio','service_status'])||order?.estado||'pendiente').toLowerCase();
+    return {...raw, _k:raw?.id||`${order?.id||'o'}-${idx}`, _qty:qty, _name:name, _note:note, _serviceGroup:sg, _serviceStatus:ss };
   });
 }
 
-
-const OrderDetailsDrawer = {
-  props: {
-    order: { type: Object, default: null },
-    open: { type: Boolean, default: false },
-    priorityOverrides: { type: Object, default: () => ({}) }, // lo dejo para no dañar tu lógica global
-  },
-  emits: ['close', 'actionDone', 'actionRequested', 'toast'],
-
-  data() {
-    return {
-      loadingAction: false,
-      noteModalOpen: false,
-      noteModalText: '',
-      noteModalContext: '',
-      noteModalTitleId: 'note-modal-title',
-    };
-  },
-  computed: {
-    hasOrder() { return !!this.order; },
-
-    statusClass() {
-      const status = this.order?.estado;
-      if (!status) return '';
-      return `b-${status}`;
-    },
-
-    isOverdue() {
-      return this.order ? this.order._elapsedMin > 6 : false;
-    },
-
-    isPriority() {
-      if (!this.order) return false;
-      // ✅ prioridad automática por atraso + override si existe (aunque ya no lo togglearás desde el drawer)
-      return this.isOverdue || !!this.priorityOverrides[this.order.id];
-    },
-
-    // ✅ NORMALIZA ITEMS + NOTAS POR ITEM
-    normalizedItems() {
-      const source =
-        this.order?.items ||
-        this.order?.detalles ||
-        this.order?.detalle ||
-        this.order?.pedido_detalles ||
-        [];
-
-      if (!Array.isArray(source)) return [];
-
-      return source.map((item, idx) => {
-        const qty = Number(item.cantidad ?? item.quantity ?? 1) || 1;
-        const name = item.nombre ?? item.menu_item?.nombre ?? item.menuItem?.nombre ?? item.producto?.nombre ?? 'Item';
-        const extrasRaw = item.extras ?? item.opciones ?? item.options ?? item.adiciones ?? null;
-        const raw = item.nota
-          ?? item.note
-          ?? item.notas
-          ?? item.observacion
-          ?? item.observaciones
-          ?? item.comentario
-          ?? item.comentarios
-          ?? item.instrucciones
-          ?? item.special_instructions
-          ?? item.pivot?.nota
-          ?? item.detalle?.nota
-          ?? item.pedido_detalle?.nota
-          ?? item.order_item?.nota
-          ?? '';
-        const categoryRaw = item.categoria ?? item.category ?? item.tipo ?? item.menu_item?.categoria ?? item.menuItem?.categoria ?? null;
-
-
-        const extras = Array.isArray(extrasRaw) ? extrasRaw.join(', ') : extrasRaw;
-        const note = this.normalizeNoteValue(raw);
-        const category = String(categoryRaw || '').trim();
-
-        return {
-          id: item.id || `${this.order?.id || 'o'}-${idx}`,
-          qty,
-          name,
-          extras: String(extras || '').trim(),
-          note: String(note || '').trim(),
-          category: category || 'General',
-        };
-      });
-    },
-
-    // ✅ NOTA GENERAL DEL PEDIDO (IMPORTANTE: incluye order.notas)
-    orderComments() {
-      return this.extractNote(this.order);
-
-    },
-
-    groupedItems() {
-      const groups = {};
-      this.normalizedItems.forEach((item) => {
-        const key = item.category || 'General';
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(item);
-      });
-      return groups;
-    },
-
-    totalItemsCount() {
-      return this.normalizedItems.reduce((acc, item) => acc + item.qty, 0);
-    },
-
-    delayLabel() {
-      if (!this.order) return '';
-      if (this.order._elapsedMin <= 6) return '';
-      return `Atrasado +${Math.floor(this.order._elapsedMin - 6)} min`;
-    },
-
-    primaryAction() {
-      return null;
-    },
-  },
-
-  methods: {
-    openNoteModal(noteText, contextText = '') {
-      const normalized = this.normalizeNoteValue(noteText);
-      if (!normalized) return;
-
-      this.noteModalText = normalized;
-      this.noteModalContext = String(contextText || '').trim();
-      this.noteModalOpen = true;
-      document.body.classList.add('note-modal-open');
-    },
-
-    closeNoteModal() {
-      this.noteModalOpen = false;
-      this.noteModalText = '';
-      this.noteModalContext = '';
-      document.body.classList.remove('note-modal-open');
-    },
-
-    onNoteChipKeydown(event, noteText, contextText = '') {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      this.openNoteModal(noteText, contextText);
-    },
-
-    normalizeNoteValue(raw) {
-      if (Array.isArray(raw)) {
-        return raw
-          .map((entry) => String(entry ?? '').trim())
-          .filter(Boolean)
-          .join(' · ')
-          .trim();
-      }
-
-      if (typeof raw === 'object' && raw !== null) {
-        return Object.values(raw)
-          .map((entry) => String(entry ?? '').trim())
-          .filter(Boolean)
-          .join(' · ')
-          .trim();
-      }
-
-      return String(raw ?? '').trim();
-    },
-    extractNote(source) {
-      if (!source || typeof source !== 'object') return '';
-
-      const directFields = ['nota', 'nota_cliente', 'notas', 'observacion', 'observaciones', 'comentario', 'comentarios', 'note', 'notes', 'special_instructions', 'instrucciones'];
-      const nestedFields = ['pivot', 'detalle', 'pedido_detalle', 'pedidoDetalle', 'order_item', 'orderItem'];
-
-      const candidates = [];
-
-      directFields.forEach((field) => {
-        candidates.push(source[field]);
-      });
-
-      nestedFields.forEach((container) => {
-        const nested = source[container];
-        if (!nested || typeof nested !== 'object') return;
-        directFields.forEach((field) => {
-          candidates.push(nested[field]);
-        });
-      });
-
-      for (const candidate of candidates) {
-        const normalized = this.normalizeNoteValue(candidate);
-        if (normalized) return normalized;
-      }
-
-      return '';
-    },
-    statusLabel(status) {
-      return statusLabelFor(status);
-    },
-
-
-    fmtTime(dateRaw) {
-      if (!dateRaw) return '-';
-      const ts = Date.parse(dateRaw);
-      if (!Number.isFinite(ts)) return '-';
-      return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-    },
-
-    fmtDate(dateRaw) {
-      if (!dateRaw) return '-';
-      const ts = Date.parse(dateRaw);
-      if (!Number.isFinite(ts)) return '-';
-      return new Date(ts).toLocaleString('es-CO', {
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-      });
-    },
-
-    formatElapsed(ms) {
-      const sec = Math.floor(ms / 1000);
-      const m = String(Math.floor(sec / 60)).padStart(2, '0');
-      const s = String(sec % 60).padStart(2, '0');
-      return `${m}:${s}`;
-    },
-
-    async executePrimaryAction() {
-      if (!this.primaryAction || !this.order || this.loadingAction) return;
-      this.loadingAction = true;
-      this.$emit('actionRequested', this.order.id, this.primaryAction.next);
-      this.$emit('actionDone', { orderId: this.order.id, nextStatus: this.primaryAction.next });
-      setTimeout(() => { this.loadingAction = false; }, 150);
-    },
-
-    onEsc(evt) {
-      if (evt.key === 'Escape' && this.noteModalOpen) {
-        this.closeNoteModal();
-        return;
-      }
-      if (evt.key === 'Escape' && this.open) this.$emit('close');
-      if (evt.key === 'Enter' && this.open && !this.noteModalOpen) this.executePrimaryAction();
-    },
-  },
-
-  mounted() {
-    window.addEventListener('keydown', this.onEsc);
-  },
-  beforeUnmount() {
-    window.removeEventListener('keydown', this.onEsc);
-    document.body.classList.remove('note-modal-open');
-  },
-
-  watch: {
-    open(nextOpen) {
-      if (!nextOpen && this.noteModalOpen) this.closeNoteModal();
-    },
-  },
-
-  // ✅ TEMPLATE: sin secondary-actions + con notas visibles
-  template: `
-    <transition name="drawer-slide">
-      <div v-if="open" class="drawer-overlay" @click.self="$emit('close')">
-        <aside class="drawer">
-          <header class="drawer-head">
-            <h2 class="drawer-title" v-text="'Pedido #' + (order?.id || '-')"></h2>
-            <button class="ghost" @click="$emit('close')">✕</button>
-          </header>
-
-          <section v-if="hasOrder" class="ticket">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-              <span class="badge" :class="statusClass" v-text="statusLabel(order.estado)"></span>
-              <span class="timer"
-                :class="order._elapsedMin > 6 ? 't-critical' : (order._elapsedMin >= 3 ? 't-warn' : 't-ok')"
-                v-text="formatElapsed(order._elapsedMs)">
-              </span>
-            </div>
-
-            <div class="ticket-grid" style="margin-top:10px;">
-              <p><strong>Creado:</strong> <span v-text="fmtDate(order.created_at)"></span></p>
-              <p><strong>Hora:</strong> <span v-text="fmtTime(order.created_at)"></span></p>
-              <p><strong>Mesa:</strong> <span v-text="order.mesa_numero || order.mesa_id || '-'"></span></p>
-              <p><strong>Cliente:</strong> <span v-text="order.cliente?.nombre || order.cliente_nombre || '-'"></span></p>
-            </div>
-
-            <span v-if="isPriority" class="priority-pill"
-              v-text="'Prioridad alta · ' + (delayLabel || 'Pedido priorizado')">
-            </span>
-          </section>
-
-          <section v-if="hasOrder && orderComments" class="ticket notes-section">
-            <h3 class="notes-title"><span aria-hidden="true">📝</span> Notas del cliente</h3>
-            <p class="notes-block" v-text="orderComments"></p>
-
-          </section>
-
-          <section v-if="hasOrder" class="ticket">
-            <h3 style="margin:0 0 8px 0;">Items</h3>
-            <p class="items-summary" v-text="normalizedItems.length + ' líneas · ' + totalItemsCount + ' unidades'"></p>
-
-            <div v-if="!normalizedItems.length" class="empty-items">
-              Este pedido no tiene items asociados. Revisar backend/relación.
-            </div>
-
-            <div v-else class="drawer-items">
-              <template v-for="(categoryItems, categoryName) in groupedItems" :key="categoryName">
-                <h4 class="category-title" v-if="categoryName && categoryName !== 'General'" v-text="categoryName"></h4>
-
-                <article class="item-row" v-for="item in categoryItems" :key="item.id">
-                  <div class="item-main">
-                    <div class="item-left">
-                      <span class="qty" v-text="item.qty + 'x'"></span>
-                      <strong class="item-name" v-text="item.name"></strong>
-                    </div>
-                    <button
-                      v-if="item.note"
-                      type="button"
-                      class="item-note-chip item-note-chip--button"
-                      :title="item.note"
-                      :data-note="item.note"
-                      @click.stop="openNoteModal(item.note, item.qty + 'x ' + item.name)"
-                      @keydown="onNoteChipKeydown($event, item.note, item.qty + 'x ' + item.name)"
-                    >
-                      ✎ <span class="item-note-text" v-text="item.note"></span>
-                    </button>
-                  </div>
-
-                  <p v-if="item.extras" class="item-extra" v-text="'Extras: ' + item.extras"></p>
-
-                </article>
-              </template>
-            </div>
-          </section>
-
-          <!-- ✅ SOLO ACCIÓN PRINCIPAL (sin botones secundarios) -->
-          <section class="ticket drawer-actions" v-if="hasOrder">
-            <button v-if="primaryAction" :class="primaryAction.className" :disabled="loadingAction" @click="executePrimaryAction" v-text="loadingAction ? 'Guardando…' : primaryAction.label"></button>
-
-            <p v-else class="muted" style="margin:0;">✅ Finalizado</p>
-          </section>
-
-          <transition name="note-modal">
-            <div v-if="noteModalOpen" class="note-modal-overlay" @click.self="closeNoteModal">
-              <section class="note-modal" role="dialog" aria-modal="true" :aria-labelledby="noteModalTitleId">
-                <header class="note-modal-head">
-                  <h3 class="note-modal-title" :id="noteModalTitleId">Nota del cliente</h3>
-                  <button type="button" class="ghost note-modal-close note-modal-close-ghost" aria-label="Cerrar" @click="closeNoteModal">✕</button>
-                </header>
-
-                <p v-if="noteModalContext" class="note-modal-context" v-text="noteModalContext"></p>
-
-                <div class="note-modal-content">
-                  <p v-text="noteModalText"></p>
-                </div>
-
-                <footer class="note-modal-footer">
-                  <button type="button" class="note-modal-close" @click="closeNoteModal">Cerrar</button>
-                </footer>
-              </section>
-            </div>
-          </transition>
-
-        </aside>
-      </div>
-    </transition>
-  `,
-};
-
 Vue.createApp({
-  components: { OrderDetailsDrawer },
   data() {
     return {
-      orders: [],
-      activeServiceArea: String(SERVICE_AREA || 'plato').toLowerCase(),
-      activeServiceLabel: ACTIVE_SERVICE_LABEL || 'Cocina',
+      orders:[],
+      activeServiceArea: String(SERVICE_AREA||'plato').toLowerCase(),
       nowTs: Date.now(),
-      error: '',
-      soundEnabled: true,
+      error:'',
       highlightedIds: new Set(),
-      processingIds: new Set(),
       processingGroupIds: new Set(),
-      optimisticSnapshots: {},
       lastSyncAt: null,
       syncInFlight: false,
-      selectedOrderId: null,
-      activeFilter: 'pendiente',
+      activeFilter:'pendiente',
       drawerOpen: false,
-      priorityOverrides: {},
-      toastMessage: '',
-      columns: [
-        { key: 'pendiente', title: 'Pendientes' },
-        { key: 'preparando', title: 'En preparación' },
-        { key: 'listo', title: 'Listos' },
-        { key: 'entregado', title: 'Entregados' },
-      ],
-      pollHandle: null,
-      tickHandle: null,
-      toastHandle: null,
+      selectedOrderId: null,
+      priorityOverrides:{},
+      toastMessage:'',
+      pollHandle:null,
+      tickHandle:null,
+      toastHandle:null,
+      showLogoutModal: false,
     };
   },
   computed: {
     normalized() {
-      return this.orders.map((order) => {
-        const parsedTs = Date.parse(order.created_at);
-        const ts = Number.isFinite(parsedTs) ? parsedTs : this.nowTs;
-
-        const elapsedMs = Math.max(this.nowTs - ts, 0);
-        const normalizedOrder = {
-          ...order,
-          _itemsNorm: normalizeOrderItems(order),
-        };
-        const activeGroup = this.serviceGroupsFor(normalizedOrder).find((group) => group.key === this.activeServiceArea);
-        if (!activeGroup) {
-          return null;
-        }
-
-        const status = String(activeGroup.status || 'pendiente').toLowerCase();
-
-        return {
-          ...normalizedOrder,
-          estado: status,
-          _createdTs: ts,
-          _elapsedMs: elapsedMs,
-          _elapsedMin: elapsedMs / 60000,
-          _urgency: (elapsedMs / 60000) + (status === 'pendiente' ? 2 : 0) + (this.priorityOverrides[order.id] ? 2 : 0),
-        };
-      }).filter((order) => order);
-    },
-
-    grouped() {
-      const groups = { pendiente: [], preparando: [], listo: [], entregado: [] };
-      this.normalized.forEach((order) => { if (groups[order.estado]) groups[order.estado].push(order); });
-      groups.pendiente.sort((a, b) => b._urgency - a._urgency || b._createdTs - a._createdTs);
-      groups.preparando.sort((a, b) => b._urgency - a._urgency || b._createdTs - a._createdTs);
-      groups.listo.sort((a, b) => b._createdTs - a._createdTs);
-      groups.entregado.sort((a, b) => b._createdTs - a._createdTs);
-      return groups;
-    },
-    boardOrders() {
-      return [...this.normalized].sort((a, b) => b._urgency - a._urgency || b._createdTs - a._createdTs);
+      return this.orders.map(order=>{
+        const ts=Date.parse(order.created_at)||this.nowTs;
+        const elapsedMs=Math.max(this.nowTs-ts,0);
+        const norm={...order,_itemsNorm:normalizeOrderItems(order)};
+        const activeGroup=this.serviceGroupsFor(norm).find(g=>g.key===this.activeServiceArea);
+        if(!activeGroup) return null;
+        const status=String(activeGroup.status||'pendiente').toLowerCase();
+        return {...norm,estado:status,_createdTs:ts,_elapsedMs:elapsedMs,_elapsedMin:elapsedMs/60000,
+          _urgency:(elapsedMs/60000)+(status==='pendiente'?2:0)+(this.priorityOverrides[order.id]?2:0)};
+      }).filter(Boolean);
     },
     filteredOrders() {
-      if (this.activeFilter === 'atrasados') {
-        return this.boardOrders.filter((order) => order.estado !== 'entregado' && order._elapsedMin > 6);
-      }
-      return this.boardOrders.filter((order) => order.estado === this.activeFilter);
+      const sorted=[...this.normalized].sort((a,b)=>b._urgency-a._urgency||b._createdTs-a._createdTs);
+      if(this.activeFilter==='atrasados') return sorted.filter(o=>o.estado!=='entregado'&&o._elapsedMin>6);
+      return sorted.filter(o=>o.estado===this.activeFilter);
     },
     serviceSummary() {
-      const summary = {
-        bebida: { pendiente: 0, preparando: 0, listo: 0, entregado: 0 },
-        plato: { pendiente: 0, preparando: 0, listo: 0, entregado: 0 },
-      };
-      this.normalized.forEach((order) => {
-        this.serviceGroupsFor(order, { includeAll: true }).forEach((group) => {
-          if (summary[group.key] && summary[group.key][group.status] !== undefined) {
-            summary[group.key][group.status] += 1;
-          }
-        });
-      });
-      return summary;
+      const s={bebida:{pendiente:0,preparando:0,listo:0,entregado:0},plato:{pendiente:0,preparando:0,listo:0,entregado:0}};
+      this.normalized.forEach(order=>this.serviceGroupsFor(order,{includeAll:true}).forEach(g=>{
+        if(s[g.key]&&s[g.key][g.status]!==undefined) s[g.key][g.status]+=1;
+      }));
+      return s;
     },
-    activeServiceSummary() {
-      return this.serviceSummary[this.activeServiceArea] || { pendiente: 0, preparando: 0, listo: 0, entregado: 0 };
-    },
-    selectedOrder() {
-      if (!this.selectedOrderId) return null;
-      return this.normalized.find((o) => o.id === this.selectedOrderId) || null;
-    },
-    activeCount() { return this.grouped.pendiente.length + this.grouped.preparando.length + this.grouped.listo.length; },
-    delayedCount() { return this.normalized.filter((o) => o.estado !== 'entregado' && o._elapsedMin > 6).length; },
-    averageMinutes() {
-      const active = this.normalized.filter((o) => o.estado !== 'listo');
-      if (!active.length) return 0;
-      return active.reduce((acc, o) => acc + o._elapsedMin, 0) / active.length;
-    },
+    activeServiceSummary() { return this.serviceSummary[this.activeServiceArea]||{pendiente:0,preparando:0,listo:0,entregado:0}; },
+    delayedCount() { return this.normalized.filter(o=>o.estado!=='entregado'&&o._elapsedMin>6).length; },
+    selectedOrder() { return this.selectedOrderId?this.normalized.find(o=>o.id===this.selectedOrderId)||null:null; },
   },
   methods: {
     getOrderItems(order) {
-      // ✅ usa lo ya normalizado cuando exista
-      if (!order) return [];
-      if (Array.isArray(order._itemsNorm)) return order._itemsNorm;
+      if(!order) return [];
+      if(Array.isArray(order._itemsNorm)) return order._itemsNorm;
       return normalizeOrderItems(order);
     },
-    fmtTime(dateRaw) {
-      if (!dateRaw) return '-';
-      const ts = Date.parse(dateRaw);
-      if (!Number.isFinite(ts)) return '-';
-      return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    fmtTime(raw) {
+      const ts=Date.parse(raw);
+      return Number.isFinite(ts)?new Date(ts).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}):'-';
     },
-    statusLabel(status) {
-      return statusLabelFor(status);
-    },
-    apiRequestOptions(method = 'GET', body = null) {
-      const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
-      const hasBody = body !== null && body !== undefined;
-      return {
-        method,
-        credentials: 'include',
-        headers: buildJsonHeaders(token, hasBody),
-        ...(hasBody ? { body: JSON.stringify(body) } : {}),
-      };
-    },
-    async requestFirstOk(attempts) {
-      const failures = [];
-
-      for (const attempt of attempts) {
-        try {
-          const response = await fetch(attempt.url, this.apiRequestOptions(attempt.method || 'GET', attempt.body));
-          if (response.ok) {
-            return { ok: true, response, source: attempt.source || attempt.url };
-          }
-          failures.push({ status: response.status, url: attempt.url, response });
-        } catch (error) {
-          failures.push({ status: 0, url: attempt.url, error });
-        }
-      }
-
-      const unauthorized = failures.some((failure) => failure.status === 401 || failure.status === 419);
-      return { ok: false, failures, unauthorized };
-    },
-    handleUnauthorized(message = 'Sesión expirada en cocina') {
-      this.error = message;
-      this.showToast('🔐 Inicia sesión nuevamente o usa una ruta web con sesión/cookies en desarrollo.');
-    },
-    canStartService(status) {
-      return status === 'pendiente' || status === 'preparando';
-    },
-    nextServiceStatus(status) {
-      if (status === 'pendiente') return 'preparando';
-      if (status === 'preparando') return 'listo';
-      return status;
-    },
-    serviceActionLabel(status, groupKey = null) {
-      if (status === 'pendiente') {
-        if ((groupKey || this.activeServiceArea) === 'bebida') return 'Iniciar bar';
-        return 'Iniciar cocina';
-      }
-      if (status === 'preparando') return 'Marcar listo';
-      if (status === 'listo') return 'Listo';
-      return 'Finalizado';
-    },
-
-    serviceActionClass(status) {
-      if (status === 'pendiente') return 'action-next-pendiente';
-      if (status === 'preparando') return 'action-next-listo';
-      if (status === 'listo') return 'action-next-listo';
-      return '';
-    },
-    serviceBadgeClass(status) {
-      if (!status) return '';
-      return `b-${status}`;
-    },
-    isGroupProcessing(orderId, groupKey) {
-      return this.processingGroupIds.has(`${orderId}:${groupKey}`);
-    },
-    serviceGroupsFor(order, options = {}) {
-      const labels = {
-        bebida: { label: 'Bebidas', emoji: '🍹' },
-        plato: { label: 'Platos', emoji: '🍽' },
-      };
-      const groups = { bebida: [], plato: [] };
-      this.getOrderItems(order).forEach((item) => {
-        const key = (item._serviceGroup || 'plato').toLowerCase();
-        if (groups[key]) groups[key].push(item);
-      });
-      const allowedGroups = options.includeAll ? ['bebida', 'plato'] : [this.activeServiceArea];
-      return allowedGroups
-        .filter((key) => groups[key]?.length)
-        .map((key) => {
-          const statuses = groups[key].map((item) => item._serviceStatus || order.estado || 'pendiente');
-          const status = this.resolveGroupStatus(statuses);
-          return { key, ...labels[key], status, items: groups[key] };
-        });
-    },
-    resolveGroupStatus(statuses) {
-      if (statuses.includes('pendiente')) return 'pendiente';
-      if (statuses.includes('preparando')) return 'preparando';
-      if (statuses.includes('listo')) return 'listo';
-      return 'entregado';
-    },
-    patchOrderGroupStatus(order, groupKey, nextStatus) {
-      const source = this.getOrderItems(order);
-      const patchedItems = source.map((item) => {
-        if ((item._serviceGroup || 'plato') !== groupKey) return item;
-        return { ...item, _serviceStatus: nextStatus, estado_servicio: nextStatus };
-      });
-      return { ...order, _itemsNorm: patchedItems };
-    },
-    async updateGroupStatus(orderId, groupKey) {
-      const processingKey = `${orderId}:${groupKey}`;
-      if (this.processingGroupIds.has(processingKey)) return;
-
-      const idx = this.orders.findIndex((o) => Number(o.id) === Number(orderId));
-      if (idx < 0) return;
-
-      const prevOrder = this.orders[idx];
-      const currentGroup = this.serviceGroupsFor(prevOrder, { includeAll: true }).find((group) => group.key === groupKey);
-      const currentStatus = currentGroup?.status || 'pendiente';
-      const nextStatus = this.nextServiceStatus(currentStatus);
-
-      if (nextStatus === currentStatus) return;
-
-
-      const optimisticOrder = this.patchOrderGroupStatus(prevOrder, groupKey, nextStatus);
-      this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? optimisticOrder : o));
-
-      const nextSet = new Set(this.processingGroupIds);
-      nextSet.add(processingKey);
-      this.processingGroupIds = nextSet;
-
-      const attempts = [
-        { url: `/pedidos/${orderId}/servicio/${groupKey}`, method: 'PUT', source: 'api-service-group' },
-      ];
-
-
-      try {
-        const result = await this.requestFirstOk(attempts);
-        if (!result.ok) {
-          if (result.unauthorized) {
-            this.handleUnauthorized('Sesión no autorizada para actualizar grupos de servicio');
-          }
-          throw new Error('No endpoint accepted service-group update');
-        }
-        this.error = '';
-      } catch (err) {
-        this.orders = this.orders.map((o) => (Number(o.id) === Number(orderId) ? prevOrder : o));
-        if (!this.error) {
-          this.error = 'No se pudo actualizar el estado por grupo de servicio';
-        }
-        this.showToast('⚠️ No se pudo guardar el grupo. Revertido.');
-      } finally {
-        const doneSet = new Set(this.processingGroupIds);
-        doneSet.delete(processingKey);
-        this.processingGroupIds = doneSet;
-      }
-    },
-
-    orderNoteCount(order) {
-      const items = this.getOrderItems(order);
-      const itemNotes = items.reduce((acc, it) => acc + (String(it._note || '').trim() ? 1 : 0), 0);
-
-      const orderComment = pickFirst(order || {}, [
-        'comentarios','comentario','observacion','nota','notas','note',
-        'special_instructions','specialInstructions','instrucciones'
-      ]);
-
-      return itemNotes + (String(orderComment || '').trim() ? 1 : 0);
-    },
-
-    orderPreviewNote(order) {
-      const items = this.getOrderItems(order);
-      const firstItemNote = items.map((it) => String(it._note || '').trim()).find(Boolean);
-      if (firstItemNote) return `Nota cliente: ${firstItemNote}`;
-
-      const orderComment = pickFirst(order || {}, [
-        'comentarios','comentario','observacion','nota','notas','note',
-        'special_instructions','specialInstructions','instrucciones'
-      ]);
-      return String(orderComment || '').trim() ? `Comentario: ${String(orderComment).trim()}` : '';
-    },
-
-    showToast(message) {
-      this.toastMessage = message;
-      clearTimeout(this.toastHandle);
-      this.toastHandle = setTimeout(() => { this.toastMessage = ''; }, 2200);
-    },
-    togglePriority(orderId) {
-      this.priorityOverrides = { ...this.priorityOverrides, [orderId]: !this.priorityOverrides[orderId] };
-      this.showToast('🚩 Prioridad actualizada');
-    },
+    statusLabel(s) { return statusLabelFor(s); },
     formatElapsed(ms) {
-      const sec = Math.floor(ms / 1000);
-      const m = String(Math.floor(sec / 60)).padStart(2, '0');
-      const s = String(sec % 60).padStart(2, '0');
-      return `${m}:${s}`;
+      const sec=Math.floor(ms/1000);
+      return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
     },
     timerClass(order) {
-      if (order._elapsedMin > 6) return 't-critical';
-      if (order._elapsedMin >= 3) return 't-warn';
-      return 't-ok';
+      if(order._elapsedMin>6) return 't-critical';
+      if(order._elapsedMin>=3) return 't-warn';
+      return '';
     },
-
-    openOrderDetails(order) {
-      this.selectedOrderId = order.id;
-      this.drawerOpen = true;
-    },
-    closeOrderDetails() {
-      this.drawerOpen = false;
-      this.selectedOrderId = null;
-    },
-    mergeIncomingOrders(incomingOrders, isInitial = false) {
-      // ✅ Asegura que lo que ya está en memoria también tenga id numérico
-      this.orders = this.orders
-      .map(o => ({ ...o, id: Number(o.id) }))
-      .filter(o => Number.isFinite(o.id));
-      const beforeIds = new Set(this.orders.map((o) => o.id));
-      if (isInitial) {
-        this.orders = incomingOrders;
-      } else {
-        const incomingById = new Map(incomingOrders.map((o) => [o.id, o]));
-        const merged = this.orders.map((order) => {
-          const candidate = incomingById.get(order.id);
-          if (!candidate) return order;
-          if (this.processingIds.has(order.id)) return order;
-          incomingById.delete(order.id);
-          return { ...order, ...candidate };
-        });
-        for (const pending of incomingById.values()) {
-          merged.push(pending);
-        }
-        this.orders = merged;
+    async confirmLogout() {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content;
+  try {
+    await fetch('/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-CSRF-TOKEN': token,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
       }
-
-      const newOrders = this.orders.filter((o) => !beforeIds.has(o.id) && String(o.estado || '').toLowerCase() === 'pendiente');
-      if (!isInitial) this.handleNewOrders(newOrders);
-    },
-    async fetchOrders(isInitial = false) {
-      if (this.syncInFlight) return;
-      this.syncInFlight = true;
-
-      try {
-        const qs = new URLSearchParams();
-        if (!isInitial && this.lastSyncAt) qs.set('since', this.lastSyncAt);
-
-        const result = await this.requestFirstOk([
-  { url: '/pedidos', method: 'GET', source: 'api-orders' },
-]);
-
-        if (!result.ok) {
-          if (result.unauthorized) {
-            this.handleUnauthorized('Sesión no autorizada para consultar la cocina');
-            return;
-          }
-          throw new Error('status sync failed');
-        }
-
-        const payload = await result.response.json().catch(() => []);
-        const incoming = payload?.data ?? payload ?? [];
-        const items = Array.isArray(incoming) ? incoming : [];
-
-        const cleanItems = normalizeAndDedupeOrders(items);
-
-        this.mergeIncomingOrders(cleanItems, isInitial || !this.lastSyncAt);
-        this.lastSyncAt = payload?.meta?.server_time || new Date().toISOString();
-        this.error = '';
-      } catch (e) {
-        this.error = 'No se pudo sincronizar la cocina';
-      } finally {
-        this.syncInFlight = false;
-      }
-    },
-    handleNewOrders(newOrders) {
-      if (!newOrders.length) return;
-      if (this.soundEnabled) this.beep();
-      const next = new Set(this.highlightedIds);
-      newOrders.forEach((o) => {
-        next.add(o.id);
-        this.$nextTick(() => {
-          const el = document.getElementById(`order-${o.id}`);
-          el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        });
+    });
+  } catch(e) {}
+  window.location.href = '/login';
+},
+    serviceGroupsFor(order,options={}) {
+      const labels={bebida:{label:'Bebidas',emoji:'🍹'},plato:{label:'Platos',emoji:'🍽'}};
+      const groups={bebida:[],plato:[]};
+      this.getOrderItems(order).forEach(item=>{
+        const k=(item._serviceGroup||'plato').toLowerCase();
+        if(groups[k]) groups[k].push(item);
       });
-      this.highlightedIds = next;
-      setTimeout(() => {
-        const clean = new Set(this.highlightedIds);
-        newOrders.forEach((o) => clean.delete(o.id));
-        this.highlightedIds = clean;
-      }, 3600);
+      const allowed=options.includeAll?['bebida','plato']:[this.activeServiceArea];
+      return allowed.filter(k=>groups[k]?.length).map(k=>{
+        const statuses=groups[k].map(i=>i._serviceStatus||order.estado||'pendiente');
+        const status=statuses.includes('pendiente')?'pendiente':statuses.includes('preparando')?'preparando':statuses.includes('listo')?'listo':'entregado';
+        return {key:k,...labels[k],status,items:groups[k]};
+      });
     },
-    beep() {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 880;
-      gain.gain.value = 0.05;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      setTimeout(() => { osc.stop(); ctx.close(); }, 120);
+    isGroupProcessing(orderId,groupKey) { return this.processingGroupIds.has(`${orderId}:${groupKey}`); },
+    patchOrderGroupStatus(order,groupKey,nextStatus) {
+      const patched=this.getOrderItems(order).map(item=>(item._serviceGroup||'plato')!==groupKey?item:{...item,_serviceStatus:nextStatus,estado_servicio:nextStatus});
+      return{...order,_itemsNorm:patched};
+    },
+    async updateGroupStatus(orderId,groupKey) {
+      const pk=`${orderId}:${groupKey}`;
+      if(this.processingGroupIds.has(pk)) return;
+      const idx=this.orders.findIndex(o=>Number(o.id)===Number(orderId));
+      if(idx<0) return;
+      const prev=this.orders[idx];
+      const grp=this.serviceGroupsFor(prev,{includeAll:true}).find(g=>g.key===groupKey);
+      const cur=grp?.status||'pendiente';
+      const next=cur==='pendiente'?'preparando':cur==='preparando'?'listo':cur;
+      if(next===cur) return;
+      const optimistic=this.patchOrderGroupStatus(prev,groupKey,next);
+      this.orders=this.orders.map(o=>Number(o.id)===Number(orderId)?optimistic:o);
+      const ns=new Set(this.processingGroupIds); ns.add(pk); this.processingGroupIds=ns;
+      try {
+        const token=document.querySelector('meta[name="csrf-token"]')?.content||'';
+        const res=await fetch(`/pedidos/${orderId}/servicio/${groupKey}`,{method:'PUT',credentials:'include',headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':token,'X-Requested-With':'XMLHttpRequest'}});
+        if(!res.ok) throw new Error('failed');
+        this.error='';
+      } catch {
+        this.orders=this.orders.map(o=>Number(o.id)===Number(orderId)?prev:o);
+        this.showToast('⚠️ No se pudo guardar. Revertido.');
+      } finally {
+        const ds=new Set(this.processingGroupIds); ds.delete(pk); this.processingGroupIds=ds;
+      }
+    },
+    showToast(msg) {
+      this.toastMessage=msg;
+      clearTimeout(this.toastHandle);
+      this.toastHandle=setTimeout(()=>{this.toastMessage='';},2500);
     },
     toggleFullscreen() {
-      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      if(!document.fullscreenElement) document.documentElement.requestFullscreen?.();
       else document.exitFullscreen?.();
     },
+    async fetchOrders(isInitial=false) {
+      if(this.syncInFlight) return;
+      this.syncInFlight=true;
+      try {
+        const token=document.querySelector('meta[name="csrf-token"]')?.content||'';
+        const res=await fetch('/pedidos',{method:'GET',credentials:'include',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':token}});
+        if(!res.ok) { if(res.status===401||res.status===419){this.error='Sesión expirada';} throw new Error('sync failed'); }
+        const payload=await res.json().catch(()=>[]);
+        const incoming=payload?.data??payload??[];
+        const items=normalizeAndDedupeOrders(Array.isArray(incoming)?incoming:[]);
+        if(isInitial||!this.lastSyncAt) {
+          this.orders=items;
+        } else {
+          const beforeIds=new Set(this.orders.map(o=>o.id));
+          const byId=new Map(items.map(o=>[o.id,o]));
+          const merged=this.orders.map(o=>{const c=byId.get(o.id);if(!c)return o;byId.delete(o.id);return{...o,...c};});
+          for(const p of byId.values()) merged.push(p);
+          const newOrders=merged.filter(o=>!beforeIds.has(o.id)&&String(o.estado||'').toLowerCase()==='pendiente');
+          if(newOrders.length) { this.beep(); const ns=new Set(this.highlightedIds); newOrders.forEach(o=>ns.add(o.id)); this.highlightedIds=ns; setTimeout(()=>{const cs=new Set(this.highlightedIds);newOrders.forEach(o=>cs.delete(o.id));this.highlightedIds=cs;},3500); }
+          this.orders=merged;
+        }
+        this.lastSyncAt=new Date().toISOString();
+        this.error='';
+      } catch(e) { if(!this.error) this.error='No se pudo sincronizar'; }
+      finally { this.syncInFlight=false; }
+    },
+    beep() {
+      const Ctx=window.AudioContext||window.webkitAudioContext;
+      if(!Ctx) return;
+      const ctx=new Ctx(); const osc=ctx.createOscillator(); const gain=ctx.createGain();
+      osc.frequency.value=880; gain.gain.value=0.05;
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); setTimeout(()=>{osc.stop();ctx.close();},120);
+    },
   },
-  mounted() {  
-    window.app = this;
-
+  mounted() {
     this.fetchOrders(true);
-    this.pollHandle = setInterval(() => this.fetchOrders(false), POLLING_MS);
-    this.tickHandle = setInterval(() => { this.nowTs = Date.now(); }, 1000);
+    this.pollHandle=setInterval(()=>this.fetchOrders(false),POLLING_MS);
+    this.tickHandle=setInterval(()=>{this.nowTs=Date.now();},1000);
   },
   beforeUnmount() {
     clearInterval(this.pollHandle);

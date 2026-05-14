@@ -9,6 +9,9 @@
           Estado:
           <span class="badge" :class="`estado-${mesaEstado}`">{{ estadoMesaLabel }}</span>
         </p>
+        <p v-if="meseroAsignado" class="mesero-asignado">
+          👤 Atendida por <strong>{{ meseroAsignado }}</strong>
+        </p>
       </div>
 
       <div class="header-actions">
@@ -42,12 +45,14 @@
           :timer-tone="timerToneMap[cliente.id] || 'ok'"
           :busy="Boolean(busyMap[cliente.id])"
           :can-edit="canEditCliente(cliente)"
+          :needs-justification="pedidoNecesitaJustificacion(cliente)"
           :can-send-to-kitchen="canSendToKitchenCliente(cliente)"
           :editing="editingClienteId === cliente.id"
           :draft-items="draftMap[cliente.id] || []"
           :menu-options="menuItems"
           @deliver-group="deliverGroupForCliente"
-          @ver-cuenta="openCuentaModal"
+          @ver-comprobante="abrirComprobante"
+          @marcar-pagado="pagarCliente"
           @edit="startEdit"
           @save-edit="handleEditAction(cliente, $event)"
           @cancel-edit="cancelEdit"
@@ -61,8 +66,20 @@
       :cliente="selectedCliente"
       :pedidos="selectedPedidos"
       :paid="selectedPaid"
+      :comprobante-url="comprobanteUrl"
       @close="closeCuentaModal"
       @mark-paid="markCuentaPagada"
+    />
+
+    <AsignarMeseroModal
+      :open="showAsignarModal"
+      :mesa-numero="mesaCodigo"
+      :ya-asignada="asignarYaAsignada"
+      :mesero-actual="asignarMeseroActual"
+      :loading="asignarLoading"
+      @confirmar="confirmarAsignacion"
+      @tomar-relevo="tomarRelevo"
+      @cancelar="cancelarAsignacion"
     />
 
   </section>
@@ -73,7 +90,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ClientePedidoCard from '../components/ClientePedidoCard.vue';
 import CuentaModal from '../components/CuentaModal.vue';
-import { bindWaiterRealtime } from '../echo';
+import AsignarMeseroModal from '../components/AsignarMeseroModal.vue';
+import { bindWaiterRealtime } from '../../echo';
 import {
   deliverOrderGroup,
   facturarCliente,
@@ -82,6 +100,8 @@ import {
   searchMenuItems,
   sendOrderToKitchen,
   updateOrder,
+  asignarMesero,
+  liberarMesero,
 } from '../api';
 
 const route = useRoute();
@@ -99,21 +119,84 @@ const menuItems = ref([]);
 const busyMap = ref({});
 const paidMap = ref({});
 const showCuentaModal = ref(false);
+const comprobanteUrl = ref(null);
 const selectedCliente = ref(null);
 const selectedPedidos = ref([]);
+
+// ── Asignación de mesero ──────────────────────────────────
+const showAsignarModal = ref(false);
+const asignarYaAsignada = ref(false);
+const asignarMeseroActual = ref('');
+const asignarLoading = ref(false);
+const meseroAsignado = ref('');
+// ─────────────────────────────────────────────────────────
 
 const syncing = ref(false);
 let timerId = null;
 let refreshId = null;
 let stopRealtime = null;
 let lastSilentSyncAt = 0;
-
 let lastHash = '';
 
 const mesaId = computed(() => route.params.id);
 const mesaCodigo = computed(() => mesa.value?.codigo ?? mesaId.value);
 const mesaEstado = computed(() => mesa.value?.estado ?? 'desconocido');
 
+// ── Lógica de asignación ──────────────────────────────────
+const verificarAsignacion = () => {
+  const meseroId = mesa.value?.mesero_id ?? null;
+  const meseroNombre = mesa.value?.mesero_nombre ?? null;
+
+  meseroAsignado.value = meseroNombre || '';
+
+  if (meseroId && meseroNombre) {
+    // Mesa ya tiene otro mesero — mostrar aviso
+    asignarYaAsignada.value = true;
+    asignarMeseroActual.value = meseroNombre;
+  } else {
+    asignarYaAsignada.value = false;
+    asignarMeseroActual.value = '';
+  }
+
+  showAsignarModal.value = true;
+};
+
+const confirmarAsignacion = async () => {
+  asignarLoading.value = true;
+  try {
+    const res = await asignarMesero(mesaId.value);
+    meseroAsignado.value = res.mesero_nombre || '';
+    showAsignarModal.value = false;
+    await loadMesaData(true);
+  } catch (err) {
+    if (err?.response?.status === 409) {
+      const data = err.response.data;
+      asignarYaAsignada.value = true;
+      asignarMeseroActual.value = data.mesero_nombre || 'Otro mesero';
+    }
+  } finally {
+    asignarLoading.value = false;
+  }
+};
+
+const tomarRelevo = async () => {
+  asignarLoading.value = true;
+  try {
+    await liberarMesero(mesaId.value);
+    const res = await asignarMesero(mesaId.value);
+    meseroAsignado.value = res.mesero_nombre || '';
+    showAsignarModal.value = false;
+    await loadMesaData(true);
+  } finally {
+    asignarLoading.value = false;
+  }
+};
+
+const cancelarAsignacion = () => {
+  showAsignarModal.value = false;
+  router.push({ name: 'mesas' });
+};
+// ─────────────────────────────────────────────────────────
 
 const sendClienteToKitchen = async (cliente) => {
   const pedido = cliente?.pedidos?.[0];
@@ -154,8 +237,98 @@ const openCuentaModal = (cliente = null) => {
   showCuentaModal.value = true;
 };
 
-const closeCuentaModal = () => {
+const closeCuentaModal = async () => {
+  const id = selectedCliente.value?.id;
+  const wasPaid = id && paidMap.value[id];
+
   showCuentaModal.value = false;
+  comprobanteUrl.value = null;
+  selectedCliente.value = null;
+  selectedPedidos.value = [];
+
+  // Si se cerró después de cobrar, limpiar pedidos y liberar mesa si quedó vacía
+  if (wasPaid) {
+    const isNumericId = Number.isInteger(Number(id));
+    if (isNumericId) {
+      pedidos.value = pedidos.value.filter(
+        (p) => String(p.cliente_id) !== String(id)
+      );
+    } else {
+      pedidos.value = [];
+    }
+    lastHash = '';
+    await new Promise(r => setTimeout(r, 500));
+    await loadMesaData(true);
+    if (!pedidos.value.length) {
+      try { await liberarMesero(mesaId.value); meseroAsignado.value = ''; } catch (_) {}
+    }
+  }
+};
+
+// ── Comprobante directo desde la tarjeta ─────────────────
+const abrirComprobante = async (cliente) => {
+  const id = cliente?.id;
+  if (!id || !Number.isInteger(Number(id))) return;
+
+  // Si ya tenemos la URL cacheada la abrimos directo
+  if (paidMap.value[id] && comprobanteUrl.value) {
+    window.open(comprobanteUrl.value, '_blank');
+    return;
+  }
+
+  // Buscar comprobante existente del cliente
+  try {
+    const res = await fetch(`/api/mesero/clientes/${id}/comprobante-url`, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.url) {
+        window.open(data.url, '_blank');
+        return;
+      }
+    }
+  } catch (_) {}
+
+  // Si no hay comprobante aún, mostrar la cuenta normal
+  openCuentaModal(cliente);
+};
+
+// ── Pago directo desde la tarjeta ────────────────────────
+const pagarCliente = async (cliente) => {
+  const id = cliente?.id;
+  if (!id || !Number.isInteger(Number(id))) return;
+  if (busyMap.value[id]) return;
+
+  busyMap.value = { ...busyMap.value, [id]: true };
+
+  try {
+    const res = await facturarCliente(id);
+    if (res?.comprobante_url) {
+      comprobanteUrl.value = res.comprobante_url;
+    }
+    paidMap.value = { ...paidMap.value, [id]: true };
+
+    // Limpiar pedidos del cliente
+    pedidos.value = pedidos.value.filter(
+      (p) => String(p.cliente_id) !== String(id)
+    );
+
+    lastHash = '';
+    await new Promise(r => setTimeout(r, 500));
+    await loadMesaData(true);
+
+    if (!pedidos.value.length) {
+      try { await liberarMesero(mesaId.value); meseroAsignado.value = ''; } catch (_) {}
+    }
+
+    // Abrir comprobante automáticamente
+    if (res?.comprobante_url) {
+      window.open(res.comprobante_url, '_blank');
+    }
+  } finally {
+    busyMap.value = { ...busyMap.value, [id]: false };
+  }
 };
 
 const selectedPaid = computed(() => {
@@ -170,32 +343,56 @@ const markCuentaPagada = async () => {
   const isNumericId = Number.isInteger(Number(id));
 
   if (isNumericId) {
-    await facturarCliente(id);
+    const res = await facturarCliente(id);
+    if (res?.comprobante_url) {
+      comprobanteUrl.value = res.comprobante_url;
+    }
   }
 
   paidMap.value = { ...paidMap.value, [id]: true };
-  await loadMesaData({ silent: true });
-};
+  // NO cerramos el modal — el mesero lo cierra después de mostrar el comprobante
 
+  if (isNumericId) {
+    pedidos.value = pedidos.value.filter(
+      (p) => String(p.cliente_id) !== String(id)
+    );
+  } else {
+    pedidos.value = [];
+  }
+
+  lastHash = '';
+  await new Promise(r => setTimeout(r, 500));
+  await loadMesaData(true);
+
+  // Si ya no quedan pedidos activos, liberar el mesero de la mesa
+  if (!pedidos.value.length) {
+    try { await liberarMesero(mesaId.value); meseroAsignado.value = ''; } catch (_) {}
+  }
+};
 
 const canEditCliente = (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido) return false;
-
   if (pedido?.can_be_edited === false) return false;
+  // El mesero/admin puede editar siempre, con justificación si está fuera de ventana
+  const bloqueados = ['entregado', 'facturado', 'cancelado'];
+  return !bloqueados.includes(pedido?.estado);
+};
 
-  return new Date().getTime() < new Date(pedido?.hold_expires_at).getTime();
+const pedidoNecesitaJustificacion = (cliente) => {
+  const pedido = cliente?.pedidos?.[0];
+  if (!pedido) return false;
+  // Necesita justificación si ya no está en ventana de retención
+  return pedido?.estado !== 'retenido' || !pedido?.hold_expires_at ||
+    new Date().getTime() >= new Date(pedido?.hold_expires_at).getTime();
 };
 
 const canSendToKitchenCliente = (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido) return false;
-
   if (pedido?.can_send_to_kitchen === false) return false;
-
   return true;
 };
-
 
 const estadoMesaLabel = computed(() => {
   const estado = mesaEstado.value;
@@ -205,11 +402,9 @@ const estadoMesaLabel = computed(() => {
   return estado || 'Sin estado';
 });
 
-// 🔥 HASH PARA EVITAR RERENDER
 const buildHash = (items = []) =>
   items.map(p => `${p.id}-${p.updated_at || ''}-${p.estado || ''}`).join('|');
 
-// 🔥 NORMALIZACIÓN ORIGINAL (SE MANTIENE)
 const normalizeItems = (pedido) => {
   const details = pedido.detalle ?? pedido.items ?? [];
   return details.map((item, index) => ({
@@ -223,7 +418,6 @@ const normalizeItems = (pedido) => {
   }));
 };
 
-// 🔥 AGRUPACIÓN ORIGINAL (SE MANTIENE)
 const clientesConPedidos = computed(() => {
   const byCliente = new Map();
 
@@ -248,7 +442,6 @@ const clientesConPedidos = computed(() => {
   }));
 });
 
-// 🔥 TIMER (optimizado)
 const clienteHoldUntil = (cliente) => {
   const hold = cliente?.pedidos?.[0]?.hold_expires_at;
   return hold ? new Date(hold).getTime() : now.value;
@@ -276,38 +469,31 @@ const timerToneMap = computed(() => {
   return map;
 });
 
-// 🔥 CARGA PROGRESIVA (CLAVE)
 const loadMesaData = async (silent = false) => {
   if (!mesaId.value || syncing.value) return;
 
   syncing.value = true;
   if (!silent) loading.value = true;
+  error.value = '';
 
   try {
-    // 1️⃣ Mesa primero (rápido)
-    const mesaData = await getMesa(mesaId.value);
+    const [mesaData, nuevos] = await Promise.all([
+      getMesa(mesaId.value),
+      getMesaPedidos(mesaId.value),
+    ]);
+
     mesa.value = mesaData;
+    meseroAsignado.value = mesaData?.mesero_nombre || '';
 
-    // 2️⃣ Pedidos después (no bloquea)
-    const currentMesa = mesaId.value;
+    const hash = buildHash(nuevos);
+    if (hash !== lastHash) {
+      pedidos.value = nuevos;
+      lastHash = hash;
+    }
 
-    setTimeout(async () => {
-    if (currentMesa !== mesaId.value) return; 
-      const nuevos = await getMesaPedidos(mesaId.value);
-      const hash = buildHash(nuevos);
-
-      if (hash !== lastHash) {
-        pedidos.value = nuevos;
-        lastHash = hash;
-      }
-    }, 120);
-
-    // 3️⃣ Menú solo una vez
-    setTimeout(async () => {
-      if (!menuItems.value.length) {
-        menuItems.value = await searchMenuItems('');
-      }
-    }, 300);
+    if (!menuItems.value.length) {
+      searchMenuItems('').then(items => { menuItems.value = items; });
+    }
 
   } catch (err) {
     if (!silent) {
@@ -319,14 +505,10 @@ const loadMesaData = async (silent = false) => {
   }
 };
 
-// 🔥 ACCIONES (SE MANTIENEN)
 const startEdit = (cliente) => {
   if (!cliente?.pedidos?.length) return;
-
   const pedido = cliente.pedidos[0];
-
   editingClienteId.value = cliente.id;
-
   draftMap.value = {
     ...draftMap.value,
     [cliente.id]: normalizeItems(pedido).map((item) => ({
@@ -373,7 +555,11 @@ const handleEditAction = async (cliente, payload) => {
   busyMap.value = { ...busyMap.value, [cliente.id]: true };
 
   try {
-    await updateOrder(pedido.id, { items, mesa_id: Number(mesaId.value) || null });
+    await updateOrder(pedido.id, {
+      items,
+      mesa_id: Number(mesaId.value) || null,
+      justificacion: payload.justificacion || null,
+    });
     editingClienteId.value = null;
     loadMesaData();
   } finally {
@@ -381,9 +567,9 @@ const handleEditAction = async (cliente, payload) => {
   }
 };
 
-// 🔥 CICLO DE VIDA
-onMounted(() => {
-  loadMesaData();
+onMounted(async () => {
+  await loadMesaData();
+  verificarAsignacion();
 
   timerId = setInterval(() => {
     now.value = Date.now();
@@ -407,7 +593,7 @@ onMounted(() => {
     if (!editingClienteId.value && !document.hidden) {
       loadMesaData(true);
     }
-  }, 25000);
+  }, 4000);
 });
 
 onUnmounted(() => {
@@ -440,6 +626,12 @@ watch(() => route.params.id, () => loadMesaData());
 }
 .header h1 { margin: 0; color: #f8fbff; font-size: 1.3rem; font-weight: 600; }
 .header-actions { display: flex; gap: 10px; }
+.mesero-asignado {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: #fbbf24;
+}
+.mesero-asignado strong { color: #fde68a; }
 .btn {
   border: 0;
   border-radius: 11px;

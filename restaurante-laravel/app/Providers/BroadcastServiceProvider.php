@@ -7,14 +7,11 @@ use Illuminate\Support\ServiceProvider;
 
 class BroadcastServiceProvider extends ServiceProvider
 {
-    /**
-     * Bootstrap any application services.
-     *
-     * @return void
-     */
-    public function boot()
+    public function boot(): void
     {
-        Broadcast::routes();
+        // El mesero está autenticado con sesión web (auth:web),
+        // así que el endpoint /broadcasting/auth debe usar ese guard.
+        Broadcast::routes(['middleware' => ['web', 'auth:web']]);
 
         require base_path('routes/channels.php');
     }

@@ -93,11 +93,10 @@
         @endforeach
     </nav>
 
-    <form method="POST" action="{{ route('logout') }}" class="global-sidebar__logout-form">
-        @csrf
-        <button type="submit" class="global-sidebar__logout" data-logout title="Cerrar sesión">
-            <span class="global-sidebar__icon" aria-hidden="true">⏻</span>
-            <span class="global-sidebar__text">Cerrar sesión</span>
-        </button>
-    </form>
+    <div class="global-sidebar__logout-form">
+    <button type="button" class="global-sidebar__logout" data-logout title="Cerrar sesión">
+        <span class="global-sidebar__icon" aria-hidden="true">⏻</span>
+        <span class="global-sidebar__text">Cerrar sesión</span>
+    </button>
+    </div>
 </aside>

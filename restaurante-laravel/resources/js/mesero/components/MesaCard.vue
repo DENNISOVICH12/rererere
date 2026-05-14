@@ -4,6 +4,9 @@
     <span class="mesa-titulo">Mesa {{ mesaNumero }}</span>
     <span class="mesa-estado">{{ estadoLabel }}</span>
     <span class="mesa-meta">{{ pedidosActivosCount }} pedidos activos</span>
+    <span v-if="mesa.mesero_nombre" class="mesa-mesero">
+      👤 {{ inicialMesero }}
+    </span>
   </button>
 </template>
 
@@ -19,10 +22,16 @@ defineEmits(['select']);
 const pedidosActivosCount = computed(() => props.mesa.pedidos_activos_count ?? 0);
 const isLibre = computed(() => pedidosActivosCount.value === 0);
 const mesaNumero = computed(() => props.mesa.numero ?? props.mesa.codigo ?? props.mesa.id ?? '-');
-
-const stateClass = computed(() => (isLibre.value ? 'estado-libre' : 'estado-ocupada'));
-
+const stateClass = computed(() => {
+  if (props.mesa.mesero_nombre) return isLibre.value ? 'estado-libre estado-asignada' : 'estado-ocupada estado-asignada';
+  return isLibre.value ? 'estado-libre' : 'estado-ocupada';
+});
 const estadoLabel = computed(() => (isLibre.value ? '🟢 Libre' : '🔴 Ocupada'));
+
+const inicialMesero = computed(() => {
+  const nombre = props.mesa.mesero_nombre || '';
+  return nombre.length > 12 ? nombre.substring(0, 12) + '…' : nombre;
+});
 </script>
 
 <style scoped>
@@ -38,7 +47,7 @@ const estadoLabel = computed(() => (isLibre.value ? '🟢 Libre' : '🔴 Ocupada
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   text-align: center;
   transition: all 0.2s ease;
 }
@@ -73,6 +82,19 @@ const estadoLabel = computed(() => (isLibre.value ? '🟢 Libre' : '🔴 Ocupada
   opacity: 0.9;
 }
 
+.mesa-mesero {
+  font-size: 0.68rem;
+  font-weight: 600;
+  opacity: 0.95;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+  padding: 1px 7px;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .estado-libre {
   background: radial-gradient(circle at 30% 28%, #4ade80 0%, #22c55e 42%, #15803d 100%);
   border-color: #86efac;
@@ -92,5 +114,11 @@ const estadoLabel = computed(() => (isLibre.value ? '🟢 Libre' : '🔴 Ocupada
 .estado-ocupada:hover {
   background: radial-gradient(circle at 30% 28%, #dc2626 0%, #991b1b 48%, #4c0519 100%);
   box-shadow: 0 12px 28px rgba(220, 38, 38, 0.5), 0 0 24px rgba(248, 113, 113, 0.4);
+}
+
+/* Borde dorado cuando tiene mesero asignado */
+.estado-asignada {
+  border-color: #fbbf24;
+  box-shadow: 0 12px 24px rgba(251, 191, 36, 0.3), 0 0 0 2px rgba(251, 191, 36, 0.2);
 }
 </style>

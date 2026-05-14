@@ -7,6 +7,15 @@ import axios from 'axios'
 import { API_BASE } from './api.js'
 import { loadCliente, getCliente, cliente, logoutCliente } from "./cliente.js"
 
+// Topbar: mesa y sesión
+const mesaNumero = computed(() =>
+  localStorage.getItem('mesa_id') || new URLSearchParams(window.location.search).get('mesa') || null
+)
+
+async function handleTopbarLogout() {
+  await logoutCliente()
+}
+
 
 loadCliente()
 
@@ -22,6 +31,7 @@ function applyClienteToken() {
 applyClienteToken()
 
 const showCart = ref(false)
+const showLoginFromTopbar = ref(false)
 const cartButton = ref(null)
 const sendingOrder = ref(false)
 const noteItemId = ref(null)
@@ -37,6 +47,23 @@ let holdCountdownInterval = null
 const holdWindowSeconds = ref(300)
 const showSendNowConfirm = ref(false)
 const sendingNowToKitchen = ref(false)
+
+// ID del cliente invitado (sin login), guardado después de crear un pedido
+const GUEST_CLIENTE_KEY = 'guest_cliente_id'
+const guestClienteId = ref(localStorage.getItem(GUEST_CLIENTE_KEY) ? Number(localStorage.getItem(GUEST_CLIENTE_KEY)) : null)
+
+function saveGuestClienteId(id) {
+  guestClienteId.value = id
+  localStorage.setItem(GUEST_CLIENTE_KEY, String(id))
+}
+
+function clearGuestClienteId() {
+  guestClienteId.value = null
+  localStorage.removeItem(GUEST_CLIENTE_KEY)
+}
+
+// El ID activo para consultar pedidos: cliente registrado o invitado
+const clienteIdActivo = computed(() => cliente.value?.id ?? guestClienteId.value ?? null)
 
 const SERVICE_STATUS_PRIORITY = ['pendiente', 'preparando', 'listo', 'entregado']
 const params = new URLSearchParams(window.location.search)
@@ -220,14 +247,11 @@ async function sendOrder() {
   sendingOrder.value = true
 
   try {
-    const mesaId = localStorage.getItem('mesa_id') // 🔥 FALTABA ESTO
-
-    console.log("MESA:", mesaId)
-
+    const mesaId = localStorage.getItem('mesa_id')
     const clienteActual = getCliente()
-    const restaurantId = 1 
+    const restaurantId = 1
 
-    await axios.post(`${API_BASE}/orders`, {
+    const orderRes = await axios.post(`${API_BASE}/orders`, {
       mesa_id: mesaId,
       cliente_id: clienteActual ? clienteActual.id : null,
       restaurant_id: restaurantId,
@@ -239,15 +263,26 @@ async function sendOrder() {
       }))
     })
 
+    const pedidoCreado = orderRes.data?.data
+    const metaHoldSeconds = Number(orderRes.data?.meta?.hold_window_seconds || 300)
+
     clearCart()
+    showToast("Pedido registrado ✅", "success")
 
-    showToast("Pedido registrado. Tienes una ventana de cambios antes de cocina ✅", "success")
-
-    loadPedidosCliente(true)
+    // Solo clientes con sesión ven el estado y el temporizador
+    if (cliente.value && pedidoCreado) {
+      pedidosCliente.value = [pedidoCreado]
+      holdWindowSeconds.value = metaHoldSeconds
+      showCart.value = true
+      await nextTick()
+      setTimeout(() => loadPedidosCliente(true), 1000)
+      setTimeout(() => loadPedidosCliente(true), 3000)
+    }
 
   } catch (error) {
-    console.error(error) // 👈 agrega esto para debug
-    showToast("Error enviando pedido ❌", "error")
+    console.error('[sendOrder] error:', error?.response?.data ?? error)
+    const msg = error?.response?.data?.message || 'Error enviando pedido ❌'
+    showToast(msg, "error")
   } finally {
     sendingOrder.value = false
   }
@@ -259,19 +294,21 @@ async function sendOrder() {
    🔥 CARGAR PEDIDOS
 ===================================================== */
 async function loadPedidosCliente(silent = false) {
-
-  const clienteActual = cliente.value
-  if (!clienteActual) return
+  const idActivo = cliente.value?.id
+  if (!idActivo) return
 
   if (!silent) loadingPedidos.value = true
   errorPedidos.value = ""
 
   try {
-    const res = await axios.get(`${API_BASE}/clientes/${clienteActual.id}/pedidos`)
-    pedidosCliente.value = res.data.data ?? res.data
-    holdWindowSeconds.value = Number(res.data?.meta?.hold_window_seconds || holdWindowSeconds.value)
+    const res = await axios.get(`${API_BASE}/clientes/${idActivo}/pedidos`)
+    const nuevos = res.data.data ?? res.data
+    if (Array.isArray(nuevos) && nuevos.length > 0) {
+      pedidosCliente.value = nuevos
+      holdWindowSeconds.value = Number(res.data?.meta?.hold_window_seconds || holdWindowSeconds.value)
+    }
   } catch (error) {
-    errorPedidos.value = "No pudimos cargar el estado del pedido."
+    if (!silent) errorPedidos.value = "No pudimos cargar el estado del pedido."
   } finally {
     if (!silent) loadingPedidos.value = false
   }
@@ -282,17 +319,26 @@ async function loadPedidosCliente(silent = false) {
 async function confirmAndSendNowToKitchen() {
   if (!pedidoActual.value || sendingNowToKitchen.value) return
 
-  const clienteActual = getCliente()
+  const clienteIdDelPedido = pedidoActual.value.cliente_id
 
   try {
     sendingNowToKitchen.value = true
-    await axios.post(`${API_BASE}/orders/${pedidoActual.value.id}/send-now`, {
-      cliente_id: clienteActual?.id ?? null,
+    const res = await axios.post(`${API_BASE}/orders/${pedidoActual.value.id}/send-now`, {
+      cliente_id: clienteIdDelPedido ?? null,
     })
 
     showSendNowConfirm.value = false
-    showToast('Pedido enviado inmediatamente a cocina ✅', 'success')
-    await loadPedidosCliente(true)
+    showToast('Pedido enviado a cocina ✅', 'success')
+
+    // Actualizar el pedido directamente con la respuesta — no depender del GET
+    const pedidoActualizado = res.data?.data
+    if (pedidoActualizado) {
+      pedidosCliente.value = [pedidoActualizado]
+    }
+
+    // Sincronizar con el servidor en segundo plano
+    setTimeout(() => loadPedidosCliente(true), 1000)
+
   } catch (error) {
     showToast(error?.response?.data?.message || 'No pudimos enviar el pedido a cocina.', 'error')
   } finally {
@@ -322,16 +368,21 @@ watch(
 
 watch(
   cliente,
-  (nuevo) => {
+  (nuevoCliente, anteriorCliente) => {
     clearPedidosPolling()
-    pedidosCliente.value = []
 
-    if (nuevo) {
-      loadPedidosCliente(true)
+    if (anteriorCliente && !nuevoCliente) {
+      // Cerró sesión: limpiar pedidos
+      pedidosCliente.value = []
+    }
 
-      pedidosInterval = setInterval(() => {
-        loadPedidosCliente(true) // 🔥 silencioso
-      }, 6000)
+    if (nuevoCliente) {
+      setTimeout(() => {
+        loadPedidosCliente(true)
+        pedidosInterval = setInterval(() => {
+          loadPedidosCliente(true)
+        }, 4000)
+      }, 300)
     }
   },
   { immediate: true }
@@ -468,6 +519,33 @@ const changeRequestedMessage = computed(() => {
 
 <template>
 <div>
+
+<!-- ✅ BARRA PRINCIPAL -->
+<header class="topbar-main">
+  <div class="topbar-brand">
+    <span class="topbar-logo">🍽</span>
+    <span class="topbar-name">ODER EASY</span>
+  </div>
+
+  <div v-if="mesaNumero" class="topbar-mesa">
+    <span class="topbar-mesa-label">Mesa</span>
+    <span class="topbar-mesa-num">{{ mesaNumero }}</span>
+  </div>
+  <div v-else class="topbar-mesa-empty"></div>
+
+  <div class="topbar-session">
+    <div v-if="!cliente">
+      <button class="topbar-login-btn" @click="showLoginFromTopbar = true">
+        Iniciar sesión
+      </button>
+    </div>
+    <div v-else class="topbar-user">
+      <span class="topbar-user-name">👤 {{ cliente.nombres }}</span>
+      <button class="topbar-logout-btn" @click="handleTopbarLogout">Salir</button>
+    </div>
+  </div>
+</header>
+
 <!-- ✅ TOPBAR SOLO ADMIN -->
 <div v-if="showBackToAdmin" class="admin-topbar">
   <a :href="backToAdminUrl" class="admin-back-btn">
@@ -498,7 +576,7 @@ const changeRequestedMessage = computed(() => {
     <span class="cart-floating__count">{{ cart.length }}</span>
   </button>
 
-  <CartaDigital />
+  <CartaDigital :open-login="showLoginFromTopbar" @login-closed="showLoginFromTopbar = false" />
 
 
   <!-- PANEL CARRITO -->
@@ -510,8 +588,21 @@ const changeRequestedMessage = computed(() => {
     </div>
 
 
-    <!-- ================= ESTADO PEDIDO ================= -->
-    
+    <!-- ================= INVITADO: RECOMENDACIÓN LOGIN ================= -->
+    <div v-if="!cliente && cart.length > 0" class="guest-hint">
+      <div class="guest-hint__icon">👤</div>
+      <div class="guest-hint__body">
+        <p class="guest-hint__title">¿Ya tienes cuenta?</p>
+        <p class="guest-hint__text">
+          Inicia sesión para ver el estado de tu pedido en tiempo real y llevar tu historial con el restaurante.
+        </p>
+        <button class="guest-hint__btn" @click="showCart = false; $nextTick(() => $emit('open-login'))">
+          Iniciar sesión
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= ESTADO PEDIDO (solo clientes con sesión) ================= -->
     <section v-if="cliente" class="order-status-card-pro">
 
   <div class="order-header-pro">
@@ -542,9 +633,9 @@ const changeRequestedMessage = computed(() => {
     <div v-if="isPedidoRetenido" class="hold-banner">
       <div class="hold-banner__icon" aria-hidden="true">⏱</div>
       <div class="hold-banner__content">
-        <p>Tienes <strong>{{ holdCountdownLabel }}</strong> para llamar a un mesero y modificar tu pedido.</p>
-        <small>Puedes solicitar modificaciones durante los próximos {{ holdWindowMinutes }} minutos.</small>
-        <small class="hold-banner__warning">Si decides enviarlo ahora, ya no podrás realizar cambios.</small>
+        <p>Tienes <strong>{{ holdCountdownLabel }}</strong> para que un mesero modifique tu pedido.</p>
+        <small>Puedes solicitar cambios durante los próximos {{ holdWindowMinutes }} minutos.</small>
+        <small class="hold-banner__warning">Si lo envías ahora, ya no podrás realizar cambios.</small>
       </div>
       <span class="hold-banner__time">{{ holdCountdownLabel }}</span>
       <button class="send-now-btn" type="button" :disabled="!pedidoActual?.can_send_now" @click="showSendNowConfirm = true">
@@ -555,14 +646,13 @@ const changeRequestedMessage = computed(() => {
     <div v-else-if="isChangeRequested" class="hold-banner hold-banner--change-requested">
       <div class="hold-banner__icon" aria-hidden="true">📝</div>
       <strong>{{ changeRequestedMessage }}</strong>
-
     </div>
 
-    <div v-else-if="holdWindowFinished" class="hold-banner hold-banner--done">
-      <div class="hold-banner__icon" aria-hidden="true">✅</div>
-      <strong>{{ postReleaseMessage }}</strong>
+    <!-- Cuando ya fue enviado a cocina: solo chip pequeño de confirmación -->
+    <div v-else-if="holdWindowFinished" class="sent-chip">
+      <span class="sent-chip__icon">✅</span>
+      <span class="sent-chip__text">Pedido en cocina — ya no puedes realizar cambios</span>
     </div>
-
 
     <OrderServiceStatus v-if="pedidoConsolidadoServicio.detalle.length" :order="pedidoConsolidadoServicio" />
 
@@ -1812,6 +1902,27 @@ const changeRequestedMessage = computed(() => {
   border-color: rgba(110, 247, 176, 0.35);
 }
 
+/* Chip compacto que reemplaza el banner grande cuando el pedido ya fue a cocina */
+.sent-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(110, 247, 176, 0.10);
+  border: 1px solid rgba(110, 247, 176, 0.30);
+  width: fit-content;
+}
+
+.sent-chip__icon { font-size: 13px; line-height: 1; }
+
+.sent-chip__text {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(110, 247, 176, 0.9);
+  line-height: 1.3;
+}
+
 @media (max-width: 640px) {
   .cart-floating {
     right: 10px;
@@ -1862,5 +1973,112 @@ const changeRequestedMessage = computed(() => {
   }
 
 }
+
+.guest-hint {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  margin-bottom: 2px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(194,58,74,0.12), rgba(194,58,74,0.06));
+  border: 1px solid rgba(194, 58, 74, 0.25);
+}
+
+.guest-hint__icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.guest-hint__body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.guest-hint__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8ece4;
+}
+
+.guest-hint__text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(248, 236, 228, 0.65);
+}
+
+.guest-hint__btn {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(194, 58, 74, 0.5);
+  background: rgba(194, 58, 74, 0.2);
+  color: #f8ece4;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.guest-hint__btn:hover {
+  background: rgba(194, 58, 74, 0.35);
+  border-color: rgba(194, 58, 74, 0.7);
+}
+
+
+/* ── TOPBAR PRINCIPAL ── */
+.topbar-main {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: rgba(10, 14, 30, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  width: 100%;
+  box-sizing: border-box;
+}
+.topbar-brand { display: flex; align-items: center; gap: 9px; }
+.topbar-logo  { font-size: 1.4rem; }
+.topbar-name  { font-size: 1rem; font-weight: 800; letter-spacing: 0.04em; color: #f0f4ff; }
+.topbar-mesa  {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(37,99,235,0.25);
+  border: 1px solid rgba(96,165,250,0.4);
+  border-radius: 12px; padding: 4px 20px;
+}
+.topbar-mesa-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #93c5fd; font-weight: 600; }
+.topbar-mesa-num   { font-size: 1.3rem; font-weight: 800; color: #bfdbfe; line-height: 1.2; }
+.topbar-mesa-empty { width: 60px; }
+.topbar-session    { display: flex; justify-content: flex-end; align-items: center; }
+.topbar-login-btn  {
+  background: #dc2626; color: #fff; border: 0;
+  border-radius: 10px; padding: 9px 18px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: filter 150ms;
+}
+.topbar-login-btn:hover  { filter: brightness(1.1); }
+.topbar-user             { display: flex; align-items: center; gap: 8px; }
+.topbar-user-name        { font-size: 13px; color: #93c5fd; font-weight: 600; }
+.topbar-logout-btn       {
+  background: rgba(148,163,184,0.15); color: #94a3b8;
+  border: 1px solid rgba(148,163,184,0.25);
+  border-radius: 8px; padding: 6px 12px;
+  font-size: 12px; cursor: pointer; transition: filter 150ms;
+}
+.topbar-logout-btn:hover { filter: brightness(1.15); }
 
 </style>

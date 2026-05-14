@@ -1,0 +1,395 @@
+{
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "groups": [],
+        "checks": [
+            {
+              "name": "menú: 200",
+              "path": "::GET menú::menú: 200",
+              "id": "c5c760bda7fe8c96f64f64e611dd7162",
+              "passes": 2067,
+              "fails": 2
+            },
+            {
+              "name": "menú: tiene data",
+              "path": "::GET menú::menú: tiene data",
+              "id": "5e1637f8ae92a48079ef8412cabfac66",
+              "passes": 2067,
+              "fails": 2
+            }
+          ],
+        "name": "GET menú",
+        "path": "::GET menú",
+        "id": "71662860f01e3b243794a702f610d21e"
+      },
+      {
+        "name": "POST pedido",
+        "path": "::POST pedido",
+        "id": "2bfe64a314a8bc9152815c4e63bf759b",
+        "groups": [],
+        "checks": [
+            {
+              "name": "pedido: 200/201",
+              "path": "::POST pedido::pedido: 200/201",
+              "id": "014536fd6eed5c2e15be235ab8e6de83",
+              "passes": 2259,
+              "fails": 5
+            }
+          ]
+      },
+      {
+        "id": "37701bbc0cb2bd390ecf38d8f351db8a",
+        "groups": [],
+        "checks": [
+            {
+              "id": "93d95d745c0f7c18587dfc46fae5b74f",
+              "passes": 704,
+              "fails": 2,
+              "name": "mesas: 200",
+              "path": "::GET mesas::mesas: 200"
+            }
+          ],
+        "name": "GET mesas",
+        "path": "::GET mesas"
+      },
+      {
+        "name": "GET cocina",
+        "path": "::GET cocina",
+        "id": "d24557c4a2d16030a54d9cbd14f55d64",
+        "groups": [],
+        "checks": [
+            {
+              "path": "::GET cocina::cocina: 200",
+              "id": "a961efad2fee6dd6f701a40e37ae7046",
+              "passes": 300,
+              "fails": 1,
+              "name": "cocina: 200"
+            }
+          ]
+      }
+    ],
+    "checks": []
+  },
+  "options": {
+    "summaryTimeUnit": "",
+    "noColor": false,
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ]
+  },
+  "state": {
+    "isStdOutTTY": true,
+    "isStdErrTTY": true,
+    "testRunDurationMs": 2043000.3493
+  },
+  "metrics": {
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 42559975,
+        "rate": 20832.093844028204
+      }
+    },
+    "http_req_duration": {
+      "thresholds": {
+        "p(99)<3000": {
+          "ok": true
+        },
+        "p(95)<1500": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 4.1832,
+        "med": 14.2013,
+        "max": 478054.1681,
+        "p(90)": 26.475760000000005,
+        "p(95)": 28.59238,
+        "avg": 831.4268737177077
+      }
+    },
+    "order_latency_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 28,
+        "p(95)": 30,
+        "avg": 953.2544169611307,
+        "min": 16,
+        "med": 24,
+        "max": 479425
+      },
+      "thresholds": {
+        "p(95)<2000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "avg": 0.00318077499064021,
+        "min": 0,
+        "med": 0,
+        "max": 2.5403,
+        "p(90)": 0
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 3583.8824152059938,
+        "min": 2004.6591,
+        "med": 2014.93225,
+        "max": 482425.8397,
+        "p(90)": 3026.24355,
+        "p(95)": 3028.225915
+      }
+    },
+    "http_req_failed": {
+      "values": {
+        "rate": 0.0020591538749532012,
+        "passes": 11,
+        "fails": 5331
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "menu_latency_ms": {
+      "thresholds": {
+        "p(95)<800": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 4,
+        "med": 8,
+        "max": 479110,
+        "p(90)": 11,
+        "p(95)": 13,
+        "avg": 325.61575640405994
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 5342,
+        "rate": 2.6147817360042778
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "max": 10,
+        "value": 1,
+        "min": 1
+      }
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.9983803482251316,
+        "passes": 7397,
+        "fails": 12
+      }
+    },
+    "vus_max": {
+      "contains": "default",
+      "values": {
+        "value": 10,
+        "min": 10,
+        "max": 10
+      },
+      "type": "gauge"
+    },
+    "http_req_waiting": {
+      "values": {
+        "min": 4.1832,
+        "med": 14.1411,
+        "max": 478054.1681,
+        "p(90)": 26.367670000000004,
+        "p(95)": 28.41004,
+        "avg": 831.3648297454132
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "total_orders": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "rate": 1.1057266831961183,
+        "count": 2259
+      }
+    },
+    "failed_orders": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 5,
+        "rate": 0.0024473808835682124
+      }
+    },
+    "error_rate": {
+      "values": {
+        "rate": 0.0018726591760299626,
+        "passes": 10,
+        "fails": 5330
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.008212223886184951,
+        "min": 0,
+        "med": 0,
+        "max": 9.8095
+      }
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0,
+        "max": 1.3221,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.0024505990265818044,
+        "min": 0
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0.533795,
+        "avg": 0.0588631973043804,
+        "min": 0,
+        "med": 0,
+        "max": 2.6202
+      }
+    },
+    "group_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 2014.93225,
+        "max": 482425.8397,
+        "p(90)": 3026.24355,
+        "p(95)": 3028.1997650000003,
+        "avg": 3583.8773624531855,
+        "min": 2004.6591
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 5340,
+        "rate": 2.6138027836508506
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "rate": 419.6406526772002,
+        "count": 857326
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 4.1832,
+        "med": 13.9581,
+        "max": 5024.8396,
+        "p(90)": 26.4326,
+        "p(95)": 28.4561,
+        "avg": 26.927020746576694
+      }
+    }
+  },
+  "setup_data": {
+    "menuItems": [
+      {
+        "descripcion": "CON HIELO",
+        "disponible": true,
+        "id": 7,
+        "image_path": "menu_items/OMwTVlmLS0bvgiVI0GENJCksC5r37Xkz3KmqqvQg.webp",
+        "imagen": "http://localhost:8000/storage/menu_items/OMwTVlmLS0bvgiVI0GENJCksC5r37Xkz3KmqqvQg.webp",
+        "nombre": "AGUA",
+        "precio": "4000.00",
+        "categoria": "bebida"
+      },
+      {
+        "image_path": "menu_items/30Pyg23dwe4o4y65doXsuSsYVCNGTVUCiALl90YI.png",
+        "imagen": "http://localhost:8000/storage/menu_items/30Pyg23dwe4o4y65doXsuSsYVCNGTVUCiALl90YI.png",
+        "nombre": "COCA COLA",
+        "precio": "4000.00",
+        "categoria": "bebida",
+        "descripcion": "BEBIDA GASEOSA CON HIELO",
+        "disponible": true,
+        "id": 6
+      },
+      {
+        "disponible": true,
+        "id": 5,
+        "image_path": "menu_items/MxqVmMrNrmSTmobrZfiyvXu8SdESP8DvOGEBGR75.png",
+        "imagen": "http://localhost:8000/storage/menu_items/MxqVmMrNrmSTmobrZfiyvXu8SdESP8DvOGEBGR75.png",
+        "nombre": "carne",
+        "precio": "50000.00",
+        "categoria": "plato",
+        "descripcion": "CON PAPAS Y ENSALADA"
+      }
+    ]
+  }
+}

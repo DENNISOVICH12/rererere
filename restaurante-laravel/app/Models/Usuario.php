@@ -20,7 +20,10 @@ class Usuario extends Authenticatable
         'apellido',
         'correo',
         'rol',
-        'activo'
+        'activo',
+        'restaurant_id',
+        'fecha_ingreso',
+        'fecha_salida',
     ];
 
     protected $hidden = [
@@ -29,6 +32,8 @@ class Usuario extends Authenticatable
     ];
 
     protected $casts = [
-        'activo' => 'boolean',
+        'activo'        => 'boolean',
+        'fecha_ingreso' => 'date',
+        'fecha_salida'  => 'date',
     ];
 }

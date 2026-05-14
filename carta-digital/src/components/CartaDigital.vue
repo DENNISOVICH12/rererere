@@ -1,23 +1,5 @@
 <template>
   <div class="menu-container">
-    <!-- HEADER -->
-    <header class="header">
-      <h1 class="title">🍽 ODER EASY</h1>
-
-      <div v-if="!cliente">
-        <button class="login-btn" @click="showLogin = true">
-          Iniciar sesión
-        </button>
-      </div>
-
-      <div v-else class="user-info">
-        <span class="user-name">👤 {{ cliente.nombres }}</span>
-        <button class="logout-btn" @click="handleLogout">
-          Cerrar sesión
-        </button>
-      </div>
-    </header>
-
     <!-- FILTROS -->
     <div class="filters">
       <button
@@ -144,7 +126,15 @@
             <input class="input" :class="{ error: registerErrors.apellidos }" placeholder="Apellidos" v-model="register.apellidos">
             <input class="input" :class="{ error: registerErrors.correo }" type="email" placeholder="Correo" v-model="register.correo">
             <input class="input" :class="{ error: registerErrors.password }" type="password" placeholder="Contraseña" v-model="register.password">
-            <input class="input" :class="{ error: registerErrors.telefono }" placeholder="Teléfono" v-model="register.telefono">
+            <input
+              class="input"
+              :class="{ error: registerErrors.telefono }"
+              type="tel"
+              inputmode="numeric"
+              placeholder="Teléfono (solo números)"
+              v-model="register.telefono"
+              @input="register.telefono = register.telefono.replace(/\D/g, '')"
+            >
 
           <p v-if="registerMessage" class="status-msg">{{ registerMessage }}</p>
 
@@ -177,7 +167,23 @@ const items = ref([])
 const selectedCategory = ref('todos')
 const categories = ['todos', 'plato', 'bebida']
 
+// Prop desde App.vue (botón de la topbar)
+const props = defineProps({
+  openLogin: { type: Boolean, default: false }
+})
+const emit = defineEmits(['login-closed'])
+
 const showLogin = ref(false)
+
+// Cuando App.vue pide abrir el modal, lo abrimos
+watch(() => props.openLogin, (val) => {
+  if (val) showLogin.value = true
+})
+
+// Cuando el modal se cierra, notificamos a App.vue
+watch(showLogin, (val) => {
+  if (!val) emit('login-closed')
+})
 const modalTab = ref('login')
 const activeItem = ref(null)
 
@@ -472,32 +478,10 @@ onMounted(async () => {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 14px 10px 132px;
-  color: var(--text-main);
-  overflow-x: hidden;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.title {
-  margin: 0;
-  font-size: clamp(1.2rem, 4.6vw, 2rem);
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  padding: 0 10px 132px;
   color: var(--text-main);
 }
 
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
 .user-name {
   font-size: 0.86rem;

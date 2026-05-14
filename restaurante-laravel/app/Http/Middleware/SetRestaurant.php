@@ -6,17 +6,18 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\Restaurant;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Log  ;
+use Illuminate\Support\Facades\Log;
 
 class SetRestaurant
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // ✅ Desactivar el middleware durante los tests para evitar 404 y errores
+        // Tests: resolver sin cache
         if (app()->runningUnitTests()) {
             if (Schema::hasTable('restaurants')) {
-                $restaurantId = \App\Models\Restaurant::query()->value('id');
+                $restaurantId = Restaurant::query()->value('id');
                 if ($restaurantId) {
                     app()->instance('current_restaurant_id', $restaurantId);
                     $request->attributes->set('restaurant_id', $restaurantId);
@@ -25,59 +26,62 @@ class SetRestaurant
             return $next($request);
         }
 
-        // --- 👇 tu lógica original ---
-        $restaurantId = null;
+        $restaurantId = $this->resolveRestaurantId($request);
 
-        // Opción 1: header
+        if ($restaurantId !== null) {
+            app()->instance('current_restaurant_id', $restaurantId);
+        } else {
+            if (app()->environment(['local', 'testing'])) {
+                $fallback = $this->fetchFirstRestaurantId() ?? 1;
+                app()->instance('current_restaurant_id', $fallback);
+                Log::warning('SetRestaurant: usando fallback', ['restaurant_id' => $fallback]);
+            } else {
+                app()->forgetInstance('current_restaurant_id');
+                abort(500, 'No se pudo determinar el restaurante activo');
+            }
+        }
+
+        return $next($request);
+    }
+
+    private function resolveRestaurantId(Request $request): ?int
+    {
+        // Opción 1: header numérico o slug
         $header = $request->headers->get('X-Restaurant-ID');
         if ($header) {
             if (ctype_digit((string) $header)) {
-                $restaurantId = (int) $header;
-            } else {
-                $restaurantId = Restaurant::where('slug', $header)->value('id') ?: null;
+                return (int) $header;
             }
+            return Cache::remember("restaurant_slug:{$header}", 300, fn () =>
+                Restaurant::where('slug', $header)->value('id')
+            ) ?: null;
         }
 
         // Opción 2: subdominio
-        if (!$restaurantId) {
-            $host = $request->getHost();
-            $parts = explode('.', $host);
-            $slug = count($parts) > 2 ? $parts[0] : (count($parts) === 2 ? $parts[0] : null);
-            if ($slug && !in_array($slug, ['localhost','127','www'])) {
-                $restaurantId = Restaurant::where('slug', $slug)->value('id') ?: null;
-            }
+        $host = $request->getHost();
+        $parts = explode('.', $host);
+        $slug = count($parts) > 1 ? $parts[0] : null;
+        if ($slug && !in_array($slug, ['localhost', '127', 'www'], true)) {
+            return Cache::remember("restaurant_slug:{$slug}", 300, fn () =>
+                Restaurant::where('slug', $slug)->value('id')
+            ) ?: null;
         }
 
-        // Fallback automático cuando solo existe un restaurante registrado
-        if (!$restaurantId && Schema::hasTable('restaurants')) {
-            $candidateIds = Restaurant::query()->limit(2)->pluck('id');
-            if ($candidateIds->count() === 1) {
-                $restaurantId = (int) $candidateIds->first();
-            } elseif (app()->environment(['local', 'testing']) && $candidateIds->isNotEmpty()) {
-                $restaurantId = (int) $candidateIds->first();
-            }
-        }
-
-        // Establecer instancia global
-        // Establecer instancia global o fallback
-if ($restaurantId !== null) {
-    app()->instance('current_restaurant_id', $restaurantId);
-} else {
-    // Fallback seguro siempre que estemos en local o testing
-    if (app()->environment(['local', 'testing'])) {
-        $fallback = Restaurant::query()->value('id') ?? 1;
-        $restaurantId = $fallback;
-        app()->instance('current_restaurant_id', $restaurantId);
-        Log::warning('⚠️ No se detectó restaurant_id, usando fallback', ['restaurant_id' => $restaurantId]);
-    } else {
-        app()->forgetInstance('current_restaurant_id');
-        abort(500, 'No se pudo determinar el restaurante activo');
+        // Opción 3: único restaurante registrado (cacheado 5 min)
+        return $this->fetchFirstRestaurantId();
     }
-}
 
-       Log::info('Middleware ejecutado correctamente', ['restaurant_id' => $restaurantId]);
-
-        // Importante: continuar con la solicitud
-        return $next($request);
+    private function fetchFirstRestaurantId(): ?int
+    {
+        return Cache::remember('restaurant_first_id', 300, function () {
+            if (!Schema::hasTable('restaurants')) {
+                return null;
+            }
+            $ids = Restaurant::query()->limit(2)->pluck('id');
+            if ($ids->count() >= 1) {
+                return (int) $ids->first();
+            }
+            return null;
+        });
     }
 }

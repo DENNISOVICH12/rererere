@@ -26,6 +26,7 @@ class Pedido extends Model
         'cliente_mesa_id',
         'restaurant_id',
         'mesa_id',
+        'mesero_id',
         'estado',
         'hold_expires_at',
         'released_to_kitchen_at',
@@ -216,5 +217,9 @@ class Pedido extends Model
 {
     return $this->belongsTo(Mesa::class, 'mesa_id');
 }
-   
+
+    public function mesero()
+    {
+        return $this->belongsTo(Usuario::class, 'mesero_id');
+    }
 }

@@ -31,6 +31,7 @@
                         <th>Nombre</th>
                         <th>Categoría</th>
                         <th>Precio</th>
+                        <th>Disponible</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -52,6 +53,16 @@
                         <td>{{ $item->categoria }}</td>
                         <td>${{ number_format($item->precio, 0, '.', '.') }}</td>
 
+                        <td class="disponible-cell">
+                            <button
+                                class="toggle-disponible {{ $item->disponible ? 'toggle-on' : 'toggle-off' }}"
+                                data-id="{{ $item->id }}"
+                                title="{{ $item->disponible ? 'Deshabilitar producto' : 'Habilitar producto' }}"
+                            >
+                                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                                <span class="toggle-label">{{ $item->disponible ? 'Activo' : 'Inactivo' }}</span>
+                            </button>
+                        </td>
                         <td>
                             <div class="table-actions">
                                 <a href="{{ route('admin.menu.edit', $item->id) }}" class="btn btn-edit">Editar</a>
@@ -178,6 +189,69 @@ document.getElementById("formNuevoPlato").addEventListener("submit", async funct
     btnText.style.display = "inline-block";
     btnLoad.style.display = "none";
 });
+
+// ── Toggle disponible ──────────────────────────────────────────────
+document.querySelectorAll('.toggle-disponible').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const row = btn.closest('tr');
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/admin/menu/${id}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+            });
+            const data = await res.json();
+            if (data.ok) {
+                const isOn = data.disponible;
+                btn.className = `toggle-disponible ${isOn ? 'toggle-on' : 'toggle-off'}`;
+                btn.title = isOn ? 'Deshabilitar producto' : 'Habilitar producto';
+                btn.querySelector('.toggle-label').textContent = isOn ? 'Activo' : 'Inactivo';
+                row.classList.toggle('item-inactivo', !isOn);
+            }
+        } catch (e) {
+            alert('Error al cambiar disponibilidad');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+});
+
+document.querySelectorAll('.toggle-disponible.toggle-off').forEach(btn => {
+    btn.closest('tr')?.classList.add('item-inactivo');
+});
 </script>
+
+@push('styles')
+<style>
+.disponible-cell { text-align: center; vertical-align: middle; }
+.toggle-disponible {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: none; border: none; cursor: pointer;
+    padding: 4px 6px; border-radius: 8px; transition: background 150ms;
+}
+.toggle-disponible:hover { background: rgba(148,163,184,0.1); }
+.toggle-track {
+    width: 42px; height: 24px; border-radius: 999px;
+    position: relative; transition: background 250ms; flex-shrink: 0;
+}
+.toggle-on .toggle-track { background: #059669; }
+.toggle-off .toggle-track { background: #6b7280; }
+.toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; transition: transform 250ms;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.toggle-on .toggle-thumb { transform: translateX(18px); }
+.toggle-label { font-size: 12px; font-weight: 600; min-width: 44px; }
+.toggle-on .toggle-label { color: #6ee7b7; }
+.toggle-off .toggle-label { color: #9ca3af; }
+tr.item-inactivo td:not(.disponible-cell) { opacity: 0.4; }
+</style>
+@endpush
 
 @endsection

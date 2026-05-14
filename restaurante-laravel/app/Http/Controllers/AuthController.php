@@ -98,14 +98,22 @@ public function loginCliente(Request $request)
 
     // ✅ Logout (solo para apps que usan tokens)
     public function logout(Request $request)
-    {
-        if ($request->user() && $request->user()->currentAccessToken()) {
-            $request->user()->currentAccessToken()->delete();
-        }
-
-        return response()->json(['message' => 'Sesión cerrada correctamente']);
+{
+    // Logout de token API (carta digital)
+    if ($request->user() && method_exists($request->user(), 'currentAccessToken') && $request->user()->currentAccessToken()) {
+        $request->user()->currentAccessToken()->delete();
     }
 
+    // Logout de sesión web (admin, mesero, cocinero)
+    if (auth('web')->check()) {
+        auth('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect('/login');
+    }
+
+    return response()->json(['message' => 'Sesión cerrada correctamente']);
+}
 
     // ✅ Crear usuarios del restaurante (admin)
     public function crearUsuario(Request $request)

@@ -5,33 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Hash; // ✅ ESTA LÍNEA
-
-
+use Illuminate\Support\Facades\Hash;
 
 class UsuarioController extends Controller
 {
-    /**
-     * @OA\Get(
-     *   path="/api/usuarios",
-     *   tags={"Usuarios"},
-     *   summary="Listar usuarios (paginado)",
-     *   @OA\Response(response=200, description="OK",
-     *     @OA\JsonContent(type="object",
-     *       @OA\Property(property="data", type="array",
-     *         @OA\Items(ref="#/components/schemas/Usuario")
-     *       ),
-     *       @OA\Property(property="current_page", type="integer"),
-     *       @OA\Property(property="per_page", type="integer"),
-     *       @OA\Property(property="total", type="integer")
-     *     )
-     *   )
-     * )
-     */
-     public function index()
+    public function index()
     {
         $usuarios = Usuario::orderByDesc('id')->paginate(20);
+        $todos    = Usuario::orderBy('fecha_ingreso')->get();
 
         $roles = [
             'admin'    => 'Administrador',
@@ -40,113 +21,55 @@ class UsuarioController extends Controller
             'barra'    => 'Barra',
         ];
 
-        return view('usuarios', [
-            'usuarios' => $usuarios,
-            'roles'    => $roles,
-        ]);
+        $todosJson = $todos->map(fn($u) => [
+    'id' => $u->id,
+    'usuario' => $u->usuario,
+    'nombre' => trim(($u->nombre ?? '').' '.($u->apellido ?? '')),
+    'rol' => $u->rol,
+    'activo' => (bool) $u->activo,
+    'fecha_ingreso' => $u->fecha_ingreso ? (string) $u->fecha_ingreso : null,
+    'fecha_salida' => $u->fecha_salida ? (string) $u->fecha_salida : null,
+]);
+
+return view('usuarios', compact('usuarios', 'todos', 'roles', 'todosJson'));
     }
 
-
-    /**
-     * @OA\Get(
-     *   path="/api/usuarios/{id}",
-     *   tags={"Usuarios"},
-     *   summary="Ver usuario por ID",
-     *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *   @OA\Response(response=200, description="OK", @OA\JsonContent(ref="#/components/schemas/Usuario")),
-     *   @OA\Response(response=404, description="Usuario no encontrado")
-     * )
-     */
     public function show($id)
     {
         return response()->json(Usuario::findOrFail($id));
     }
 
-    /**
-     * @OA\Post(
-     *   path="/api/usuarios",
-     *   tags={"Usuarios"},
-     *   summary="Crear un nuevo usuario",
-     *   @OA\RequestBody(required=true,
-     *     @OA\JsonContent(
-     *       required={"usuario","password","nombre","correo","rol"},
-     *       @OA\Property(property="usuario", type="string", example="admin"),
-     *       @OA\Property(property="password", type="string", example="secreto123"),
-     *       @OA\Property(property="nombre", type="string", example="Admin"),
-     *       @OA\Property(property="apellido", type="string", nullable=true, example="Demo"),
-     *       @OA\Property(property="correo", type="string", format="email", example="admin@example.com"),
-     *       @OA\Property(property="rol", type="string", example="admin",
-     *         description="admin|mesero|cocinero|cliente|empleado"),
-     *       @OA\Property(property="activo", type="boolean", example=true),
-     *       @OA\Property(property="restaurant_id", type="integer", example=1)
-     *     )
-     *   ),
-     *   @OA\Response(response=201, description="Usuario creado", @OA\JsonContent(ref="#/components/schemas/Usuario")),
-     *   @OA\Response(response=422, description="Validación fallida")
-     * )
-     */
-    
     public function store(Request $request)
-{
+    {
         $data = $request->validate([
-            'usuario'  => 'required|string|max:50|unique:usuarios,usuario',
-            'correo'   => 'required|email|max:180|unique:usuarios,correo',
-            'password' => 'required|min:6',
-            'rol'      => 'required|in:admin,cocinero,mesero,barra',
-            'nombre'   => 'nullable|string|max:120',
-            'apellido' => 'nullable|string|max:120',
-            'activo'   => 'nullable|boolean',
+            'usuario'       => 'required|string|max:50|unique:usuarios,usuario',
+            'correo'        => 'required|email|max:180|unique:usuarios,correo',
+            'password'      => 'required|min:6',
+            'rol'           => 'required|in:admin,cocinero,mesero,barra',
+            'nombre'        => 'nullable|string|max:120',
+            'apellido'      => 'nullable|string|max:120',
+            'activo'        => 'nullable|boolean',
+            'fecha_ingreso' => 'nullable|date',
         ]);
 
-        $usuario = Usuario::create([
-            'usuario'  => $data['usuario'],
-            'correo'   => $data['correo'],
-            'password' => Hash::make($data['password']),
-            'rol'      => $data['rol'],
-            'nombre'   => $data['nombre'] ?? ucfirst($data['usuario']),
-            'apellido' => $data['apellido'] ?? '',
-            'activo'   => $request->boolean('activo', true),
+        Usuario::create([
+            'usuario'       => $data['usuario'],
+            'correo'        => $data['correo'],
+            'password'      => Hash::make($data['password']),
+            'rol'           => $data['rol'],
+            'nombre'        => $data['nombre'] ?? ucfirst($data['usuario']),
+            'apellido'      => $data['apellido'] ?? '',
+            'activo'        => $request->boolean('activo', true),
+            'fecha_ingreso' => $data['fecha_ingreso'] ?? now()->toDateString(),
         ]);
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'message' => 'Usuario creado correctamente',
-                'usuario' => $usuario,
-            ], 201);
+            return response()->json(['message' => 'Usuario creado correctamente'], 201);
         }
 
-        return redirect()
-            ->route('usuarios.panel')
-            ->with('status', 'Usuario creado correctamente.');
+        return redirect()->route('usuarios.panel')->with('status', 'Empleado creado correctamente.');
     }
 
-
-
-
-
-    /**
-     * @OA\Put(
-     *   path="/api/usuarios/{id}",
-     *   tags={"Usuarios"},
-     *   summary="Actualizar usuario existente",
-     *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *   @OA\RequestBody(required=true,
-     *     @OA\JsonContent(
-     *       @OA\Property(property="usuario", type="string", example="admin2"),
-     *       @OA\Property(property="password", type="string", example="nuevo123"),
-     *       @OA\Property(property="nombre", type="string", example="Admin"),
-     *       @OA\Property(property="apellido", type="string", nullable=true, example="Demo"),
-     *       @OA\Property(property="correo", type="string", format="email", example="admin2@example.com"),
-     *       @OA\Property(property="rol", type="string", example="gerente"),
-     *       @OA\Property(property="activo", type="boolean", example=false),
-     *       @OA\Property(property="restaurant_id", type="integer", example=1)
-     *     )
-     *   ),
-     *   @OA\Response(response=200, description="Usuario actualizado", @OA\JsonContent(ref="#/components/schemas/Usuario")),
-     *   @OA\Response(response=404, description="Usuario no encontrado"),
-     *   @OA\Response(response=422, description="Validación fallida")
-     * )
-     */
     public function update(Request $request, $id)
     {
         $u = Usuario::findOrFail($id);
@@ -160,8 +83,10 @@ class UsuarioController extends Controller
             'rol'           => ['sometimes', 'string', 'in:admin,cocinero,mesero,barra'],
             'activo'        => ['sometimes', 'boolean'],
             'restaurant_id' => ['sometimes', 'integer'],
+            'fecha_ingreso' => ['sometimes', 'nullable', 'date'],
+            'fecha_salida'  => ['sometimes', 'nullable', 'date'],
         ]);
-        
+
         if (isset($data['password'])) {
             $data['password'] = $data['password'] ? Hash::make($data['password']) : $u->password;
         }
@@ -169,35 +94,29 @@ class UsuarioController extends Controller
         if ($request->has('activo')) {
             $data['activo'] = $request->boolean('activo');
         }
+
+        // Si se reactiva, limpiar fecha_salida si viene vacía
+        if (isset($data['fecha_salida']) && $data['fecha_salida'] === '') {
+            $data['fecha_salida'] = null;
+        }
+
         $u->update($data);
+
         if ($request->wantsJson()) {
             return response()->json($u);
         }
 
-        return redirect()
-            ->route('usuarios.panel')
-            ->with('status', 'Usuario actualizado correctamente.');
+        return redirect()->route('usuarios.panel')->with('status', 'Empleado actualizado correctamente.');
     }
 
-    /**
-     * @OA\Delete(
-     *   path="/api/usuarios/{id}",
-     *   tags={"Usuarios"},
-     *   summary="Eliminar usuario",
-     *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *   @OA\Response(response=200, description="Usuario eliminado"),
-     *   @OA\Response(response=404, description="Usuario no encontrado")
-     * )
-     */
     public function destroy(Request $request, $id)
     {
         Usuario::findOrFail($id)->delete();
+
         if ($request->wantsJson()) {
             return response()->json(['deleted' => true]);
         }
 
-        return redirect()
-            ->route('usuarios.panel')
-            ->with('status', 'Usuario eliminado.');
+        return redirect()->route('usuarios.panel')->with('status', 'Usuario eliminado.');
     }
 }

@@ -13,7 +13,7 @@ use App\Services\WaiterNotificationService;
 
 class MeseroOrderController extends Controller
 {
-    private const BLOCKED_STATE = 'entregado';
+    private const BLOCKED_STATES = ['entregado', 'facturado', 'cancelado'];
 
     public function index(Request $request): JsonResponse
     {
@@ -34,13 +34,7 @@ class MeseroOrderController extends Controller
                 'change_request_count',
                 'release_trigger',
             ])
-            ->whereIn('estado', [
-                Pedido::STATUS_RETAINED,
-                Pedido::STATUS_CHANGE_REQUESTED,
-                'pendiente',
-                'preparando',
-                'listo',
-            ])
+            ->whereNotIn('estado', self::BLOCKED_STATES)
             ->with([
                 'mesa:id,numero',
                 'cliente:id,nombres,apellidos',
@@ -56,7 +50,7 @@ class MeseroOrderController extends Controller
 
         $orders = $query
             ->orderByDesc('created_at')
-            ->limit(50) // 🔥 CRÍTICO
+            ->limit(50)
             ->get();
 
         return response()->json([
@@ -92,8 +86,8 @@ class MeseroOrderController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if ($pedido->estado === self::BLOCKED_STATE) {
-            return response()->json(['message' => 'El pedido entregado no puede modificarse.'], 422);
+        if (in_array($pedido->estado, self::BLOCKED_STATES)) {
+            return response()->json(['message' => 'El pedido no puede modificarse.'], 422);
         }
 
         if (!$pedido->canRequestChange()) {
@@ -118,11 +112,16 @@ class MeseroOrderController extends Controller
 
         $pedido->releaseToKitchen(Pedido::RELEASE_TRIGGER_WAITER_CONFIRMATION);
 
-        app(WaiterNotificationService::class)->createFromPedido(
-            $pedido,
-            'edited_order',
-            '✏️ Pedido enviado a cocina'
-        );
+        try {
+            app(WaiterNotificationService::class)->createFromPedido(
+                $pedido,
+                'edited_order',
+                '✏️ Pedido enviado a cocina'
+            );
+        } catch (\Throwable $e) {
+            // Notificación falla silenciosamente — no bloquea la respuesta
+            \Illuminate\Support\Facades\Log::warning('WS notification failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Pedido enviado a cocina.',
@@ -134,29 +133,42 @@ class MeseroOrderController extends Controller
     {
         $pedido->refresh();
 
-        if ($pedido->estado === self::BLOCKED_STATE) {
+        if (in_array($pedido->estado, self::BLOCKED_STATES)) {
             return response()->json(['message' => 'No editable.'], 422);
         }
 
-        if (!$pedido->canBeEditedByWaiter()) {
-            return response()->json(['message' => 'Tiempo expirado.'], 403);
-        }
+        // Fuera de la ventana de retención se requiere justificación
+        $fueraDeVentana = !$pedido->canBeEditedByWaiter();
 
         $validated = $request->validate([
-            'mesa_id' => ['nullable','integer', Rule::exists('mesas','id')],
-            'items' => ['required','array','min:1'],
+            'mesa_id'              => ['nullable','integer', Rule::exists('mesas','id')],
+            'items'                => ['required','array','min:1'],
             'items.*.menu_item_id' => ['required','integer'],
-            'items.*.cantidad' => ['required','integer','min:1'],
-            'items.*.nota' => ['nullable','string'],
+            'items.*.cantidad'     => ['required','integer','min:1'],
+            'items.*.nota'         => ['nullable','string'],
+            'justificacion'        => [$fueraDeVentana ? 'required' : 'nullable', 'string', 'max:500'],
         ]);
+
+        if ($fueraDeVentana && empty($validated['justificacion'])) {
+            return response()->json(['message' => 'Se requiere justificación para modificar este pedido.'], 422);
+        }
 
         $menuItems = MenuItem::whereIn(
             'id',
             collect($validated['items'])->pluck('menu_item_id')
         )->get()->keyBy('id');
 
-        DB::transaction(function () use ($pedido, $validated, $menuItems) {
-            $pedido->update(['mesa_id' => $validated['mesa_id'] ?? $pedido->mesa_id]);
+        DB::transaction(function () use ($pedido, $validated, $menuItems, $fueraDeVentana, $request) {
+            $updateData = ['mesa_id' => $validated['mesa_id'] ?? $pedido->mesa_id];
+
+            // Guardar la justificación y quién hizo el cambio si es fuera de ventana
+            if ($fueraDeVentana && !empty($validated['justificacion'])) {
+                $updateData['change_request_reason'] = $validated['justificacion'];
+                $updateData['change_requested_by']   = $request->user()?->id;
+                $updateData['change_requested_at']   = now();
+            }
+
+            $pedido->update($updateData);
 
             $pedido->detalle()->delete();
 
@@ -197,7 +209,7 @@ class MeseroOrderController extends Controller
 
     public function destroy(Pedido $pedido): JsonResponse
     {
-        if ($pedido->estado === self::BLOCKED_STATE) {
+        if (in_array($pedido->estado, self::BLOCKED_STATES)) {
             return response()->json(['message' => 'No se puede eliminar'], 422);
         }
 

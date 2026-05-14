@@ -7,10 +7,11 @@
     "require": {
         "php": "^8.0.2",
         "barryvdh/laravel-dompdf": "^3.1",
-        "beyondcode/laravel-websockets": "^1.13",
+        "beyondcode/laravel-websockets": "^1.14",
         "darkaonline/l5-swagger": "^8.5",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^9.19",
+        "laravel/octane": "^1.5",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.7",
         "pusher/pusher-php-server": "^7.2",

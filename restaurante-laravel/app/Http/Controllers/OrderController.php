@@ -9,6 +9,7 @@ use App\Services\WaiterNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -29,8 +30,20 @@ class OrderController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $resolvedClienteId = $this->resolveAuthenticatedClienteId($restaurantId)
-            ?? $this->resolveClienteId($request->input('cliente_id'), $restaurantId);
+        // Resolver el ID real de la mesa a partir del numero recibido
+        $mesaNumeroRecibido = $request->input('mesa_id');
+        $mesaRealId = null;
+        if ($mesaNumeroRecibido) {
+            $mesaObj = \App\Models\Mesa::query()
+                ->where('restaurant_id', $restaurantId)
+                ->where('numero', $mesaNumeroRecibido)
+                ->first();
+            // Si lo encontró por numero, usa su ID; si no, asume que ya es un ID
+            $mesaRealId = $mesaObj ? $mesaObj->id : (int) $mesaNumeroRecibido;
+        }
+
+        $resolvedClienteId = $this->resolveAuthenticatedClienteId($restaurantId, $mesaRealId)
+    ?? $this->resolveClienteId($request->input('cliente_id'), $restaurantId);
 
         if (!$resolvedClienteId) {
             $clienteInvitado = $this->createGuestCliente($request, $restaurantId);
@@ -48,10 +61,18 @@ class OrderController extends Controller
             fn ($item) => ((float) ($item['precio_unitario'] ?? 0)) * ((int) ($item['cantidad'] ?? 0))
         );
 
+        // Guardar el mesero asignado a la mesa en el momento del pedido
+        $meseroId = null;
+        if ($mesaRealId) {
+            $mesaParaMesero = \App\Models\Mesa::find($mesaRealId);
+            $meseroId = $mesaParaMesero?->mesero_id;
+        }
+
         $order = Pedido::create([
             'cliente_id' => $resolvedClienteId,
             'restaurant_id' => $restaurantId,
-            'mesa_id' => $request->mesa_id,
+            'mesa_id' => $mesaRealId,
+            'mesero_id' => $meseroId,
             'estado' => Pedido::STATUS_RETAINED,
             'hold_expires_at' => now()->addMinutes(5),
             'total' => $total,
@@ -78,32 +99,51 @@ class OrderController extends Controller
         }
 
         $order->load(['mesa:id,numero', 'detalle.menuItem', 'cliente']);
+
+$orderForNotification = $order;
+dispatch(function () use ($orderForNotification) {
+    try {
         app(WaiterNotificationService::class)->createFromPedido(
-            $order,
+            $orderForNotification,
             'new_order',
             '🆕 Nuevo pedido recibido',
             [
                 'origin' => 'customer',
-                'hold_expires_at' => optional($order->hold_expires_at)->toIso8601String(),
+                'hold_expires_at' => optional($orderForNotification->hold_expires_at)->toIso8601String(),
             ]
         );
-
-        return response()->json([
-            'message' => 'Pedido creado exitosamente.',
-            'data' => $this->transformCustomerOrderPayload($order),
-            'meta' => [
-                'hold_window_seconds' => Pedido::holdWindowSeconds(),
-            ],
-        ], Response::HTTP_CREATED);
+    } catch (\Throwable $e) {
+        Log::warning('WS notification failed: ' . $e->getMessage());
     }
+})->onQueue('default');
+
+return response()->json([
+    'message' => 'Pedido creado exitosamente.',
+    'data' => $this->transformCustomerOrderPayload($order),
+    'meta' => [
+        'hold_window_seconds' => Pedido::holdWindowSeconds(),
+    ],
+], Response::HTTP_CREATED);
+
+}
 
     public function sendNowToKitchen(Request $request, Pedido $order): JsonResponse
     {
         //Pedido::releaseExpiredRetentionWindow();
         $order->refresh();
 
-        $resolvedClienteId = $this->resolveAuthenticatedClienteId((int) $order->restaurant_id)
-            ?? $this->resolveClienteId($request->input('cliente_id'), $order->restaurant_id);
+        // Primero intentar con el cliente_id explícito del body
+        // (clientes invitados guardan su ID localmente y lo envían aquí)
+        $bodyClienteId = $this->resolveClienteId($request->input('cliente_id'), $order->restaurant_id);
+
+        // Si el body trae el cliente correcto, usarlo sin pasar por la sesión
+        // (evita el 403 cuando hay una cookie de staff activa en el browser)
+        if ($bodyClienteId && (int) $order->cliente_id === $bodyClienteId) {
+            $resolvedClienteId = $bodyClienteId;
+        } else {
+            $resolvedClienteId = $this->resolveAuthenticatedClienteId((int) $order->restaurant_id)
+                ?? $bodyClienteId;
+        }
 
         if ($resolvedClienteId && (int) $order->cliente_id !== $resolvedClienteId) {
             return response()->json(['message' => 'No puedes confirmar este pedido.'], Response::HTTP_FORBIDDEN);
@@ -163,18 +203,63 @@ class OrderController extends Controller
         return response()->json(['message' => 'Estado actualizado ✅']);
     }
 
-    private function resolveAuthenticatedClienteId(int $restaurantId): ?int
+    private function resolveAuthenticatedClienteId(int $restaurantId, ?int $mesaId = null): ?int
     {
-        $authCliente = auth('sanctum')->user();
+        // Intentar autenticar con el token Bearer si viene en el header
+        // Esto funciona aunque la ruta no tenga middleware auth:sanctum
+        $authCliente = null;
+        try {
+            request()->headers->get('Authorization')
+                ? $authCliente = auth('sanctum')->user()
+                : null;
+        } catch (\Throwable $e) {
+            $authCliente = null;
+        }
+
         if (!$authCliente) return null;
 
         if ($authCliente instanceof Cliente) {
-            return (int) $authCliente->id;
+            $clienteId = (int) $authCliente->id;
+
+            // 1️⃣ El propio cliente autenticado tiene pedidos sin facturar en esta mesa
+            //    → reutilizamos su ID para acumular todo en la misma cuenta.
+            $tienePedidosSinFacturar = Pedido::where('cliente_id', $clienteId)
+                ->where('mesa_id', $mesaId)
+                ->whereNotIn('estado', ['facturado', 'cancelado'])
+                ->exists();
+
+            if ($tienePedidosSinFacturar) {
+                return $clienteId;
+            }
+
+            // 2️⃣ En una sesión anterior pudo haberse creado un registro duplicado del
+            //    mismo cliente (mismo nombre + mismo restaurant + activo). Lo buscamos
+            //    para mantener la cuenta unificada mientras no haya sido facturado.
+            $duplicado = Cliente::query()
+                ->where('restaurant_id', $restaurantId)
+                ->where('nombres', $authCliente->nombres)
+                ->where('apellidos', $authCliente->apellidos)
+                ->where('activo', true)
+                ->whereHas('pedidos', function ($q) use ($mesaId) {
+                    $q->where('mesa_id', $mesaId)
+                      ->whereNotIn('estado', ['facturado', 'cancelado']);
+                })
+                ->orderByDesc('id')
+                ->first();
+
+            if ($duplicado) {
+                return (int) $duplicado->id;
+            }
+
+            // 3️⃣ No hay cuenta abierta para este cliente en esta mesa
+            //    (primera vez o ya pagó) → usar directamente el ID del cliente autenticado.
+            return $clienteId;
         }
 
         return Cliente::query()
             ->where('usuario_id', (int) $authCliente->id)
             ->where('restaurant_id', $restaurantId)
+            ->where('activo', true)
             ->value('id');
     }
 

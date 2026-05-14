@@ -1,0 +1,18 @@
+
+  [41;1m Psy\Exception\ParseErrorException [49;22m
+
+[39;1m  PHP Parse error: Syntax error, unexpected ',' on line 1[39;22m
+
+  at [32mvendor/psy/psysh/src/Exception/ParseErrorException.php[39m:[32m44[39m
+    [90m 40[0m[90m▕ [0m[90;3m     * @param \PhpParser\Error $e[0m
+    [90m 41[0m[90m▕ [0m[90;3m     */[0m
+    [90m 42[0m[90m▕ [0m[90;3m    [0m[35;1mpublic static function [0m[39;1mfromParseError[0m[35;1m(\PhpParser\Error [0m[39;1m$e[0m[35;1m): [0m[39;1mself[0m
+    [90m 43[0m[90m▕ [0m[39;1m    [0m[35;1m{[0m
+[31;1m  ➜ [0m[3;1m 44[0m[90m▕ [0m[35;1m        return new [0m[39;1mself[0m[35;1m([0m[39;1m$e[0m[35;1m->[0m[39;1mgetRawMessage[0m[35;1m(), [0m[39;1m$e[0m[35;1m->[0m[39;1mgetAttributes[0m[35;1m());[0m
+    [90m 45[0m[90m▕ [0m[35;1m    }[0m
+    [90m 46[0m[90m▕ [0m[35;1m}[0m
+    [90m 47[0m[90m▕ [0m
+
+      [2m+19 vendor frames [22m
+  [33m20  [39m[39;1martisan[39;22m:[39;1m35[39;22m
+  [90m    Illuminate\Foundation\Console\Kernel::handle()[39m

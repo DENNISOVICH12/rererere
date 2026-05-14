@@ -1,6 +1,18 @@
 @extends('layouts.admin')
 
 @section('content')
+
+<script>
+const RESTAURANT_WIFI = {
+  ssid: @json($restaurant->wifi_ssid ?? ''),
+  password: @json($restaurant->wifi_password ?? ''),
+  security: @json($restaurant->wifi_security ?? 'WPA'),
+};
+const CARTA_BASE_URL = '{{ "http://".request()->getHost().":5174" }}';
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <div class="mesas-admin" id="mesasAdminApp">
     <header class="mesas-topbar">
         <div>
@@ -8,7 +20,6 @@
             <h1>Gestión de Mesas</h1>
             <p class="subtitle">Visualiza estado, pedidos activos y administra tus mesas en tiempo real.</p>
         </div>
-        
         <div class="toolbar-actions">
             <div class="search-wrap">
                 <span aria-hidden="true">🔎</span>
@@ -70,11 +81,9 @@
             <button class="icon-btn" id="closeCreateMesaModal" aria-label="Cerrar">✕</button>
         </div>
         <p class="modal-subtitle">Si no ingresas un número, se asignará automáticamente.</p>
-
         <form id="createMesaForm" class="modal-form">
             <label for="mesaNumero">Número de mesa</label>
             <input type="number" min="1" id="mesaNumero" name="numero" placeholder="Ej: 12" />
-
             <div class="modal-actions">
                 <button type="button" class="btn btn-ghost" id="cancelCreateMesa">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Crear mesa</button>
@@ -89,9 +98,7 @@
             <h3 id="detailTitle">Mesa</h3>
             <button class="icon-btn" id="closeDetailModal" aria-label="Cerrar">✕</button>
         </div>
-
         <div id="detailBody" class="mesa-detail-body"></div>
-
         <div class="modal-actions">
             <button type="button" class="btn btn-danger" id="deleteMesaAction">Eliminar mesa</button>
             <button type="button" class="btn btn-ghost" id="closeDetailAction">Cerrar</button>
@@ -110,7 +117,6 @@
         --text-soft: #94a3b8;
         --border-soft: rgba(148, 163, 184, 0.24);
         --accent: #ffd7aa;
-
         color: var(--text-main);
         background:
             radial-gradient(circle at 20% 20%, rgba(156, 32, 48, 0.2), transparent 35%),
@@ -121,337 +127,82 @@
         border: 1px solid var(--border-soft);
         box-shadow: 0 25px 70px rgba(2, 6, 23, 0.45);
     }
-
-    .mesas-topbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        gap: 16px;
-        flex-wrap: wrap;
-    }
-
-    .eyebrow {
-        margin: 0 0 6px;
-        text-transform: uppercase;
-        letter-spacing: .12em;
-        font-size: 11px;
-        color: var(--accent);
-        font-weight: 700;
-    }
-
+    .mesas-topbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+    .eyebrow { margin: 0 0 6px; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; color: var(--accent); font-weight: 700; }
     .mesas-topbar h1 { margin: 0; font-size: clamp(24px, 3vw, 34px); }
     .subtitle { margin: 8px 0 0; color: var(--text-soft); }
-
-    .toolbar-actions {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    .search-wrap,
-    .toolbar-actions select {
-        border: 1px solid var(--border-soft);
-        background: rgba(15, 23, 42, 0.95);
-        color: var(--text-main);
-        border-radius: 14px;
-        height: 44px;
-    }
-
-    .search-wrap {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 0 12px;
-    }
-
-    .search-wrap input {
-        border: none;
-        outline: none;
-        background: transparent;
-        color: inherit;
-        min-width: 220px;
-    }
-
+    .toolbar-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .search-wrap, .toolbar-actions select { border: 1px solid var(--border-soft); background: rgba(15, 23, 42, 0.95); color: var(--text-main); border-radius: 14px; height: 44px; }
+    .search-wrap { display: flex; align-items: center; gap: 10px; padding: 0 12px; }
+    .search-wrap input { border: none; outline: none; background: transparent; color: inherit; min-width: 220px; }
     .toolbar-actions select { padding: 0 14px; }
-
-    .status-overview {
-        margin-top: 22px;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
-    }
-
-    .stat-card {
-        background: rgba(15, 23, 42, 0.82);
-        border: 1px solid var(--border-soft);
-        border-radius: 18px;
-        padding: 14px;
-    }
+    .status-overview { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .stat-card { background: rgba(15, 23, 42, 0.82); border: 1px solid var(--border-soft); border-radius: 18px; padding: 14px; }
     .stat-card p { margin: 0; color: var(--text-soft); font-size: 13px; }
     .stat-card strong { font-size: 24px; margin-top: 6px; display: inline-block; }
     .stat-libre strong { color: #4ade80; }
     .stat-ocupada strong { color: #f87171; }
     .stat-proceso strong { color: #fbbf24; }
-
-    .mesa-grid {
-        margin-top: 24px;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 16px;
-        min-height: 170px;
-    }
-
-    .mesa-card {
-        background: var(--bg-card);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 22px;
-        padding: 16px;
-        cursor: pointer;
-        transition: transform .24s ease, box-shadow .24s ease, background .24s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .mesa-card:hover {
-        transform: translateY(-5px);
-        background: var(--bg-card-hover);
-        box-shadow: 0 18px 45px rgba(2, 6, 23, 0.45);
-    }
-
-    .mesa-status-dot {
-        position: absolute;
-        top: 14px;
-        right: 14px;
-        width: 11px;
-        height: 11px;
-        border-radius: 50%;
-        box-shadow: 0 0 0 7px rgba(255,255,255,0.04);
-    }
-
-    .mesa-circle {
-        width: 92px;
-        aspect-ratio: 1;
-        margin: 8px auto 14px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        font-size: 19px;
-        font-weight: 700;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        transition: all .3s ease;
-    }
-
-    .mesa-state-libre .mesa-circle,
-    .mesa-state-libre .mesa-status-dot {
-        background: rgba(34, 197, 94, .2);
-        color: #86efac;
-        box-shadow: 0 0 30px rgba(34, 197, 94, .35);
-    }
-
-    .mesa-state-ocupada .mesa-circle,
-    .mesa-state-ocupada .mesa-status-dot {
-        background: rgba(239, 68, 68, .24);
-        color: #fca5a5;
-        box-shadow: 0 0 28px rgba(248, 113, 113, .32);
-    }
-
-    .mesa-state-en_proceso .mesa-circle,
-    .mesa-state-en_proceso .mesa-status-dot {
-        background: rgba(250, 204, 21, .22);
-        color: #fde68a;
-        box-shadow: 0 0 28px rgba(234, 179, 8, .33);
-    }
-
+    .mesa-grid { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; min-height: 170px; }
+    .mesa-card { background: var(--bg-card); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 22px; padding: 16px; cursor: pointer; transition: transform .24s ease, box-shadow .24s ease, background .24s ease; position: relative; overflow: hidden; }
+    .mesa-card:hover { transform: translateY(-5px); background: var(--bg-card-hover); box-shadow: 0 18px 45px rgba(2, 6, 23, 0.45); }
+    .mesa-status-dot { position: absolute; top: 14px; right: 14px; width: 11px; height: 11px; border-radius: 50%; box-shadow: 0 0 0 7px rgba(255,255,255,0.04); }
+    .mesa-circle { width: 92px; aspect-ratio: 1; margin: 8px auto 14px; border-radius: 50%; display: grid; place-items: center; font-size: 19px; font-weight: 700; border: 1px solid rgba(255,255,255,0.18); transition: all .3s ease; }
+    .mesa-state-libre .mesa-circle, .mesa-state-libre .mesa-status-dot { background: rgba(34,197,94,.2); color: #86efac; box-shadow: 0 0 30px rgba(34,197,94,.35); }
+    .mesa-state-ocupada .mesa-circle, .mesa-state-ocupada .mesa-status-dot { background: rgba(239,68,68,.24); color: #fca5a5; box-shadow: 0 0 28px rgba(248,113,113,.32); }
+    .mesa-state-en_proceso .mesa-circle, .mesa-state-en_proceso .mesa-status-dot { background: rgba(250,204,21,.22); color: #fde68a; box-shadow: 0 0 28px rgba(234,179,8,.33); }
     .mesa-card h3 { margin: 0; text-align: center; font-size: 18px; }
     .mesa-meta { margin-top: 12px; display: grid; gap: 6px; color: var(--text-soft); font-size: 13px; }
-    .mesa-badge {
-        justify-self: center;
-        margin-top: 10px;
-        border-radius: 999px;
-        padding: 6px 12px;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: .08em;
-        border: 1px solid transparent;
-    }
-
+    .mesa-badge { justify-self: center; margin-top: 10px; border-radius: 999px; padding: 6px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border: 1px solid transparent; }
     .mesa-state-libre .mesa-badge { color: #86efac; border-color: rgba(34,197,94,.45); }
     .mesa-state-ocupada .mesa-badge { color: #fca5a5; border-color: rgba(248,113,113,.45); }
     .mesa-state-en_proceso .mesa-badge { color: #fde68a; border-color: rgba(234,179,8,.45); }
-
-    .empty-state {
-        margin-top: 18px;
-        text-align: center;
-        padding: 40px 20px;
-        border-radius: 20px;
-        border: 1px dashed var(--border-soft);
-        color: var(--text-soft);
-    }
+    .empty-state { margin-top: 18px; text-align: center; padding: 40px 20px; border-radius: 20px; border: 1px dashed var(--border-soft); color: var(--text-soft); }
     .empty-icon { font-size: 42px; margin-bottom: 10px; }
-
-    .fab {
-        position: fixed;
-        bottom: 22px;
-        right: 22px;
-        border: none;
-        border-radius: 16px;
-        padding: 13px 18px;
-        font-weight: 700;
-        background: linear-gradient(120deg, #2563eb, #0ea5e9);
-        color: #fff;
-        box-shadow: 0 18px 45px rgba(37, 99, 235, .38);
-        cursor: pointer;
-        z-index: 40;
-    }
-
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(2, 6, 23, .65);
-        display: none;
-        place-items: center;
-        padding: 16px;
-        z-index: 90;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity .2s ease;
-    }
-
-    .modal-overlay.is-open {
-        display: grid;
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    .modal-card {
-        width: min(500px, 100%);
-        background: #0b1220;
-        border-radius: 22px;
-        border: 1px solid var(--border-soft);
-        padding: 20px;
-        box-shadow: 0 24px 60px rgba(2, 6, 23, .6);
-        transform: translateY(10px) scale(.98);
-        opacity: 0;
-        transition: transform .2s ease, opacity .2s ease;
-    }
-
-    .modal-overlay.is-open .modal-card {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-
-    body.modal-open {
-        overflow: hidden;
-    }
-
+    .fab { position: fixed; bottom: 22px; right: 22px; border: none; border-radius: 16px; padding: 13px 18px; font-weight: 700; background: linear-gradient(120deg, #2563eb, #0ea5e9); color: #fff; box-shadow: 0 18px 45px rgba(37,99,235,.38); cursor: pointer; z-index: 40; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(2,6,23,.65); display: none; place-items: center; padding: 16px; z-index: 90; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+    .modal-overlay.is-open { display: grid; opacity: 1; pointer-events: auto; }
+    .modal-card { width: min(560px, 100%); background: #0b1220; border-radius: 22px; border: 1px solid var(--border-soft); padding: 20px; box-shadow: 0 24px 60px rgba(2,6,23,.6); transform: translateY(10px) scale(.98); opacity: 0; transition: transform .2s ease, opacity .2s ease; }
+    .modal-overlay.is-open .modal-card { transform: translateY(0) scale(1); opacity: 1; }
+    body.modal-open { overflow: hidden; }
     .modal-head { display: flex; justify-content: space-between; align-items: center; }
     .modal-head h3 { margin: 0; }
-    .icon-btn {
-        border: 1px solid var(--border-soft);
-        border-radius: 10px;
-        width: 34px;
-        height: 34px;
-        color: var(--text-main);
-        background: transparent;
-        cursor: pointer;
-    }
-
+    .icon-btn { border: 1px solid var(--border-soft); border-radius: 10px; width: 34px; height: 34px; color: var(--text-main); background: transparent; cursor: pointer; }
     .modal-subtitle { color: var(--text-soft); margin-top: 8px; }
     .modal-form { display: grid; gap: 10px; margin-top: 12px; }
-    .modal-form input {
-        border-radius: 12px;
-        border: 1px solid var(--border-soft);
-        background: rgba(15, 23, 42, .8);
-        padding: 10px;
-        color: var(--text-main);
-    }
-
+    .modal-form input { border-radius: 12px; border: 1px solid var(--border-soft); background: rgba(15,23,42,.8); padding: 10px; color: var(--text-main); }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-
-    .btn {
-        border: none;
-        border-radius: 12px;
-        padding: 10px 14px;
-        cursor: pointer;
-        color: #fff;
-    }
+    .btn { border: none; border-radius: 12px; padding: 10px 14px; cursor: pointer; color: #fff; }
     .btn-primary { background: linear-gradient(120deg, #2563eb, #0ea5e9); }
     .btn-danger { background: linear-gradient(120deg, #dc2626, #ef4444); }
-    .btn-ghost { background: rgba(148, 163, 184, .15); border: 1px solid var(--border-soft); }
-
-    .mesa-detail-body {
-        margin-top: 14px;
-        display: grid;
-        gap: 10px;
-        color: var(--text-soft);
-    }
-
-    .detail-chip {
-        display: inline-flex;
-        border-radius: 999px;
-        padding: 4px 10px;
-        font-size: 12px;
-        border: 1px solid var(--border-soft);
-    }
-
-    .toast-stack {
-        position: fixed;
-        top: 18px;
-        right: 18px;
-        display: grid;
-        gap: 8px;
-        z-index: 120;
-    }
-
-    .toast {
-        min-width: 240px;
-        max-width: 320px;
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid var(--border-soft);
-        background: rgba(15, 23, 42, .95);
-        box-shadow: 0 16px 40px rgba(2, 6, 23, .5);
-        color: var(--text-main);
-        animation: pop .2s ease;
-    }
+    .btn-ghost { background: rgba(148,163,184,.15); border: 1px solid var(--border-soft); }
+    .mesa-detail-body { margin-top: 14px; display: grid; gap: 10px; color: var(--text-soft); }
+    .detail-chip { display: inline-flex; border-radius: 999px; padding: 4px 10px; font-size: 12px; border: 1px solid var(--border-soft); }
+    .toast-stack { position: fixed; top: 18px; right: 18px; display: grid; gap: 8px; z-index: 120; }
+    .toast { min-width: 240px; max-width: 320px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-soft); background: rgba(15,23,42,.95); box-shadow: 0 16px 40px rgba(2,6,23,.5); color: var(--text-main); animation: pop .2s ease; }
     .toast.success { border-color: rgba(34,197,94,.6); }
     .toast.error { border-color: rgba(239,68,68,.6); }
-
     .shimmer-card { pointer-events: none; }
-    .shimmer-circle,
-    .shimmer-line {
-        position: relative;
-        overflow: hidden;
-        background: rgba(148, 163, 184, .18);
-        border-radius: 12px;
-    }
-    .shimmer-circle {
-        width: 88px;
-        aspect-ratio: 1;
-        border-radius: 50%;
-        margin: 8px auto 16px;
-    }
+    .shimmer-circle, .shimmer-line { position: relative; overflow: hidden; background: rgba(148,163,184,.18); border-radius: 12px; }
+    .shimmer-circle { width: 88px; aspect-ratio: 1; border-radius: 50%; margin: 8px auto 16px; }
     .shimmer-line { height: 14px; }
     .shimmer-line.short { width: 60%; margin-top: 8px; }
-
-    .shimmer-circle::after,
-    .shimmer-line::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        transform: translateX(-100%);
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
-        animation: shimmer 1.2s infinite;
-    }
-
+    .shimmer-circle::after, .shimmer-line::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); animation: shimmer 1.2s infinite; }
     @keyframes shimmer { to { transform: translateX(100%); } }
     @keyframes pop { from { opacity: .2; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 768px) { .fab { right: 14px; bottom: 14px; } .search-wrap input { min-width: 160px; } }
 
-    @media (max-width: 768px) {
-        .fab { right: 14px; bottom: 14px; }
-        .search-wrap input { min-width: 160px; }
-    }
+    /* QR Styles */
+    .qr-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
+    .qr-block { background: rgba(2,6,23,.5); border: 1px solid var(--border-soft); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+    .qr-block-title { font-size: .82rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
+    .qr-block-desc { font-size: .76rem; color: var(--text-soft); line-height: 1.4; }
+    .qr-canvas-wrap { background: #fff; border-radius: 10px; padding: 8px; display: flex; align-items: center; justify-content: center; }
+    .qr-no-wifi { background: rgba(156,32,48,.1); border: 1px dashed rgba(255,215,170,.3); border-radius: 10px; padding: 14px; font-size: .8rem; color: var(--accent); text-align: center; line-height: 1.5; }
+    .detail-meta { display: grid; gap: 8px; margin-top: 4px; }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; font-size: .88rem; }
+    .detail-row span:first-child { color: var(--text-soft); }
+    .detail-row strong { color: var(--text-main); }
 </style>
 
 <script>
@@ -491,11 +242,7 @@
         toastStack: document.getElementById('toastStack'),
     };
 
-    const statusLabel = {
-        libre: 'Libre',
-        ocupada: 'Ocupada',
-        en_proceso: 'En proceso',
-    };
+    const statusLabel = { libre: 'Libre', ocupada: 'Ocupada', en_proceso: 'En proceso' };
     const MODAL_ANIMATION_MS = 200;
 
     const getMesaStatus = (mesa) => {
@@ -510,7 +257,7 @@
         if (typeof mesa.pedidos_count === 'number') return mesa.pedidos_count;
         if (Array.isArray(mesa.pedidos_activos)) return mesa.pedidos_activos.length;
         if (Array.isArray(mesa.pedidos)) {
-            return mesa.pedidos.filter((pedido) => !['entregado', 'cancelado', 'cerrado'].includes((pedido.estado || '').toLowerCase())).length;
+            return mesa.pedidos.filter((p) => !['entregado','cancelado','cerrado'].includes((p.estado||'').toLowerCase())).length;
         }
         return 0;
     };
@@ -532,7 +279,6 @@
 
     const applyFilters = () => {
         const query = state.search.trim().toLowerCase();
-
         state.filtered = [...state.mesas]
             .sort((a, b) => (Number(a.numero ?? a.id) - Number(b.numero ?? b.id)))
             .filter((mesa) => {
@@ -542,7 +288,6 @@
                 const bySearch = !query || mesaNumero.includes(query);
                 return byState && bySearch;
             });
-
         renderMesas();
         renderStats();
     };
@@ -551,7 +296,6 @@
         const status = getMesaStatus(mesa);
         const activeOrders = getActiveOrdersCount(mesa);
         const numero = mesa.numero ?? mesa.id ?? '-';
-
         return `
             <article class="mesa-card mesa-state-${status}" data-mesa-id="${mesa.id}">
                 <span class="mesa-status-dot" aria-hidden="true"></span>
@@ -567,26 +311,17 @@
     };
 
     const renderMesas = () => {
-        el.grid.replaceChildren(); // limpia completamente para evitar duplicados visuales
-
-        if (!state.filtered.length) {
-            el.empty.hidden = false;
-            return;
-        }
-
+        el.grid.replaceChildren();
+        if (!state.filtered.length) { el.empty.hidden = false; return; }
         el.empty.hidden = true;
-        const html = state.filtered.map(mesaCardTemplate).join('');
-        el.grid.innerHTML = html;
+        el.grid.innerHTML = state.filtered.map(mesaCardTemplate).join('');
     };
 
     const renderStats = () => {
         const totals = state.mesas.reduce((acc, mesa) => {
             const status = getMesaStatus(mesa);
-            acc.total += 1;
-            acc[status] += 1;
-            return acc;
+            acc.total += 1; acc[status] += 1; return acc;
         }, { total: 0, libre: 0, ocupada: 0, en_proceso: 0 });
-
         el.statTotal.textContent = totals.total;
         el.statLibres.textContent = totals.libre;
         el.statOcupadas.textContent = totals.ocupada;
@@ -602,10 +337,7 @@
     const openModal = (id) => {
         const modal = typeof id === 'string' ? document.getElementById(id) : id;
         if (!modal) return;
-        if (state.activeModal && state.activeModal !== modal) {
-            hideModalImmediately(state.activeModal);
-        }
-
+        if (state.activeModal && state.activeModal !== modal) hideModalImmediately(state.activeModal);
         modal.hidden = false;
         requestAnimationFrame(() => modal.classList.add('is-open'));
         document.body.classList.add('modal-open');
@@ -614,36 +346,23 @@
 
     const closeModal = () => {
         if (!state.activeModal) return;
-
         const modal = state.activeModal;
         modal.classList.remove('is-open');
         document.body.classList.remove('modal-open');
         state.activeModal = null;
-
         if (modal === el.detailModal) state.selectedMesa = null;
-
-        window.setTimeout(() => {
-            if (!modal.classList.contains('is-open')) {
-                modal.hidden = true;
-            }
-        }, MODAL_ANIMATION_MS);
+        window.setTimeout(() => { if (!modal.classList.contains('is-open')) modal.hidden = true; }, MODAL_ANIMATION_MS);
     };
 
     const loadMesas = async () => {
         setLoading(true);
-
         try {
             const res = await fetch('/api/mesas', { headers: { Accept: 'application/json' } });
             const payload = await res.json();
-
             if (!res.ok) throw new Error(payload?.message || 'No se pudo cargar la data de mesas.');
-
             const mesas = Array.isArray(payload?.data) ? payload.data : [];
             const unique = new Map();
-            mesas.forEach((mesa) => {
-                if (mesa?.id != null) unique.set(mesa.id, mesa);
-            });
-
+            mesas.forEach((mesa) => { if (mesa?.id != null) unique.set(mesa.id, mesa); });
             state.mesas = Array.from(unique.values());
             applyFilters();
         } catch (error) {
@@ -666,11 +385,46 @@
 
         el.detailTitle.textContent = `Mesa ${numero}`;
         el.detailBody.innerHTML = `
-            <div><span class="detail-chip">${statusLabel[status]}</span></div>
-            <p><strong>Pedidos activos:</strong> ${activeOrders}</p>
-            <p><strong>ID interno:</strong> ${mesa.id}</p>
-            <p>Acciones rápidas: puedes eliminar la mesa o cerrar esta ventana.</p>
+            <div class="detail-meta">
+                <div class="detail-row"><span>Estado</span><span class="detail-chip">${statusLabel[status]}</span></div>
+                <div class="detail-row"><span>Pedidos activos</span><strong>${activeOrders}</strong></div>
+                <div class="detail-row"><span>ID interno</span><strong>#${mesa.id}</strong></div>
+            </div>
+            <div class="qr-section">
+                <div class="qr-block">
+                    <span class="qr-block-title">📶 WiFi</span>
+                    <div id="qrWifi"></div>
+                    <p class="qr-block-desc">Escanea para conectarte a la red del restaurante</p>
+                </div>
+                <div class="qr-block">
+                    <span class="qr-block-title">🍽️ Carta Digital</span>
+                    <div id="qrCarta"></div>
+                    <p class="qr-block-desc">Escanea para ver el menú y pedir desde Mesa ${numero}</p>
+                </div>
+            </div>
         `;
+
+        // QR WiFi
+        const wifiEl = document.getElementById('qrWifi');
+        if (RESTAURANT_WIFI.ssid) {
+            const sec = RESTAURANT_WIFI.security || 'WPA';
+            const wifiStr = sec === 'nopass'
+                ? `WIFI:T:nopass;S:${RESTAURANT_WIFI.ssid};;`
+                : `WIFI:T:${sec};S:${RESTAURANT_WIFI.ssid};P:${RESTAURANT_WIFI.password};;`;
+            const wrap = document.createElement('div');
+            wrap.className = 'qr-canvas-wrap';
+            wifiEl.appendChild(wrap);
+            new QRCode(wrap, { text: wifiStr, width: 120, height: 120, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        } else {
+            wifiEl.innerHTML = '<div class="qr-no-wifi">⚠️ WiFi no configurado.<br><a href="/admin/config" style="color:#ffd7aa;">Configurar ahora →</a></div>';
+        }
+
+        // QR Carta
+        const cartaUrl = `${CARTA_BASE_URL}?mesa=${mesa.id}`;
+        const wrapCarta = document.createElement('div');
+        wrapCarta.className = 'qr-canvas-wrap';
+        document.getElementById('qrCarta').appendChild(wrapCarta);
+        new QRCode(wrapCarta, { text: cartaUrl, width: 120, height: 120, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
 
         openModal('mesaDetailModal');
     };
@@ -679,22 +433,15 @@
         event.preventDefault();
         const numero = el.mesaNumero.value ? Number(el.mesaNumero.value) : null;
         const body = numero ? { numero } : {};
-
         try {
             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             const res = await fetch('/api/mesas', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': token },
                 body: JSON.stringify(body),
             });
-
             const payload = await res.json();
             if (!res.ok) throw new Error(payload?.message || 'No se pudo crear la mesa.');
-
             closeModal();
             el.createForm.reset();
             showToast('Mesa creada correctamente.');
@@ -706,20 +453,14 @@
 
     const deleteSelectedMesa = async () => {
         if (!state.selectedMesa) return;
-
         try {
             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             const res = await fetch(`/api/mesas/${state.selectedMesa.id}`, {
                 method: 'DELETE',
-                headers: {
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
+                headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token },
             });
-
             const payload = await res.json();
             if (!res.ok) throw new Error(payload?.message || 'No se pudo eliminar la mesa.');
-
             closeModal();
             showToast('Mesa eliminada exitosamente.');
             await loadMesas();
@@ -728,58 +469,21 @@
         }
     };
 
-    el.search.addEventListener('input', (event) => {
-        state.search = event.target.value;
-        applyFilters();
-    });
-
-    el.filter.addEventListener('change', (event) => {
-        state.filter = event.target.value;
-        applyFilters();
-    });
-
-    el.grid.addEventListener('click', (event) => {
-        const card = event.target.closest('[data-mesa-id]');
-        if (!card) return;
-        openMesaDetail(card.dataset.mesaId);
-    });
-
+    el.search.addEventListener('input', (e) => { state.search = e.target.value; applyFilters(); });
+    el.filter.addEventListener('change', (e) => { state.filter = e.target.value; applyFilters(); });
+    el.grid.addEventListener('click', (e) => { const card = e.target.closest('[data-mesa-id]'); if (!card) return; openMesaDetail(card.dataset.mesaId); });
     el.createForm.addEventListener('submit', createMesa);
-
-    el.openCreate.addEventListener('click', () => {
-        openModal('createMesaModal');
-        el.mesaNumero.focus();
-    });
-
-    [el.closeCreate, el.cancelCreate].forEach((button) => {
-        button.addEventListener('click', () => {
-            closeModal();
-            el.createForm.reset();
-        });
-    });
-
-    [el.closeDetail, el.closeDetailAction].forEach((button) => {
-        button.addEventListener('click', closeModal);
-    });
-
-    el.createModal.addEventListener('click', (event) => {
-        if (event.target === el.createModal) closeModal();
-    });
-    el.detailModal.addEventListener('click', (event) => {
-        if (event.target === el.detailModal) closeModal();
-    });
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeModal();
-    });
-
+    el.openCreate.addEventListener('click', () => { openModal('createMesaModal'); el.mesaNumero.focus(); });
+    [el.closeCreate, el.cancelCreate].forEach((btn) => btn.addEventListener('click', () => { closeModal(); el.createForm.reset(); }));
+    [el.closeDetail, el.closeDetailAction].forEach((btn) => btn.addEventListener('click', closeModal));
+    el.createModal.addEventListener('click', (e) => { if (e.target === el.createModal) closeModal(); });
+    el.detailModal.addEventListener('click', (e) => { if (e.target === el.detailModal) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
     el.deleteMesaAction.addEventListener('click', deleteSelectedMesa);
-
-    [el.createModal, el.detailModal].forEach((modal) => {
-        hideModalImmediately(modal);
-    });
+    [el.createModal, el.detailModal].forEach((modal) => hideModalImmediately(modal));
 
     loadMesas();
 })();
 </script>
+
 @endsection

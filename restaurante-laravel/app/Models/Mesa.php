@@ -13,6 +13,12 @@ class Mesa extends Model
         'capacidad',
         'estado',
         'codigo_qr',
-        'restaurant_id', // 🔥 IMPORTANTE
+        'restaurant_id',
+        'mesero_id',
     ];
+
+    public function mesero()
+    {
+        return $this->belongsTo(Usuario::class, 'mesero_id');
+    }
 }

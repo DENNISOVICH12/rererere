@@ -2,6 +2,8 @@
 
 use BeyondCode\LaravelWebSockets\Dashboard\Http\Middleware\Authorize;
 
+
+
 return [
 
     /*
@@ -24,13 +26,13 @@ return [
     'apps' => [
         [
             'id' => env('PUSHER_APP_ID'),
-            'name' => env('APP_NAME'),
+            'name' => 'local',
             'key' => env('PUSHER_APP_KEY'),
             'secret' => env('PUSHER_APP_SECRET'),
             'path' => env('PUSHER_APP_PATH'),
             'capacity' => null,
             'enable_client_messages' => false,
-            'enable_statistics' => true,
+            'enable_statistics' => false,
         ],
     ],
 
@@ -86,7 +88,6 @@ return [
          * and then release them into the database on each interval defined below.
          */
         'logger' => BeyondCode\LaravelWebSockets\Statistics\Logger\HttpStatisticsLogger::class,
-
         /*
          * Here you can specify the interval in seconds at which statistics should be logged.
          */

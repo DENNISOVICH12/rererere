@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pedido;
+use App\Models\Comprobante;
 use App\Models\Usuario;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -113,17 +114,23 @@ class AdminDashboardController extends Controller
 
         $waiters = Usuario::query()
             ->where('rol', 'mesero')
-            ->select('id', 'nombre', 'apellido')
-            ->orderBy('nombre')
+            ->select('usuarios.id', 'usuarios.nombre', 'usuarios.apellido',
+                DB::raw('COUNT(pedidos.id) as total_pedidos'))
+            ->leftJoin('pedidos', function($join) use ($start, $end) {
+                $join->on('pedidos.mesero_id', '=', 'usuarios.id')
+                     ->whereBetween('pedidos.created_at', [$start, $end]);
+            })
+            ->groupBy('usuarios.id', 'usuarios.nombre', 'usuarios.apellido')
+            ->orderByDesc('total_pedidos')
             ->limit(5)
             ->get()
             ->map(fn ($u) => [
                 'nombre' => trim(($u->nombre ?? '') . ' ' . ($u->apellido ?? '')) ?: "Mesero #{$u->id}",
-                'pedidos' => null,
+                'pedidos' => (int) $u->total_pedidos,
             ]);
 
         $recentOrders = (clone $ordersQuery)
-            ->with(['mesa:id,numero', 'cliente', 'detalle.menuItem'])
+            ->with(['mesa:id,numero', 'mesero:id,nombre,apellido', 'cliente', 'detalle.menuItem'])
             ->orderByDesc('created_at')
             ->limit(8)
             ->get()
@@ -132,14 +139,38 @@ class AdminDashboardController extends Controller
                     ? trim(($order->cliente->nombres ?? '') . ' ' . ($order->cliente->apellidos ?? ''))
                     : null;
 
+                $mesero = $order->mesero;
+                $meseroNombre = $mesero
+                    ? trim(($mesero->nombre ?? '') . ' ' . ($mesero->apellido ?? ''))
+                    : null;
+
+                // Buscar comprobante si el pedido está facturado
+                // Usa whereRaw para compatibilidad con JSON en PostgreSQL
+                $comprobanteToken   = null;
+                $comprobanteDetalle = null;
+                if ($order->estado === 'facturado') {
+                    $orderId = $order->id;
+                    $comp = Comprobante::where('restaurant_id', $order->restaurant_id)
+                        ->whereRaw("pedidos_ids::jsonb @> ?::jsonb", [json_encode([$orderId])])
+                        ->latest()
+                        ->first();
+                    if ($comp) {
+                        $comprobanteToken   = $comp->token;
+                        $comprobanteDetalle = $comp->detalle;
+                    }
+                }
+
                 return [
                     'id' => $order->id,
                     'mesa_id' => $order->mesa_id,
                     'mesa_numero' => $order->mesa?->numero,
                     'cliente' => $client ?: 'Invitado',
+                    'mesero' => $meseroNombre ?: '—',
                     'estado' => $order->estado,
                     'total' => (float) $order->total,
                     'created_at' => optional($order->created_at)->toIso8601String(),
+                    'comprobante_token'   => $comprobanteToken,
+                    'comprobante_detalle' => $comprobanteDetalle,
                     'detalles' => $order->detalle->take(6)->map(function ($item) {
                         return [
                             'producto' => optional($item->menuItem)->nombre ?: "Ítem #{$item->menu_item_id}",

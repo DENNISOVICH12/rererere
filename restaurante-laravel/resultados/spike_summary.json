@@ -1,0 +1,358 @@
+{
+  "options": {
+    "summaryTimeUnit": "",
+    "noColor": false,
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ]
+  },
+  "state": {
+    "isStdOutTTY": true,
+    "isStdErrTTY": true,
+    "testRunDurationMs": 121149.5271
+  },
+  "metrics": {
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 80,
+        "min": 80,
+        "max": 80
+      }
+    },
+    "vus": {
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 80
+      },
+      "type": "gauge"
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0,
+        "min": 0
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 774947,
+        "rate": 6396.615971602913
+      }
+    },
+    "orders_ok": {
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      },
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 1757,
+        "rate": 14.502739235207464
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 1216.0812500000002,
+        "p(95)": 7404.579449999999,
+        "avg": 1595.683724051193,
+        "min": 1114.7644,
+        "med": 1147.4425,
+        "max": 9258.2503
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 75.73095000000004,
+        "p(95)": 101.953105,
+        "avg": 254.7759258946328,
+        "min": 3.6118,
+        "med": 19.012500000000003,
+        "max": 8148.1579
+      }
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.9618440779610195,
+        "passes": 12831,
+        "fails": 509
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 2266,
+        "rate": 18.70415885428578
+      }
+    },
+    "orders_failed": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 445,
+        "rate": 3.6731468182511793
+      }
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0.5277,
+        "avg": 0.04511165808905797,
+        "min": 0,
+        "med": 0,
+        "max": 1.5982
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0,
+        "med": 0,
+        "max": 1.6326,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.00820284179906019
+      }
+    },
+    "recovery_time_ms": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 305.46821071752953,
+        "min": 9,
+        "med": 31,
+        "max": 8148,
+        "p(90)": 89.90000000000009,
+        "p(95)": 127.89999999999964
+      }
+    },
+    "http_reqs": {
+      "contains": "default",
+      "values": {
+        "count": 4469,
+        "rate": 36.88829917025735
+      },
+      "type": "counter"
+    },
+    "http_req_waiting": {
+      "values": {
+        "min": 3.6118,
+        "med": 19.235,
+        "max": 8148.1579,
+        "p(90)": 76.38094000000001,
+        "p(95)": 102.56673999999984,
+        "avg": 259.4682941373919
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 6653984,
+        "rate": 54923.730692796074
+      }
+    },
+    "group_duration": {
+      "values": {
+        "min": 1114.7644,
+        "med": 1147.4425,
+        "max": 9258.2503,
+        "p(90)": 1216.0812500000002,
+        "p(95)": 7404.579449999999,
+        "avg": 1595.683102603708
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_connecting": {
+      "values": {
+        "med": 0,
+        "max": 1.2811,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.006563817408816289,
+        "min": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_failed": {
+      "values": {
+        "rate": 0.09957484895949877,
+        "passes": 445,
+        "fails": 4024
+      },
+      "thresholds": {
+        "rate<0.05": {
+          "ok": false
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 102.56673999999984,
+        "avg": 259.515579525622,
+        "min": 3.6118,
+        "med": 19.2828,
+        "max": 8148.1579,
+        "p(90)": 76.42534
+      },
+      "thresholds": {
+        "p(95)<3000": {
+          "ok": true
+        }
+      }
+    },
+    "error_rate": {
+      "contains": "default",
+      "values": {
+        "rate": 0.18775359645887127,
+        "passes": 509,
+        "fails": 2202
+      },
+      "thresholds": {
+        "rate<0.05": {
+          "ok": false
+        }
+      },
+      "type": "rate"
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 0.7686,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 0.0021737301409711345,
+        "min": 0,
+        "med": 0
+      }
+    }
+  },
+  "setup_data": {
+    "menuItems": [
+      {
+        "disponible": true,
+        "id": 7,
+        "image_path": "menu_items/OMwTVlmLS0bvgiVI0GENJCksC5r37Xkz3KmqqvQg.webp",
+        "imagen": "http://localhost:8000/storage/menu_items/OMwTVlmLS0bvgiVI0GENJCksC5r37Xkz3KmqqvQg.webp",
+        "nombre": "AGUA",
+        "precio": "4000.00",
+        "categoria": "bebida",
+        "descripcion": "CON HIELO"
+      },
+      {
+        "precio": "4000.00",
+        "categoria": "bebida",
+        "descripcion": "BEBIDA GASEOSA CON HIELO",
+        "disponible": true,
+        "id": 6,
+        "image_path": "menu_items/30Pyg23dwe4o4y65doXsuSsYVCNGTVUCiALl90YI.png",
+        "imagen": "http://localhost:8000/storage/menu_items/30Pyg23dwe4o4y65doXsuSsYVCNGTVUCiALl90YI.png",
+        "nombre": "COCA COLA"
+      },
+      {
+        "descripcion": "CON PAPAS Y ENSALADA",
+        "disponible": true,
+        "id": 5,
+        "image_path": "menu_items/MxqVmMrNrmSTmobrZfiyvXu8SdESP8DvOGEBGR75.png",
+        "imagen": "http://localhost:8000/storage/menu_items/MxqVmMrNrmSTmobrZfiyvXu8SdESP8DvOGEBGR75.png",
+        "nombre": "carne",
+        "precio": "50000.00",
+        "categoria": "plato"
+      }
+    ]
+  },
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "id": "c27c09502a4adf0ba75f17745cf90994",
+        "groups": [],
+        "checks": [
+            {
+              "name": "menú accesible durante pico",
+              "path": "::Flujo completo durante pico::menú accesible durante pico",
+              "id": "0ad47b4e8d0efba77e44e06d10c2597d",
+              "passes": 2266,
+              "fails": 0
+            },
+            {
+              "fails": 64,
+              "name": "menú responde < 2s",
+              "path": "::Flujo completo durante pico::menú responde < 2s",
+              "id": "030c9d34a5f2c6e722ed3eb36a1bd455",
+              "passes": 2202
+            },
+            {
+              "name": "pedido creado bajo pico",
+              "path": "::Flujo completo durante pico::pedido creado bajo pico",
+              "id": "388256d14db0b485e36d902fea7aa201",
+              "passes": 1757,
+              "fails": 445
+            },
+            {
+              "name": "no timeout",
+              "path": "::Flujo completo durante pico::no timeout",
+              "id": "36c2291ddf259484733c9543263e02cd",
+              "passes": 2202,
+              "fails": 0
+            },
+            {
+              "passes": 2202,
+              "fails": 0,
+              "name": "no 503",
+              "path": "::Flujo completo durante pico::no 503",
+              "id": "a2967fb2b7fbab1d942b777bf7913f92"
+            },
+            {
+              "name": "no 429 (rate limit)",
+              "path": "::Flujo completo durante pico::no 429 (rate limit)",
+              "id": "33197e013c67395b5ea20ed3daa33e25",
+              "passes": 2202,
+              "fails": 0
+            }
+          ],
+        "name": "Flujo completo durante pico",
+        "path": "::Flujo completo durante pico"
+      }
+    ],
+    "checks": []
+  }
+}
