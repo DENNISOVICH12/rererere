@@ -100,6 +100,14 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
     Route::put('/admin/config', [\App\Http\Controllers\RestaurantConfigController::class, 'update'])
         ->name('admin.config.update');
 
+    // ── Pedidos admin ──────────────────────────────────────────────────
+    Route::get('/admin/pedidos', [AdminDashboardController::class, 'pedidosIndex'])
+        ->name('admin.pedidos.index');
+    Route::get('/admin/pedidos/{id}', [AdminDashboardController::class, 'pedidoDetalle'])
+        ->name('admin.pedidos.detalle');
+    Route::post('/admin/pedidos/{id}/estado', [AdminDashboardController::class, 'pedidoCambiarEstado'])
+        ->name('admin.pedidos.estado');
+
     // ── Ajustes / anulaciones de comprobantes ──────────────────────────
     // IMPORTANTE: la ruta de historial debe ir ANTES de la ruta con {token}
     // para que /ajustes/historial no sea interpretado como un token

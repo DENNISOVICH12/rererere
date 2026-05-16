@@ -27,6 +27,7 @@ class MeseroOrderController extends Controller
                 'updated_at',
                 'mesa_id',
                 'cliente_id',
+                'total',
                 'hold_expires_at',
                 'change_requested_at',
                 'change_requested_by',
@@ -201,6 +202,13 @@ class MeseroOrderController extends Controller
             $pedido->update(['total' => $total]);
         });
 
+        $pedido->refresh();
+        $pedido->loadMissing([
+            'mesa:id,numero',
+            'cliente:id,nombres,apellidos',
+            'detalle.menuItem:id,nombre,categoria',
+        ]);
+
         return response()->json([
             'message' => 'Pedido actualizado',
             'data' => $this->transformOrder($pedido),
@@ -221,20 +229,36 @@ class MeseroOrderController extends Controller
     private function transformOrder(Pedido $pedido): array
     {
         return [
-            'id' => $pedido->id,
-            'estado' => $pedido->estado,
-            'mesa_numero' => $pedido->mesa?->numero,
+            'id'           => $pedido->id,
+            'estado'       => $pedido->estado,
+            'mesa_id'      => $pedido->mesa_id,
+            'mesa_numero'  => $pedido->mesa?->numero,
+            'cliente_id'   => $pedido->cliente_id,
+            'created_at'   => optional($pedido->created_at)?->toISOString(),
+            'updated_at'   => optional($pedido->updated_at)?->toISOString(),
+            'hold_expires_at'   => optional($pedido->hold_expires_at)?->toISOString(),
+            'can_be_edited'     => $pedido->canBeEditedByWaiter(),
+            'can_send_to_kitchen' => $pedido->canBeEditedByWaiter(),
+
+            'change_requested_at'    => optional($pedido->change_requested_at)?->toISOString(),
+            'change_request_reason'  => $pedido->change_request_reason,
+            'change_request_count'   => (int) ($pedido->change_request_count ?? 0),
+            'change_request_overdue' => $pedido->isChangeRequestOverdue(),
 
             'cliente_nombre' => $pedido->cliente
                 ? trim(($pedido->cliente->nombres ?? '') . ' ' . ($pedido->cliente->apellidos ?? ''))
                 : 'Cliente invitado',
 
             'items' => $pedido->detalle->map(fn ($d) => [
-                'id' => $d->id,
-                'cantidad' => $d->cantidad,
-                'nota' => $d->nota,
-                'nombre' => $d->menuItem?->nombre,
-                'categoria' => $d->menuItem?->categoria,
+                'id'             => $d->id,
+                'menu_item_id'   => $d->menu_item_id,
+                'cantidad'       => (int) $d->cantidad,
+                'nota'           => $d->nota,
+                'nombre'         => $d->menuItem?->nombre,
+                'categoria'      => $d->menuItem?->categoria,
+                'grupo_servicio' => $d->grupo_servicio,
+                'estado_servicio'=> $d->estado_servicio,
+                'importe'        => (float) $d->importe,
             ])->values(),
         ];
     }

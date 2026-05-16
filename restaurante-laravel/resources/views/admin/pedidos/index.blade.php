@@ -21,8 +21,8 @@
         <tr>
             <td>#{{ $p->id }}</td>
             <td>
-                @if($pedido->cliente)
-                    {{ $pedido->cliente->nombre }} {{ $pedido->cliente->apellido }}
+                @if($p->cliente)
+                    {{ trim(($p->cliente->nombres ?? '') . ' ' . ($p->cliente->apellidos ?? '')) ?: 'Invitado' }}
                 @else
                     Invitado
                 @endif

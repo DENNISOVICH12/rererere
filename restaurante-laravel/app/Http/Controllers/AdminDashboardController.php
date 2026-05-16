@@ -29,6 +29,57 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    // ── Pedidos admin ─────────────────────────────────────────────────
+
+    public function pedidosIndex(Request $request)
+    {
+        $pedidos = Pedido::query()
+            ->with(['mesa:id,numero', 'cliente:id,nombres,apellidos'])
+            ->orderByDesc('created_at')
+            ->paginate(30);
+
+        return view('admin.pedidos.index', compact('pedidos'));
+    }
+
+    public function pedidoDetalle(Request $request, int $id)
+    {
+        $pedido = Pedido::with([
+            'mesa:id,numero',
+            'cliente:id,nombres,apellidos',
+            'detalles.menuItem:id,nombre',
+        ])->findOrFail($id);
+
+        $estados = ['pendiente', 'preparando', 'listo', 'entregado', 'cancelado'];
+
+        return view('admin.pedidos.detalle', compact('pedido', 'estados'));
+    }
+
+    public function pedidoCambiarEstado(Request $request, int $id)
+    {
+        $request->validate([
+            'estado'        => 'required|string|in:pendiente,preparando,listo,entregado,cancelado',
+            'justificacion' => 'nullable|string|max:500',
+        ]);
+
+        $pedido = Pedido::findOrFail($id);
+
+        $updateData = ['estado' => $request->estado];
+
+        if ($request->filled('justificacion')) {
+            $updateData['change_request_reason']  = $request->justificacion;
+            $updateData['change_requested_by']    = $request->user()?->id;
+            $updateData['change_requested_at']    = now();
+        }
+
+        $pedido->update($updateData);
+
+        return redirect()
+            ->route('admin.pedidos.detalle', $id)
+            ->with('success', 'Estado actualizado correctamente.');
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+
     public function dashboardData(Request $request): JsonResponse
     {
         $range = $this->resolveDateRange($request);

@@ -382,9 +382,14 @@ const canEditCliente = (cliente) => {
 const pedidoNecesitaJustificacion = (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido) return false;
-  // Necesita justificación si ya no está en ventana de retención
-  return pedido?.estado !== 'retenido' || !pedido?.hold_expires_at ||
-    new Date().getTime() >= new Date(pedido?.hold_expires_at).getTime();
+  // Necesita justificación solo si ya salió de la ventana de retención
+  // (estado != 'retenido') Y además ya venció el hold_expires_at
+  if (pedido?.estado === 'retenido' && pedido?.hold_expires_at) {
+    return new Date().getTime() >= new Date(pedido.hold_expires_at).getTime();
+  }
+  // Si nunca estuvo retenido (ya fue enviado a cocina), siempre requiere justificación
+  const sinVentana = ['pendiente', 'preparando', 'listo', 'modificacion_solicitada'];
+  return sinVentana.includes(pedido?.estado);
 };
 
 const canSendToKitchenCliente = (cliente) => {
