@@ -65,7 +65,7 @@ Route::post('/registro', [AuthController::class, 'doRegister'])->name('registro.
 Route::middleware(['auth:web', 'role:admin'])->group(function () {
 
     Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
-
+    Route::get('/admin/backup', [AdminDashboardController::class, 'backup'])->name('admin.backup');
     // Usuarios
     Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.panel');
     Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
@@ -93,6 +93,10 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
     // Dashboard data (refresco en vivo)
     Route::get('/admin/dashboard/data', [AdminDashboardController::class, 'dashboardData'])
         ->name('admin.dashboard.data');
+    Route::get('/admin/dashboard/pedidos', [AdminDashboardController::class, 'dashboardPedidos'])
+        ->name('admin.dashboard.pedidos');
+    Route::post('/admin/dashboard/pedidos/{id}/editar', [AdminDashboardController::class, 'dashboardEditarPedido'])
+        ->name('admin.dashboard.pedidos.editar');
 
     // Configuración del restaurante
     Route::get('/admin/config', [\App\Http\Controllers\RestaurantConfigController::class, 'index'])
@@ -107,6 +111,8 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
         ->name('admin.pedidos.detalle');
     Route::post('/admin/pedidos/{id}/estado', [AdminDashboardController::class, 'pedidoCambiarEstado'])
         ->name('admin.pedidos.estado');
+    Route::post('/admin/pedidos/{id}/editar-items', [AdminDashboardController::class, 'pedidoEditarItems'])
+        ->name('admin.pedidos.editar-items');
 
     // ── Ajustes / anulaciones de comprobantes ──────────────────────────
     // IMPORTANTE: la ruta de historial debe ir ANTES de la ruta con {token}
@@ -117,6 +123,10 @@ Route::middleware(['auth:web', 'role:admin'])->group(function () {
         ->name('admin.comprobantes.ajustes');
     Route::post('/admin/comprobantes/{token}/anular-item', [AjusteComprobanteController::class, 'anularItem'])
         ->name('admin.comprobantes.anular-item');
+    Route::post('/admin/comprobantes/{token}/confirmar-ajuste', [AjusteComprobanteController::class, 'confirmarAjuste'])
+        ->name('admin.comprobantes.confirmar-ajuste');
+    Route::post('/admin/comprobantes/por-pedido/{pedidoId}/confirmar-ajuste', [AjusteComprobanteController::class, 'confirmarAjustePorPedido'])
+        ->name('admin.comprobantes.confirmar-ajuste-pedido');
 });
 
 /*
@@ -154,7 +164,7 @@ Route::middleware(['auth:web', 'role:admin,barra'])->group(function () {
 | PANEL MESEROS
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:web', 'role:mesero'])->group(function () {
+Route::middleware(['auth:web', 'role:mesero,admin'])->group(function () {
 
     Route::view('/mesero',           'mesero')->name('mesero.panel');
     Route::view('/mesero/mesa/{mesa}','mesero')->name('mesero.mesa.detalle');
@@ -174,6 +184,10 @@ Route::middleware(['auth:web', 'role:mesero'])->group(function () {
         Route::get('/clientes/{clienteId}/comprobante-url', [ComprobanteController::class, 'url']);
         Route::post('/notifications/read-all',              [WaiterNotificationController::class, 'markAllRead']);
         Route::post('/notifications/{notification}/read',   [WaiterNotificationController::class, 'markRead']);
+        Route::post('/pedidos/{pedidoId}/confirmar-ajuste', [AjusteComprobanteController::class, 'confirmarAjustePorPedido']);
+        Route::post('/comprobantes/{token}/confirmar-ajuste', [AjusteComprobanteController::class, 'confirmarAjuste']);
+        Route::post('/mesas/{mesa}/asignar-mesero',         [MesaController::class, 'asignarMesero']);
+        Route::post('/mesas/{mesa}/liberar-mesero',         [MesaController::class, 'liberarMesero']);
     });
 });
 

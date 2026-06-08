@@ -10,8 +10,10 @@ class AjusteComprobante extends Model
 
     protected $fillable = [
         'comprobante_id',
+        'pedido_id',
         'restaurant_id',
         'admin_id',
+        'tipo',
         'item_nombre',
         'item_cantidad',
         'item_precio_unitario',
@@ -31,6 +33,11 @@ class AjusteComprobante extends Model
     public function comprobante()
     {
         return $this->belongsTo(Comprobante::class);
+    }
+
+    public function pedido()
+    {
+        return $this->belongsTo(\App\Models\Pedido::class);
     }
 
     public function admin()

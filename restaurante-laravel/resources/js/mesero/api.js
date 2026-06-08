@@ -85,7 +85,7 @@ export const markNotificationsReadAll = () =>
     meseroHttp.post('/notifications/read-all').then((r) => r.data);
 
 export const asignarMesero = (mesaNumero) =>
-    floorHttp.post(`/mesas/${mesaNumero}/asignar-mesero`).then((r) => r.data);
+    meseroHttp.post(`/mesas/${mesaNumero}/asignar-mesero`).then((r) => r.data);
 
 export const liberarMesero = (mesaNumero) =>
-    floorHttp.post(`/mesas/${mesaNumero}/liberar-mesero`).then((r) => r.data);
+    meseroHttp.post(`/mesas/${mesaNumero}/liberar-mesero`).then((r) => r.data);

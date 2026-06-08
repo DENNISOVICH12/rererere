@@ -66,6 +66,12 @@
                     'href' => route('admin.menu'),
                     'active' => request()->routeIs('admin.menu') || request()->routeIs('admin.menu.*') || request()->is('admin/menu*'),
                 ],
+                [
+                    'label' => 'Configuración',
+                    'icon' => '⚙️',
+                    'href' => route('admin.config'),
+                    'active' => request()->routeIs('admin.config'),
+                ],
             ],
         ],
     ];

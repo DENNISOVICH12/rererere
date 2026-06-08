@@ -19,14 +19,22 @@ class Comprobante extends Model
         'total',
         'mesero_nombre',
         'pagado_at',
+        'ajuste_pendiente_at',
     ];
 
     protected $casts = [
-        'pedidos_ids' => 'array',
-        'detalle'     => 'array',
-        'total'       => 'decimal:2',
-        'pagado_at'   => 'datetime',
+        'pedidos_ids'         => 'array',
+        'detalle'             => 'array',
+        'total'               => 'decimal:2',
+        'pagado_at'           => 'datetime',
+        'ajuste_pendiente_at' => 'datetime',
     ];
+
+    /** ¿Tiene un ajuste registrado que el cliente no ha reconfirmado aún? */
+    public function tieneAjustePendiente(): bool
+    {
+        return $this->ajuste_pendiente_at !== null;
+    }
 
     public static function generarToken(): string
     {

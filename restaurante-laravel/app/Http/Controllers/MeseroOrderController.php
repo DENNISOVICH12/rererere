@@ -13,11 +13,19 @@ use App\Services\WaiterNotificationService;
 
 class MeseroOrderController extends Controller
 {
-    private const BLOCKED_STATES = ['entregado', 'facturado', 'cancelado'];
+    private const BLOCKED_STATES        = ['entregado', 'facturado', 'cancelado'];
+    private const ADMIN_BLOCKED_STATES   = ['facturado', 'cancelado'];
+
+    /** Estados que el admin puede editar pero que requieren justificación obligatoria */
+    private const ADMIN_REQUIRES_JUSTIF  = ['entregado'];
 
     public function index(Request $request): JsonResponse
     {
-        $status = $request->query('status');
+        $status  = $request->query('status');
+        $isAdmin = $request->user()?->rol === 'admin';
+
+        // El admin también ve los pedidos 'entregado' para poder editarlos
+        $blockedForQuery = $isAdmin ? self::ADMIN_BLOCKED_STATES : self::BLOCKED_STATES;
 
         $query = Pedido::query()
             ->select([
@@ -33,9 +41,10 @@ class MeseroOrderController extends Controller
                 'change_requested_by',
                 'change_request_reason',
                 'change_request_count',
+                'ajuste_pendiente_at',
                 'release_trigger',
             ])
-            ->whereNotIn('estado', self::BLOCKED_STATES)
+            ->whereNotIn('estado', $blockedForQuery)
             ->with([
                 'mesa:id,numero',
                 'cliente:id,nombres,apellidos',
@@ -134,12 +143,20 @@ class MeseroOrderController extends Controller
     {
         $pedido->refresh();
 
-        if (in_array($pedido->estado, self::BLOCKED_STATES)) {
+        $isAdmin = $request->user()?->rol === 'admin';
+
+        // Determinar qué estados bloquear según el rol
+        $blockedForThisUser = $isAdmin ? self::ADMIN_BLOCKED_STATES : self::BLOCKED_STATES;
+
+        if (in_array($pedido->estado, $blockedForThisUser)) {
             return response()->json(['message' => 'No editable.'], 422);
         }
 
-        // Fuera de la ventana de retención se requiere justificación
-        $fueraDeVentana = !$pedido->canBeEditedByWaiter();
+        // Requiere justificación si:
+        // a) está fuera de la ventana de retención normal, o
+        // b) el admin está editando un pedido en estado 'entregado'
+        $adminEditandoEntregado = $isAdmin && in_array($pedido->estado, self::ADMIN_REQUIRES_JUSTIF);
+        $fueraDeVentana = !$pedido->canBeEditedByWaiter() || $adminEditandoEntregado;
 
         $validated = $request->validate([
             'mesa_id'              => ['nullable','integer', Rule::exists('mesas','id')],
@@ -159,14 +176,19 @@ class MeseroOrderController extends Controller
             collect($validated['items'])->pluck('menu_item_id')
         )->get()->keyBy('id');
 
-        DB::transaction(function () use ($pedido, $validated, $menuItems, $fueraDeVentana, $request) {
+        DB::transaction(function () use ($pedido, $validated, $menuItems, $fueraDeVentana, $adminEditandoEntregado, $request) {
             $updateData = ['mesa_id' => $validated['mesa_id'] ?? $pedido->mesa_id];
 
-            // Guardar la justificación y quién hizo el cambio si es fuera de ventana
+            // Guardar la justificación y quién hizo el cambio
             if ($fueraDeVentana && !empty($validated['justificacion'])) {
                 $updateData['change_request_reason'] = $validated['justificacion'];
                 $updateData['change_requested_by']   = $request->user()?->id;
                 $updateData['change_requested_at']   = now();
+            }
+
+            // Si el admin edita un pedido entregado, lo regresa a 'pendiente' para que cocina lo vea
+            if ($adminEditandoEntregado) {
+                $updateData['estado'] = 'pendiente';
             }
 
             $pedido->update($updateData);
@@ -236,8 +258,9 @@ class MeseroOrderController extends Controller
             'cliente_id'   => $pedido->cliente_id,
             'created_at'   => optional($pedido->created_at)?->toISOString(),
             'updated_at'   => optional($pedido->updated_at)?->toISOString(),
-            'hold_expires_at'   => optional($pedido->hold_expires_at)?->toISOString(),
-            'can_be_edited'     => $pedido->canBeEditedByWaiter(),
+            'hold_expires_at'     => optional($pedido->hold_expires_at)?->toISOString(),
+            'ajuste_pendiente_at' => optional($pedido->ajuste_pendiente_at)?->toISOString(),
+            'can_be_edited'       => $pedido->canBeEditedByWaiter(),
             'can_send_to_kitchen' => $pedido->canBeEditedByWaiter(),
 
             'change_requested_at'    => optional($pedido->change_requested_at)?->toISOString(),

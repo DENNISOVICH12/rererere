@@ -115,6 +115,10 @@
             <input class="date-input" type="date" id="startDate" value="{{ $initialRange['start_date'] }}">
             <input class="date-input" type="date" id="endDate"   value="{{ $initialRange['end_date'] }}">
             <button class="btn primary" id="applyCustom">Aplicar</button>
+            <button class="btn" id="btnBackup" onclick="abrirModalBackup()"
+               style="background:#065f46;border:1px solid rgba(52,211,153,.3);color:#6ee7b7;display:inline-flex;align-items:center;gap:6px;">
+               💾 Backup
+            </button>
             <button class="btn" type="button" data-logout>Cerrar sesión</button>
         </div>
     </div>
@@ -135,17 +139,38 @@
                 </div>
             </div>
 
-            <div class="panel">
-                <h3>Pedidos recientes</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th><th>Mesa</th><th>Cliente</th><th>Mesero</th>
-                            <th>Total</th><th>Estado</th><th>Tiempo</th><th>Detalle</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recentOrders"></tbody>
-                </table>
+            <div class="panel" id="pedidosPanel">
+                <span id="urlPedidos" data-url="{{ route('admin.dashboard.pedidos') }}" style="display:none;"></span>
+                <!-- Cabecera -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                    <h3 style="margin:0;">Pedidos <span id="pedidosCount" style="font-size:.8rem;color:var(--muted);font-weight:400;"></span></h3>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input type="text" id="pedidosBuscar" placeholder="Buscar cliente, mesa, ID..."
+                            style="background:#0d1320;border:1px solid var(--border);color:var(--text);border-radius:9px;padding:6px 10px;font-size:.82rem;width:200px;"
+                            oninput="filtrarPedidosTabla()">
+                        <button class="btn" id="btnVerTodos" onclick="toggleVerTodos()" style="font-size:.82rem;padding:6px 12px;">
+                            Ver todos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabla -->
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Mesa</th><th>Cliente</th><th>Mesero</th>
+                                <th>Total</th><th>Estado</th><th>Tiempo</th><th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentOrders"></tbody>
+                    </table>
+                </div>
+
+                <!-- "Ver menos" al fondo cuando está expandido -->
+                <div id="verMenosWrap" style="display:none;text-align:center;margin-top:10px;">
+                    <button class="btn" onclick="toggleVerTodos()" style="font-size:.82rem;padding:6px 16px;">↑ Ver menos</button>
+                </div>
             </div>
 
             {{-- ── Historial de modificaciones de comprobantes ── --}}
@@ -199,6 +224,74 @@
     </div>
 </div>
 
+{{-- ── Modal editar pedido (admin) ── --}}
+<div class="modal" id="editOrderModal">
+    <div class="ajuste-modal" style="width:min(680px,96vw);max-height:90vh;overflow-y:auto;">
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+            <div>
+                <h3 id="editModalTitle" style="margin:0 0 4px;">Editar pedido</h3>
+                <p class="sub" id="editModalSub" style="margin:0;"></p>
+            </div>
+            <button onclick="cerrarEditModal()" style="background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer;padding:4px;">✕</button>
+        </div>
+
+        <!-- Aviso entregado -->
+        <div id="editWarningEntregado" style="display:none;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:9px;padding:10px 14px;font-size:12px;color:#fbbf24;margin:10px 0;">
+            ⚠️ Estás editando un pedido <strong>entregado</strong>. Usá esto para corregir la cuenta si salió un plato de más o uno dañado. El pedido se mantiene en estado <strong>entregado</strong>.
+        </div>
+
+        <!-- Tabla de ítems -->
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin:14px 0 0;">
+            <thead>
+                <tr>
+                    <th style="text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;padding:0 6px 8px;width:40%">Producto</th>
+                    <th style="text-align:center;color:#64748b;font-size:11px;text-transform:uppercase;padding:0 6px 8px;width:12%">Cant.</th>
+                    <th style="text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;padding:0 6px 8px;">Nota</th>
+                    <th style="width:34px;"></th>
+                </tr>
+            </thead>
+            <tbody id="editItemsBody"></tbody>
+        </table>
+
+        <!-- Agregar ítem -->
+        <div style="display:grid;grid-template-columns:1fr 60px 1fr auto;gap:6px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #1a2640;">
+            <select id="editNewProducto" style="background:#0f172a;border:1px solid #1f2d45;color:#e2e8f0;border-radius:8px;padding:7px 9px;font-size:13px;">
+                <option value="">Agregar producto...</option>
+            </select>
+            <input type="number" id="editNewCantidad" value="1" min="1" style="background:#0f172a;border:1px solid #1f2d45;color:#e2e8f0;border-radius:8px;padding:7px 8px;font-size:13px;text-align:center;">
+            <input type="text" id="editNewNota" placeholder="Nota..." style="background:#0f172a;border:1px solid #1f2d45;color:#e2e8f0;border-radius:8px;padding:7px 9px;font-size:13px;">
+            <button onclick="editAddItem()" style="background:#1e3a5f;border:1px solid rgba(96,165,250,.3);color:#e2e8f0;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">+ Agregar</button>
+        </div>
+
+        <!-- Justificación -->
+        <div style="background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:12px 14px;margin-top:16px;">
+            <div style="font-size:12px;font-weight:600;color:#fbbf24;margin-bottom:6px;">
+                📝 Justificación del cambio <span style="color:#f87171;font-weight:400;font-size:11px;">* obligatoria</span>
+            </div>
+            <textarea id="editJustificacion"
+                style="width:100%;background:#0f172a;border:1px solid #1f2d45;color:#e2e8f0;border-radius:8px;padding:9px 11px;font-size:13px;resize:vertical;box-sizing:border-box;"
+                rows="3" placeholder="Ej: El cliente solicitó cambiar el plato por alergia..." maxlength="500"></textarea>
+            <div style="font-size:11px;color:#475569;margin-top:4px;">Mín. 5 caracteres · Queda registrado en auditoría.</div>
+        </div>
+
+        <!-- Error -->
+        <div id="editError" style="display:none;color:#f87171;font-size:13px;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,.1);border-radius:8px;"></div>
+
+        <!-- Botones -->
+        <div style="display:flex;gap:10px;margin-top:14px;">
+            <button id="editSaveBtn" onclick="guardarEditPedido()"
+                style="background:#2563eb;color:#fff;border:none;border-radius:10px;padding:9px 20px;font-weight:600;font-size:13px;cursor:pointer;">
+                💾 Guardar cambios
+            </button>
+            <button onclick="cerrarEditModal()"
+                style="background:transparent;border:1px solid #1f2d45;color:#94a3b8;border-radius:10px;padding:9px 16px;font-size:13px;cursor:pointer;">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
 {{-- ── Modal anular ítem de comprobante ── --}}
 <div class="modal" id="ajusteOverlay">
     <div class="ajuste-modal">
@@ -230,6 +323,74 @@
 </div>
 
 <script>
+/* ── Variables globales compartidas entre IIFE y funciones globales ── */
+let pedidosModoExpandido  = false;
+let todosPedidosCache     = [];
+let menuItemsCache        = [];
+let pedidosFiltroActual   = '';
+const PEDIDOS_RECIENTES_N = 5;
+let state                 = {};   // se inicializa dentro del IIFE
+
+const fmt  = (v) => new Intl.NumberFormat('es-CO', { style:'currency', currency:'COP', maximumFractionDigits:0 }).format(Number(v||0));
+const fmtN = (v) => new Intl.NumberFormat('es-CO').format(Number(v||0));
+const elapsed = (iso) => {
+    if (!iso) return '-';
+    const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+    if (min < 60) return `${min} min`;
+    return `${Math.floor(min/60)}h ${min%60}m`;
+};
+
+function statusClass(s) { return `s-${String(s||'').toLowerCase().replace(/\s+/g,'-')}`; }
+
+function buildPedidoRow(o) {
+    let editBtn;
+    if (o.estado === 'entregado') {
+        editBtn = `<button class="btn danger" style="font-size:11px;padding:4px 10px;" onclick="abrirEditModal(${o.id})">✏️ Editar</button>`;
+    } else if (['facturado', 'cancelado', 'pendiente', 'preparando', 'listo', 'retenido'].includes(o.estado)) {
+        editBtn = `<button class="btn" disabled title="Solo se pueden editar pedidos entregados"
+            style="font-size:11px;padding:4px 10px;opacity:0.35;cursor:not-allowed;background:#1e293b;border:1px solid #1f2d45;color:#64748b;">
+            ✏️ Editar
+        </button>`;
+    } else {
+        editBtn = `<span style="color:#334155;font-size:11px;">—</span>`;
+    }
+
+    const anularBtn = (o.estado === 'facturado' && o.comprobante_token)
+        ? `<button class="btn danger" style="font-size:11px;padding:4px 9px;"
+               onclick="abrirAjusteModal('${o.comprobante_token}', ${JSON.stringify(JSON.stringify(o.comprobante_detalle || [])).replaceAll("'","&#39;")})">
+               ⚠️ Anular ítem
+           </button>`
+        : '';
+
+    return `<tr>
+        <td>#${o.id}</td>
+        <td>${o.mesa_numero ?? o.mesa_id ?? '-'}</td>
+        <td>${o.cliente}</td>
+        <td>${o.mesero ?? '—'}</td>
+        <td>${fmt(o.total)}</td>
+        <td><span class="status ${statusClass(o.estado)}">${o.estado}</span></td>
+        <td>${elapsed(o.created_at)}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">${editBtn}${anularBtn}</td>
+    </tr>`;
+}
+
+function filtrarPedidosTabla() {
+    pedidosFiltroActual = document.getElementById('pedidosBuscar').value.trim().toLowerCase();
+    const fuente = pedidosModoExpandido ? todosPedidosCache : (state.data?.recent_orders || []);
+    renderPedidosEnTabla(fuente);
+}
+
+function renderPedidosEnTabla(lista) {
+    const filtrada = pedidosFiltroActual
+        ? lista.filter(o => [o.id, o.mesa_numero, o.cliente, o.mesero, o.estado].join(' ').toLowerCase().includes(pedidosFiltroActual))
+        : lista;
+    document.getElementById('recentOrders').innerHTML = filtrada.length
+        ? filtrada.map(buildPedidoRow).join('')
+        : `<tr><td colspan="8" style="text-align:center;color:#475569;padding:20px;">Sin pedidos para este filtro.</td></tr>`;
+    document.getElementById('pedidosCount').textContent =
+        pedidosModoExpandido ? `(${filtrada.length} pedidos)` : `(${filtrada.length} recientes)`;
+}
+
 (() => {
     /* ══════════════════════════════════════════
        DASHBOARD — estado y utilidades
@@ -237,21 +398,12 @@
     const initialData  = @json($initialData);
     const initialRange = @json($initialRange);
 
-    const state = {
+    state = {
         preset:    initialRange.preset || 'today',
         startDate: initialRange.start_date,
         endDate:   initialRange.end_date,
         data:      initialData,
         charts:    {},
-    };
-
-    const fmt  = (v) => new Intl.NumberFormat('es-CO', { style:'currency', currency:'COP', maximumFractionDigits:0 }).format(Number(v||0));
-    const fmtN = (v) => new Intl.NumberFormat('es-CO').format(Number(v||0));
-    const elapsed = (iso) => {
-        if (!iso) return '-';
-        const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
-        if (min < 60) return `${min} min`;
-        return `${Math.floor(min/60)}h ${min%60}m`;
     };
 
     function activatePreset() {
@@ -312,41 +464,14 @@
             </div>`;
     }
 
-    function statusClass(s) { return `s-${String(s||'').toLowerCase().replace(/\s+/g,'-')}`; }
+    /* ── Pedidos: renderizado (funciones globales definidas antes del IIFE) ── */
 
     function renderRecentOrders(orders) {
-        document.getElementById('recentOrders').innerHTML = orders.map(o => {
-            const modificarBtn = (o.estado === 'facturado' && o.comprobante_token)
-                ? `<button class="btn danger" style="font-size:11px;padding:4px 10px"
-                       onclick="abrirAjusteModal('${o.comprobante_token}', ${JSON.stringify(JSON.stringify(o.comprobante_detalle || [])).replaceAll("'","&#39;")})">
-                       ✏️ Modificar
-                   </button>`
-                : '<span style="color:#475569;font-size:11px">—</span>';
-
-            return `
-            <tr>
-                <td>#${o.id}</td>
-                <td>${o.mesa_numero ?? o.mesa_id ?? '-'}</td>
-                <td>${o.cliente}</td>
-                <td>${o.mesero ?? '—'}</td>
-                <td>${fmt(o.total)}</td>
-                <td><span class="status ${statusClass(o.estado)}">${o.estado}</span></td>
-                <td>${elapsed(o.created_at)}</td>
-                <td><span class="link-btn" data-order='${JSON.stringify(o).replaceAll("'","&#39;")}'>Ver</span></td>
-                <td>${modificarBtn}</td>
-            </tr>`;
-        }).join('');
-
-        document.querySelectorAll('.link-btn').forEach(el => {
-            el.addEventListener('click', () => {
-                const o = JSON.parse(el.dataset.order.replaceAll('&#39;',"'"));
-                document.getElementById('modalTitle').textContent = `Pedido #${o.id} · Mesa ${o.mesa_numero ?? o.mesa_id ?? '-'}`;
-                document.getElementById('modalBody').innerHTML = o.detalles?.length
-                    ? `<ul>${o.detalles.map(d=>`<li>${d.cantidad}x ${d.producto} (${fmt(d.importe)})</li>`).join('')}</ul>`
-                    : '<p>Pedido sin detalle disponible.</p>';
-                document.getElementById('orderModal').classList.add('open');
-            });
-        });
+        if (!pedidosModoExpandido) {
+            renderPedidosEnTabla(orders.slice(0, PEDIDOS_RECIENTES_N));
+            document.getElementById('verMenosWrap').style.display = 'none';
+            document.getElementById('btnVerTodos').textContent = 'Ver todos';
+        }
     }
 
     function renderAll(payload) {
@@ -386,6 +511,37 @@
     renderAll(state.data);
     setInterval(fetchData, 8000);
 })();
+
+async function toggleVerTodos() {
+    if (pedidosModoExpandido) {
+        pedidosModoExpandido = false;
+        document.getElementById('btnVerTodos').textContent = 'Ver todos';
+        document.getElementById('verMenosWrap').style.display = 'none';
+        renderPedidosEnTabla((state.data?.recent_orders || []).slice(0, PEDIDOS_RECIENTES_N));
+        return;
+    }
+    document.getElementById('btnVerTodos').textContent = 'Cargando...';
+    try {
+        const params = new URLSearchParams({ preset: state.preset });
+        if (state.preset === 'custom') {
+            params.set('start_date', state.startDate);
+            params.set('end_date',   state.endDate);
+        }
+        const res  = await fetch(document.getElementById('urlPedidos').dataset.url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const data = await res.json();
+        todosPedidosCache = data.pedidos    || [];
+        menuItemsCache    = data.menu_items || [];
+        poblarSelectMenuItems();
+        pedidosModoExpandido = true;
+        document.getElementById('btnVerTodos').textContent = 'Ver menos';
+        document.getElementById('verMenosWrap').style.display = 'block';
+        renderPedidosEnTabla(todosPedidosCache);
+    } catch(e) {
+        document.getElementById('btnVerTodos').textContent = 'Ver todos';
+        alert('Error cargando pedidos.');
+    }
+}
+
 
 /* ══════════════════════════════════════════
    AJUSTES DE COMPROBANTE
@@ -514,24 +670,37 @@ async function cargarHistorialAjustes() {
 
         const fmt2 = v => Number(v).toLocaleString('es-CO');
 
-        tbody.innerHTML = rows.map(a => `
-            <tr>
+        tbody.innerHTML = rows.map(a => {
+            const esEdicion = a.tipo === 'edicion_pedido';
+            const referencia = esEdicion
+                ? `<span style="color:#94a3b8;">Pedido #${a.pedido_id ?? '—'}</span>`
+                : `<a href="/comprobante/${a.comprobante?.token}" target="_blank"
+                      style="color:#60a5fa;text-decoration:none">#${a.comprobante_id}</a>`;
+
+            const mesa = esEdicion
+                ? (a.pedido?.mesa_numero ?? '—')
+                : (a.comprobante?.mesa_numero ?? '—');
+
+            const tipoBadge = esEdicion
+                ? `<span style="font-size:10px;background:rgba(96,165,250,.15);color:#60a5fa;border-radius:4px;padding:2px 6px;">edición</span>`
+                : `<span style="font-size:10px;background:rgba(239,68,68,.12);color:#f87171;border-radius:4px;padding:2px 6px;">anulación</span>`;
+
+            const montoColor = a.monto_anulado > 0 ? 'color:#f87171' : 'color:#34d399';
+
+            return `<tr>
                 <td>${new Date(a.created_at).toLocaleString('es-CO')}</td>
-                <td>
-                    <a href="/comprobante/${a.comprobante?.token}" target="_blank"
-                       style="color:#60a5fa;text-decoration:none">
-                        #${a.comprobante_id}
-                    </a>
+                <td>${referencia} ${tipoBadge}</td>
+                <td>${mesa}</td>
+                <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.item_nombre}">
+                    ${a.item_nombre}
                 </td>
-                <td>${a.comprobante?.mesa_numero ?? '—'}</td>
-                <td>${a.item_nombre} x${a.item_cantidad}</td>
-                <td class="monto-anulado">-$${fmt2(a.monto_anulado)}</td>
+                <td style="${montoColor}">-$${fmt2(a.monto_anulado)}</td>
                 <td>$${fmt2(a.total_anterior)}</td>
                 <td style="color:#34d399;font-weight:700">$${fmt2(a.total_nuevo)}</td>
                 <td>${a.admin?.nombre ?? ''} ${a.admin?.apellido ?? ''}</td>
                 <td class="justif-text" title="${a.justificacion}">${a.justificacion}</td>
-            </tr>`
-        ).join('');
+            </tr>`;
+        }).join('');
 
     } catch (err) {
         console.error('Error cargando ajustes:', err);
@@ -545,9 +714,403 @@ document.getElementById('ajusteOverlay').addEventListener('click', e => {
 
 // Cargar historial al iniciar
 cargarHistorialAjustes();
+
+/* ══════════════════════════════════════════
+   MODAL BACKUP
+══════════════════════════════════════════ */
+let backupTipo = null;
+
+function abrirModalBackup() {
+    backupTipo = null;
+    document.getElementById('backupOptBD').style.borderColor   = '#1f2d45';
+    document.getElementById('backupOptTodo').style.borderColor = '#1f2d45';
+    document.getElementById('backupConfirmBtn').style.opacity        = '.4';
+    document.getElementById('backupConfirmBtn').style.pointerEvents  = 'none';
+    document.getElementById('backupProgress').style.display = 'none';
+    const modal = document.getElementById('backupModal');
+    modal.style.display = 'flex';
+}
+
+function cerrarModalBackup() {
+    document.getElementById('backupModal').style.display = 'none';
+}
+
+function seleccionarBackup(tipo) {
+    backupTipo = tipo;
+    document.getElementById('backupOptBD').style.borderColor   = tipo === 'bd'   ? '#34d399' : '#1f2d45';
+    document.getElementById('backupOptTodo').style.borderColor = tipo === 'todo' ? '#34d399' : '#1f2d45';
+    document.getElementById('backupConfirmBtn').style.opacity       = '1';
+    document.getElementById('backupConfirmBtn').style.pointerEvents = 'auto';
+}
+
+async function ejecutarBackup() {
+    if (!backupTipo) return;
+
+    const btn      = document.getElementById('backupConfirmBtn');
+    const progress = document.getElementById('backupProgress');
+    const progText = document.getElementById('backupProgressText');
+
+    btn.style.display = 'none';
+    progress.style.display = 'block';
+    progText.textContent = backupTipo === 'bd'
+        ? 'Generando backup de la base de datos...'
+        : 'Generando backup completo, esto puede tardar unos segundos...';
+
+    const url = backupTipo === 'bd'
+        ? '{{ route('admin.backup', ['tipo' => 'bd']) }}'
+        : '{{ route('admin.backup', ['tipo' => 'todo']) }}';
+
+    try {
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || `Error ${res.status}`);
+        }
+
+        // Obtener nombre del archivo desde el header
+        const disposition = res.headers.get('content-disposition') || '';
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        const filename = match ? match[1] : `backup_${backupTipo}.${backupTipo === 'bd' ? 'sql' : 'zip'}`;
+
+        // Descargar el blob
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.href  = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+
+        cerrarModalBackup();
+    } catch (err) {
+        progText.textContent = '❌ ' + err.message;
+        btn.style.display = 'block';
+    }
+}
+
+// Cerrar al hacer click fuera — esperar a que el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    const backupModal = document.getElementById('backupModal');
+    if (backupModal) {
+        backupModal.addEventListener('click', e => {
+            if (e.target.id === 'backupModal') cerrarModalBackup();
+        });
+    }
+
+    const editModal = document.getElementById('editOrderModal');
+    if (editModal) {
+        editModal.addEventListener('click', e => {
+            if (e.target.id === 'editOrderModal') cerrarEditModal();
+        });
+    }
+});
+
+
+let editPedidoId   = null;
+let editPedidoData = null;
+
+function poblarSelectMenuItems() {
+    const sel = document.getElementById('editNewProducto');
+    // Agrupar por categoría
+    const grupos = {};
+    menuItemsCache.forEach(m => {
+        const cat = m.categoria || 'Sin categoría';
+        if (!grupos[cat]) grupos[cat] = [];
+        grupos[cat].push(m);
+    });
+    let html = '<option value="">Agregar producto...</option>';
+    Object.entries(grupos).forEach(([cat, catItems]) => {
+        html += `<optgroup label="${cat}">`;
+        catItems.forEach(m => {
+            html += `<option value="${m.id}">${m.nombre} — ${fmt(m.precio)}</option>`;
+        });
+        html += '</optgroup>';
+    });
+    sel.innerHTML = html;
+}
+
+function abrirEditModal(pedidoId) {
+    // Buscar en caché expandido primero, luego en recientes
+    const fromCache   = todosPedidosCache.find(p => p.id === pedidoId);
+    const fromRecent  = (state.data?.recent_orders || []).find(p => p.id === pedidoId);
+    const pedidoBase  = fromCache || fromRecent;
+
+    if (!pedidoBase) { alert('Pedido no encontrado.'); return; }
+
+    // Necesitamos items + menuItemsCache para abrir el editor
+    const tieneItems  = Array.isArray(pedidoBase.items) && pedidoBase.items.length > 0;
+    const tieneMenu   = menuItemsCache.length > 0;
+
+    if (tieneItems && tieneMenu) {
+        _abrirEditModalConDatos(pedidoBase);
+        return;
+    }
+
+    // Faltan datos — cargamos el endpoint completo
+    const params = new URLSearchParams({ preset: state.preset });
+    if (state.preset === 'custom') {
+        params.set('start_date', state.startDate);
+        params.set('end_date',   state.endDate);
+    }
+
+    fetch(document.getElementById('urlPedidos').dataset.url + '?' + params, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        todosPedidosCache = data.pedidos    || [];
+        menuItemsCache    = data.menu_items || [];
+        poblarSelectMenuItems();
+        const full = todosPedidosCache.find(p => p.id === pedidoId);
+        if (full) _abrirEditModalConDatos(full);
+        else alert('No se pudo cargar el pedido.');
+    })
+    .catch(() => alert('Error cargando el pedido.'));
+}
+
+function _abrirEditModalConDatos(pedido) {
+    editPedidoId   = pedido.id;
+    // Normalizar: algunos pedidos traen 'detalles' (de recent_orders), otros 'items'
+    const itemsRaw = pedido.items || (pedido.detalles || []).map(d => ({
+        menu_item_id: d.menu_item_id || null,
+        nombre:       d.producto     || d.nombre || 'Ítem',
+        cantidad:     d.cantidad     || 1,
+        precio:       d.precio       || 0,
+        importe:      d.importe      || 0,
+        nota:         d.nota         || '',
+    }));
+    editPedidoData = JSON.parse(JSON.stringify({ ...pedido, items: itemsRaw }));
+
+    document.getElementById('editModalTitle').textContent = `Editar pedido #${pedido.id}`;
+    document.getElementById('editModalSub').textContent   =
+        `Mesa ${pedido.mesa_numero} · ${pedido.cliente} · Estado: ${pedido.estado}`;
+
+    document.getElementById('editWarningEntregado').style.display = 'block';
+
+    document.getElementById('editJustificacion').value = '';
+    document.getElementById('editError').style.display = 'none';
+
+    renderEditItems();
+    document.getElementById('editOrderModal').classList.add('open');
+}
+
+function renderEditItems() {
+    const tbody = document.getElementById('editItemsBody');
+    const items = editPedidoData?.items || [];
+
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:#475569;padding:16px;text-align:center;">Sin ítems. Agrega productos abajo.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = items.map((item, idx) => {
+        // Build select options
+        const grupos = {};
+        menuItemsCache.forEach(m => {
+            const cat = m.categoria || 'Sin categoría';
+            if (!grupos[cat]) grupos[cat] = [];
+            grupos[cat].push(m);
+        });
+        let opts = '';
+        Object.entries(grupos).forEach(([cat, catItems]) => {
+            opts += `<optgroup label="${cat}">`;
+            catItems.forEach(m => {
+                opts += `<option value="${m.id}" ${m.id == item.menu_item_id ? 'selected' : ''}>${m.nombre} — ${fmt(m.precio)}</option>`;
+            });
+            opts += '</optgroup>';
+        });
+
+        return `<tr>
+            <td>
+                <select onchange="editUpdateItem(${idx},'menu_item_id',this.value)"
+                    style="width:100%;background:#0f172a;border:1px solid #1f2d45;color:#e2e8f0;border-radius:8px;padding:7px 9px;font-size:13px;">
+                    ${opts}
+                </select>
+            </td>
+            <td style="text-align:center;">
+                <input type="number" value="${item.cantidad}" min="1"
+                    onchange="editUpdateItem(${idx},'cantidad',this.value)"
+                    style="width:56px;background:#0f172a;border:1px solid #1f2d45;color:#e2e8f0;border-radius:8px;padding:7px 6px;font-size:13px;text-align:center;">
+            </td>
+            <td>
+                <input type="text" value="${item.nota || ''}" placeholder="Nota..."
+                    onchange="editUpdateItem(${idx},'nota',this.value)"
+                    style="width:100%;background:#0f172a;border:1px solid #1f2d45;color:#e2e8f0;border-radius:8px;padding:7px 9px;font-size:13px;">
+            </td>
+            <td>
+                <button onclick="editRemoveItem(${idx})"
+                    style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:7px;padding:5px 9px;cursor:pointer;">✕</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function editUpdateItem(idx, field, value) {
+    if (field === 'cantidad') editPedidoData.items[idx][field] = parseInt(value) || 1;
+    else editPedidoData.items[idx][field] = value;
+}
+
+function editRemoveItem(idx) {
+    if (editPedidoData.items.length <= 1) { alert('El pedido debe tener al menos 1 ítem.'); return; }
+    editPedidoData.items.splice(idx, 1);
+    renderEditItems();
+}
+
+function editAddItem() {
+    const menuItemId = parseInt(document.getElementById('editNewProducto').value);
+    if (!menuItemId) { alert('Selecciona un producto.'); return; }
+    const menuItem = menuItemsCache.find(m => m.id === menuItemId);
+    if (!menuItem) return;
+
+    editPedidoData.items.push({
+        menu_item_id: menuItem.id,
+        nombre: menuItem.nombre,
+        cantidad: parseInt(document.getElementById('editNewCantidad').value) || 1,
+        precio:   parseFloat(menuItem.precio),
+        nota:     document.getElementById('editNewNota').value,
+    });
+
+    document.getElementById('editNewProducto').value = '';
+    document.getElementById('editNewCantidad').value = 1;
+    document.getElementById('editNewNota').value     = '';
+    renderEditItems();
+}
+
+async function guardarEditPedido() {
+    const justificacion = document.getElementById('editJustificacion').value.trim();
+    const errorEl = document.getElementById('editError');
+
+    if (justificacion.length < 5) {
+        errorEl.textContent = 'La justificación debe tener al menos 5 caracteres.';
+        errorEl.style.display = 'block';
+        return;
+    }
+    if (!editPedidoData.items.length) {
+        errorEl.textContent = 'El pedido debe tener al menos 1 ítem.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    const btn = document.getElementById('editSaveBtn');
+    btn.disabled    = true;
+    btn.textContent = 'Guardando...';
+    errorEl.style.display = 'none';
+
+    try {
+        const res = await fetch(`/admin/dashboard/pedidos/${editPedidoId}/editar`, {
+            method:  'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({
+                items: editPedidoData.items.map(i => ({
+                    menu_item_id: parseInt(i.menu_item_id),
+                    cantidad:     parseInt(i.cantidad) || 1,
+                    nota:         i.nota || null,
+                })),
+                justificacion,
+            }),
+        });
+
+        // Si no es JSON (ej: error 419 CSRF, 404) mostrar mensaje claro
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(`Error HTTP ${res.status} — recarga la página e intenta de nuevo.`);
+        }
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || data.message || `Error ${res.status}`);
+        if (!res.ok) throw new Error(data.error || data.message || 'Error al guardar.');
+
+        // Actualizar caché expandido
+        const idx = todosPedidosCache.findIndex(p => p.id === editPedidoId);
+        if (idx !== -1) {
+            todosPedidosCache[idx].total  = data.pedido.total;
+            todosPedidosCache[idx].estado = data.pedido.estado;
+            todosPedidosCache[idx].items  = data.pedido.items;
+        }
+
+        // Actualizar también recent_orders si el pedido está ahí
+        if (state.data?.recent_orders) {
+            const ri = state.data.recent_orders.findIndex(p => p.id === editPedidoId);
+            if (ri !== -1) {
+                state.data.recent_orders[ri].total  = data.pedido.total;
+                state.data.recent_orders[ri].estado = data.pedido.estado;
+            }
+        }
+
+        cerrarEditModal();
+        renderPedidosEnTabla(todosPedidosCache);
+        await fetchData(); // Refrescar KPIs y charts
+
+    } catch (err) {
+        errorEl.textContent   = err.message;
+        errorEl.style.display = 'block';
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = '💾 Guardar cambios';
+    }
+}
+
+function cerrarEditModal() {
+    document.getElementById('editOrderModal').classList.remove('open');
+    editPedidoId   = null;
+    editPedidoData = null;
+}
 </script>
 
-<script src="{{ asset('js/confirm-modal.js') }}"></script>
+{{-- ── Modal Backup ── --}}
+<div id="backupModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:none;align-items:center;justify-content:center;">
+    <div style="background:#111827;border:1px solid #1f2d45;border-radius:16px;padding:28px 32px;width:min(480px,94vw);box-shadow:0 24px 60px rgba(0,0,0,.5);">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <h3 style="margin:0;font-size:1.1rem;">💾 Generar copia de seguridad</h3>
+            <button onclick="cerrarModalBackup()" style="background:none;border:none;color:#64748b;font-size:1.3rem;cursor:pointer;">✕</button>
+        </div>
+        <p style="color:#64748b;font-size:13px;margin:0 0 20px;">Elige qué quieres incluir en la copia:</p>
+
+        <!-- Opción 1: Solo BD -->
+        <div id="backupOptBD" onclick="seleccionarBackup('bd')"
+            style="border:2px solid #1f2d45;border-radius:12px;padding:16px 18px;cursor:pointer;margin-bottom:10px;transition:border-color 150ms;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <span style="font-size:1.6rem;">🗄️</span>
+                <div>
+                    <div style="font-weight:600;font-size:14px;color:#e2e8f0;">Solo base de datos</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:2px;">Descarga un archivo <code style="color:#93c5fd;">.sql</code> con todos los datos: pedidos, clientes, menú, comprobantes, etc.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Opción 2: Todo -->
+        <div id="backupOptTodo" onclick="seleccionarBackup('todo')"
+            style="border:2px solid #1f2d45;border-radius:12px;padding:16px 18px;cursor:pointer;margin-bottom:20px;transition:border-color 150ms;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <span style="font-size:1.6rem;">📦</span>
+                <div>
+                    <div style="font-weight:600;font-size:14px;color:#e2e8f0;">Proyecto completo</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:2px;">Descarga un <code style="color:#93c5fd;">.zip</code> con el código fuente + la base de datos incluida. <span style="color:#fbbf24;">Puede tardar unos segundos.</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado de progreso -->
+        <div id="backupProgress" style="display:none;text-align:center;padding:10px 0;color:#94a3b8;font-size:13px;">
+            <span id="backupProgressText">Generando backup...</span>
+        </div>
+
+        <div style="display:flex;gap:10px;">
+            <button id="backupConfirmBtn" onclick="ejecutarBackup()"
+                style="flex:1;background:#065f46;border:1px solid rgba(52,211,153,.3);color:#6ee7b7;border-radius:10px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;opacity:.4;pointer-events:none;">
+                Descargar
+            </button>
+            <button onclick="cerrarModalBackup()"
+                style="background:transparent;border:1px solid #1f2d45;color:#94a3b8;border-radius:10px;padding:10px 18px;font-size:14px;cursor:pointer;">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
 <script src="{{ asset('js/logout.js') }}"></script>
 </body>
 </html>

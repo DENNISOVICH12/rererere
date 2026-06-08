@@ -35,6 +35,7 @@ class Pedido extends Model
         'change_requested_by',
         'change_request_reason',
         'change_request_count',
+        'ajuste_pendiente_at',
         'total',
         'pedido_id',
         'grupo_servicio',
@@ -49,6 +50,7 @@ class Pedido extends Model
         'hold_expires_at' => 'datetime',
         'released_to_kitchen_at' => 'datetime',
         'change_requested_at' => 'datetime',
+        'ajuste_pendiente_at' => 'datetime',
     ];
 
     public const STATUS_RETAINED = 'retenido';

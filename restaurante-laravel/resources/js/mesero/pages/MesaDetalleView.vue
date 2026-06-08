@@ -50,6 +50,8 @@
           :editing="editingClienteId === cliente.id"
           :draft-items="draftMap[cliente.id] || []"
           :menu-options="menuItems"
+          :ajuste-pendiente="clienteTieneAjustePendiente(cliente)"
+          :comprobante-token="clienteComprobanteToken(cliente)"
           @deliver-group="deliverGroupForCliente"
           @ver-comprobante="abrirComprobante"
           @marcar-pagado="pagarCliente"
@@ -57,6 +59,7 @@
           @save-edit="handleEditAction(cliente, $event)"
           @cancel-edit="cancelEdit"
           @send-to-kitchen="sendClienteToKitchen"
+          @confirmar-ajuste="confirmarAjusteCliente"
         />
       </div>
     </template>
@@ -186,6 +189,10 @@ const tomarRelevo = async () => {
     const res = await asignarMesero(mesaId.value);
     meseroAsignado.value = res.mesero_nombre || '';
     showAsignarModal.value = false;
+    await loadMesaData(true);
+  } catch (err) {
+    console.error('tomarRelevo error:', err?.response?.data || err);
+    // Si falla, recargar para mostrar el estado real de la mesa
     await loadMesaData(true);
   } finally {
     asignarLoading.value = false;
@@ -370,24 +377,66 @@ const markCuentaPagada = async () => {
   }
 };
 
+const userRol = window.__APP__?.userRol ?? 'mesero';
+const isAdmin = userRol === 'admin';
+
+const clienteTieneAjustePendiente = (cliente) => {
+  return cliente?.pedidos?.some(p => p.ajuste_pendiente_at != null) ?? false;
+};
+
+const clienteComprobanteToken = (cliente) => {
+  return cliente?.pedidos?.find(p => p.comprobante_token)?.comprobante_token ?? null;
+};
+
+const confirmarAjusteCliente = async (cliente) => {
+  const token = clienteComprobanteToken(cliente);
+  const pedido = cliente?.pedidos?.find(p => p.ajuste_pendiente_at);
+  if (!pedido) return;
+
+  const url = token
+    ? `/api/mesero/comprobantes/${token}/confirmar-ajuste`
+    : `/api/mesero/pedidos/${pedido.id}/confirmar-ajuste`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+    if (res.ok) {
+      loadMesaData();
+    } else {
+      console.error('confirmarAjuste error:', res.status);
+    }
+  } catch (e) {
+    console.error('confirmarAjuste fetch error:', e);
+  }
+};
+
+
 const canEditCliente = (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido) return false;
-  if (pedido?.can_be_edited === false) return false;
-  // El mesero/admin puede editar siempre, con justificación si está fuera de ventana
-  const bloqueados = ['entregado', 'facturado', 'cancelado'];
+  if (pedido?.can_be_edited === false && !isAdmin) return false;
+  // El admin puede editar también pedidos entregados (con justificación obligatoria)
+  const bloqueadosParaMesero = ['entregado', 'facturado', 'cancelado'];
+  const bloqueadosParaAdmin  = ['facturado', 'cancelado'];
+  const bloqueados = isAdmin ? bloqueadosParaAdmin : bloqueadosParaMesero;
   return !bloqueados.includes(pedido?.estado);
 };
 
 const pedidoNecesitaJustificacion = (cliente) => {
   const pedido = cliente?.pedidos?.[0];
   if (!pedido) return false;
+  // Admin editando un pedido entregado: justificación siempre obligatoria
+  if (isAdmin && pedido?.estado === 'entregado') return true;
   // Necesita justificación solo si ya salió de la ventana de retención
-  // (estado != 'retenido') Y además ya venció el hold_expires_at
   if (pedido?.estado === 'retenido' && pedido?.hold_expires_at) {
     return new Date().getTime() >= new Date(pedido.hold_expires_at).getTime();
   }
-  // Si nunca estuvo retenido (ya fue enviado a cocina), siempre requiere justificación
+  // Si ya fue enviado a cocina, siempre requiere justificación
   const sinVentana = ['pendiente', 'preparando', 'listo', 'modificacion_solicitada'];
   return sinVentana.includes(pedido?.estado);
 };
@@ -408,7 +457,7 @@ const estadoMesaLabel = computed(() => {
 });
 
 const buildHash = (items = []) =>
-  items.map(p => `${p.id}-${p.updated_at || ''}-${p.estado || ''}`).join('|');
+  items.map(p => `${p.id}-${p.updated_at || ''}-${p.estado || ''}-${p.ajuste_pendiente_at || ''}`).join('|');
 
 const normalizeItems = (pedido) => {
   const details = pedido.detalle ?? pedido.items ?? [];

@@ -4,12 +4,58 @@ namespace App\Http\Controllers;
 
 use App\Models\AjusteComprobante;
 use App\Models\Comprobante;
+use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AjusteComprobanteController extends Controller
 {
+    /**
+     * El mesero confirma que el cliente reconfirmó el comprobante ajustado.
+     * Limpia el flag ajuste_pendiente_at en el comprobante y sus pedidos.
+     */
+    public function confirmarAjuste(Request $request, string $token)
+    {
+        $comprobante = Comprobante::where('token', $token)
+            ->where('restaurant_id', Auth::user()->restaurant_id)
+            ->firstOrFail();
+
+        if (!$comprobante->tieneAjustePendiente()) {
+            return response()->json(['ok' => true, 'mensaje' => 'No había ajuste pendiente.']);
+        }
+
+        DB::transaction(function () use ($comprobante) {
+            $comprobante->ajuste_pendiente_at = null;
+            $comprobante->save();
+
+            Pedido::whereIn('id', $comprobante->pedidos_ids ?? [])
+                ->update(['ajuste_pendiente_at' => null]);
+        });
+
+        return response()->json([
+            'ok'     => true,
+            'mensaje' => 'Ajuste confirmado. Ya puede proceder al pago.',
+        ]);
+    }
+
+    /**
+     * Confirmar ajuste cuando aún no existe comprobante (ajuste pre-pago).
+     * Solo limpia ajuste_pendiente_at del pedido.
+     */
+    public function confirmarAjustePorPedido(Request $request, int $pedidoId)
+    {
+        try {
+            $pedido = Pedido::findOrFail($pedidoId);
+            $pedido->ajuste_pendiente_at = null;
+            $pedido->save(); // guarda + actualiza updated_at
+            return response()->json(['ok' => true, 'mensaje' => 'Ajuste confirmado.']);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     /**
      * Listar ajustes de un comprobante específico.
      */
@@ -83,10 +129,14 @@ class AjusteComprobanteController extends Controller
             $detalle[$idx]['anulado_at']          = now()->toDateTimeString();
             $detalle[$idx]['justificacion_anulacion'] = $request->justificacion;
 
-            // Actualizar comprobante
-            $comprobante->detalle = $detalle;
-            $comprobante->total   = $totalNuevo;
+            // Actualizar comprobante — marcar ajuste pendiente de reconfirmación
+            $comprobante->detalle             = $detalle;
+            $comprobante->total               = $totalNuevo;
             $comprobante->save();
+
+            // Propagar el flag a los pedidos vinculados para bloquear "Marcar pagado"
+            Pedido::whereIn('id', $comprobante->pedidos_ids ?? [])
+                ->update(['ajuste_pendiente_at' => now()]);
 
             // Registrar en log de auditoría
             AjusteComprobante::create([
@@ -121,6 +171,7 @@ class AjusteComprobanteController extends Controller
         $ajustes = AjusteComprobante::with([
                 'admin:id,nombre,apellido',
                 'comprobante:id,token,mesa_numero,pagado_at',
+                'pedido:id,mesa_id',
             ])
             ->where('restaurant_id', $restaurantId)
             ->orderByDesc('created_at')

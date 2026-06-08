@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MenuItem;
 use App\Models\Pedido;
 use App\Models\Comprobante;
 use App\Models\Usuario;
@@ -10,6 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class AdminDashboardController extends Controller
 {
@@ -31,6 +34,105 @@ class AdminDashboardController extends Controller
 
     // ── Pedidos admin ─────────────────────────────────────────────────
 
+    // ── Backup de base de datos / proyecto completo ───────────────────────
+
+    public function backup(Request $request)
+    {
+        $tipo = $request->query('tipo', 'bd');
+
+        $host     = config('database.connections.pgsql.host');
+        $port     = config('database.connections.pgsql.port', 5432);
+        $database = config('database.connections.pgsql.database');
+        $username = config('database.connections.pgsql.username');
+        $password = config('database.connections.pgsql.password');
+
+        $timestamp = now()->format('Y-m-d_H-i-s');
+        $sqlFile   = storage_path("app/backup_{$timestamp}.sql");
+
+        // 1. Generar el dump de PostgreSQL
+        $command = sprintf(
+            'PGPASSWORD=%s pg_dump -h %s -p %s -U %s %s > %s 2>&1',
+            escapeshellarg($password),
+            escapeshellarg($host),
+            escapeshellarg((string) $port),
+            escapeshellarg($username),
+            escapeshellarg($database),
+            escapeshellarg($sqlFile)
+        );
+
+        exec($command, $output, $exitCode);
+
+        if ($exitCode !== 0 || !file_exists($sqlFile) || filesize($sqlFile) === 0) {
+            return response()->json([
+                'error' => 'Error generando el dump de PostgreSQL. Verifica que pg_dump esté disponible.'
+            ], 500);
+        }
+
+        // Solo base de datos
+        if ($tipo === 'bd') {
+            $filename = "backup_bd_{$timestamp}.sql";
+            return response()->download($sqlFile, $filename, [
+                'Content-Type' => 'application/octet-stream',
+            ])->deleteFileAfterSend(true);
+        }
+
+        // Proyecto completo: código + BD en un ZIP
+        $zipFile = storage_path("app/backup_completo_{$timestamp}.zip");
+        $baseDir = base_path();
+
+        $excludes = ['vendor', 'node_modules', '.git', 'storage/app/backup_'];
+
+        $zip = new \ZipArchive();
+        if ($zip->open($zipFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            @unlink($sqlFile);
+            return response()->json(['error' => 'No se pudo crear el archivo ZIP.'], 500);
+        }
+
+        // Agregar el dump de BD al zip
+        $zip->addFile($sqlFile, "database/backup_{$timestamp}.sql");
+
+        // Agregar archivos del proyecto (excepto carpetas pesadas)
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($baseDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $file) {
+            $filePath    = $file->getRealPath();
+            $relativePath = substr($filePath, strlen($baseDir) + 1);
+
+            // Excluir carpetas pesadas o irrelevantes
+            $skip = false;
+            foreach ($excludes as $ex) {
+                if (str_starts_with($relativePath, $ex) || str_contains($relativePath, DIRECTORY_SEPARATOR . ltrim($ex, 'storage/app/'))) {
+                    $skip = true;
+                    break;
+                }
+            }
+            if ($skip) continue;
+
+            if ($file->isDir()) {
+                $zip->addEmptyDir($relativePath);
+            } elseif ($file->isFile()) {
+                $zip->addFile($filePath, $relativePath);
+            }
+        }
+
+        $zip->close();
+        @unlink($sqlFile);
+
+        if (!file_exists($zipFile) || filesize($zipFile) === 0) {
+            return response()->json(['error' => 'Error generando el ZIP.'], 500);
+        }
+
+        $filename = "backup_completo_{$timestamp}.zip";
+        return response()->download($zipFile, $filename, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+
     public function pedidosIndex(Request $request)
     {
         $pedidos = Pedido::query()
@@ -46,12 +148,83 @@ class AdminDashboardController extends Controller
         $pedido = Pedido::with([
             'mesa:id,numero',
             'cliente:id,nombres,apellidos',
-            'detalles.menuItem:id,nombre',
+            'detalle.menuItem:id,nombre,precio,categoria',
         ])->findOrFail($id);
 
-        $estados = ['pendiente', 'preparando', 'listo', 'entregado', 'cancelado'];
+        $estados    = ['pendiente', 'preparando', 'listo', 'entregado', 'cancelado'];
+        $menuItems  = MenuItem::where('disponible', true)
+            ->orderBy('categoria')->orderBy('nombre')
+            ->get(['id', 'nombre', 'precio', 'categoria']);
 
-        return view('admin.pedidos.detalle', compact('pedido', 'estados'));
+        $bloqueado  = in_array($pedido->estado, ['facturado', 'cancelado']);
+
+        return view('admin.pedidos.detalle', compact('pedido', 'estados', 'menuItems', 'bloqueado'));
+    }
+
+    public function pedidoEditarItems(Request $request, int $id)
+    {
+        $request->validate([
+            'items'                => 'required|array|min:1',
+            'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
+            'items.*.cantidad'     => 'required|integer|min:1',
+            'items.*.nota'         => 'nullable|string|max:255',
+            'justificacion'        => 'required|string|min:5|max:500',
+        ]);
+
+        $pedido = Pedido::with('detalle')->findOrFail($id);
+
+        if (in_array($pedido->estado, ['facturado', 'cancelado'])) {
+            return back()->withErrors(['error' => 'Este pedido no puede modificarse.']);
+        }
+
+        $menuItems = MenuItem::whereIn('id',
+            collect($request->items)->pluck('menu_item_id')
+        )->get()->keyBy('id');
+
+        DB::transaction(function () use ($pedido, $request, $menuItems) {
+            // Guardar auditoría del cambio
+            $pedido->update([
+                'change_request_reason' => $request->justificacion,
+                'change_requested_by'   => $request->user()?->id,
+                'change_requested_at'   => now(),
+                // Si estaba entregado, lo regresa a pendiente para que cocina reprocese
+                'estado' => $pedido->estado === 'entregado' ? 'pendiente' : $pedido->estado,
+            ]);
+
+            // Reemplazar ítems
+            $pedido->detalle()->delete();
+
+            $detalles = [];
+            $total    = 0;
+
+            foreach ($request->items as $item) {
+                $menuItem = $menuItems[$item['menu_item_id']] ?? null;
+                if (!$menuItem) continue;
+
+                $cantidad = (int) $item['cantidad'];
+                $precio   = (float) $menuItem->precio;
+
+                $detalles[] = [
+                    'pedido_id'        => $pedido->id,
+                    'menu_item_id'     => $menuItem->id,
+                    'cantidad'         => $cantidad,
+                    'precio_unitario'  => $precio,
+                    'importe'          => $cantidad * $precio,
+                    'nota'             => $item['nota'] ?? null,
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ];
+
+                $total += $cantidad * $precio;
+            }
+
+            DB::table('pedido_detalles')->insert($detalles);
+            $pedido->update(['total' => $total]);
+        });
+
+        return redirect()
+            ->route('admin.pedidos.detalle', $id)
+            ->with('success', 'Pedido actualizado correctamente.');
     }
 
     public function pedidoCambiarEstado(Request $request, int $id)
@@ -79,6 +252,165 @@ class AdminDashboardController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────
+
+    // ── Todos los pedidos del rango (para "Ver todos" del dashboard) ──────
+
+    public function dashboardPedidos(Request $request): JsonResponse
+    {
+        $range = $this->resolveDateRange($request);
+        $start = $range['start'];
+        $end   = $range['end'];
+
+        $pedidos = Pedido::query()
+            ->with(['mesa:id,numero', 'mesero:id,nombre,apellido', 'cliente:id,nombres,apellidos', 'detalle.menuItem:id,nombre,precio,categoria'])
+            ->whereBetween('created_at', [$start, $end])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($o) => [
+                'id'           => $o->id,
+                'mesa_numero'  => $o->mesa?->numero ?? '-',
+                'cliente'      => $o->cliente
+                    ? trim(($o->cliente->nombres ?? '') . ' ' . ($o->cliente->apellidos ?? '')) ?: 'Invitado'
+                    : 'Invitado',
+                'mesero'       => $o->mesero
+                    ? trim(($o->mesero->nombre ?? '') . ' ' . ($o->mesero->apellido ?? ''))
+                    : '—',
+                'estado'       => $o->estado,
+                'total'        => (float) $o->total,
+                'created_at'   => optional($o->created_at)->toIso8601String(),
+                'bloqueado'    => in_array($o->estado, ['facturado', 'cancelado']),
+                'change_request_reason' => $o->change_request_reason,
+                'change_requested_at'   => optional($o->change_requested_at)?->toIso8601String(),
+                'items'        => $o->detalle->map(fn ($d) => [
+                    'id'           => $d->id,
+                    'menu_item_id' => $d->menu_item_id,
+                    'nombre'       => $d->menuItem?->nombre ?? "Ítem #{$d->menu_item_id}",
+                    'cantidad'     => (int) $d->cantidad,
+                    'precio'       => (float) ($d->menuItem?->precio ?? 0),
+                    'importe'      => (float) $d->importe,
+                    'nota'         => $d->nota,
+                ])->values(),
+            ]);
+
+        $menuItems = MenuItem::where('disponible', true)
+            ->orderBy('categoria')->orderBy('nombre')
+            ->get(['id', 'nombre', 'precio', 'categoria']);
+
+        return response()->json([
+            'pedidos'    => $pedidos,
+            'menu_items' => $menuItems,
+        ]);
+    }
+
+    // ── Editar ítems de un pedido desde el dashboard ──────────────────────
+
+    public function dashboardEditarPedido(Request $request, int $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'items'                => 'required|array|min:1',
+                'items.*.menu_item_id' => 'required|integer|exists:menu_items,id',
+                'items.*.cantidad'     => 'required|integer|min:1',
+                'items.*.nota'         => 'nullable|string|max:255',
+                'justificacion'        => 'required|string|min:5|max:500',
+            ]);
+
+            $pedido = Pedido::with('detalle')->findOrFail($id);
+
+            if ($pedido->estado !== 'entregado') {
+                return response()->json(['error' => 'Solo se pueden editar pedidos en estado entregado.'], 422);
+            }
+
+            $menuItems = MenuItem::whereIn('id',
+                collect($request->items)->pluck('menu_item_id')
+            )->get()->keyBy('id');
+
+            DB::transaction(function () use ($pedido, $request, $menuItems) {
+                $totalAnterior = (float) $pedido->total;
+
+                $pedido->ajuste_pendiente_at   = now();
+                $pedido->change_request_reason = $request->justificacion;
+                $pedido->change_requested_by   = $request->user()?->id;
+                $pedido->change_requested_at   = now();
+                $pedido->save();
+
+                $pedido->detalle()->delete();
+
+                $detalles  = [];
+                $total     = 0;
+                $itemNames = [];
+
+                foreach ($request->items as $item) {
+                    $menuItem = $menuItems[$item['menu_item_id']] ?? null;
+                    if (!$menuItem) continue;
+
+                    $cantidad = (int) $item['cantidad'];
+                    $precio   = (float) $menuItem->precio;
+
+                    $detalles[] = [
+                        'pedido_id'       => $pedido->id,
+                        'menu_item_id'    => $menuItem->id,
+                        'restaurant_id'   => $pedido->restaurant_id,
+                        'cantidad'        => $cantidad,
+                        'precio_unitario' => $precio,
+                        'importe'         => $cantidad * $precio,
+                        'nota'            => $item['nota'] ?? null,
+                        'created_at'      => now(),
+                        'updated_at'      => now(),
+                    ];
+
+                    $itemNames[] = "{$cantidad}x {$menuItem->nombre}";
+                    $total      += $cantidad * $precio;
+                }
+
+                DB::table('pedido_detalles')->insert($detalles);
+                $pedido->total = $total;
+                $pedido->save();
+
+                // Registrar en historial de modificaciones
+                \App\Models\AjusteComprobante::create([
+                    'comprobante_id'      => null,
+                    'pedido_id'           => $pedido->id,
+                    'restaurant_id'       => $pedido->restaurant_id,
+                    'admin_id'            => $request->user()?->id,
+                    'tipo'                => 'edicion_pedido',
+                    'item_nombre'         => implode(', ', $itemNames) ?: 'Sin ítems',
+                    'item_cantidad'       => count($detalles),
+                    'item_precio_unitario'=> $total / max(count($detalles), 1),
+                    'monto_anulado'       => max(0, $totalAnterior - $total),
+                    'justificacion'       => $request->justificacion,
+                    'total_anterior'      => $totalAnterior,
+                    'total_nuevo'         => $total,
+                ]);
+            });
+
+            $pedido->refresh()->load('detalle.menuItem:id,nombre,precio,categoria');
+
+            return response()->json([
+                'ok'     => true,
+                'pedido' => [
+                    'id'     => $pedido->id,
+                    'estado' => $pedido->estado,
+                    'total'  => (float) $pedido->total,
+                    'items'  => $pedido->detalle->map(fn ($d) => [
+                        'id'           => $d->id,
+                        'menu_item_id' => $d->menu_item_id,
+                        'nombre'       => $d->menuItem?->nombre,
+                        'cantidad'     => (int) $d->cantidad,
+                        'precio'       => (float) ($d->menuItem?->precio ?? 0),
+                        'importe'      => (float) $d->importe,
+                        'nota'         => $d->nota,
+                    ])->values(),
+                ],
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['error' => 'Validación: ' . implode(', ', array_merge(...array_values($e->errors())))], 422);
+        } catch (\Throwable $e) {
+            Log::error('dashboardEditarPedido error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 
     public function dashboardData(Request $request): JsonResponse
     {
@@ -220,6 +552,7 @@ class AdminDashboardController extends Controller
                     'estado' => $order->estado,
                     'total' => (float) $order->total,
                     'created_at' => optional($order->created_at)->toIso8601String(),
+                    'bloqueado' => in_array($order->estado, ['facturado', 'cancelado']),
                     'comprobante_token'   => $comprobanteToken,
                     'comprobante_detalle' => $comprobanteDetalle,
                     'detalles' => $order->detalle->take(6)->map(function ($item) {

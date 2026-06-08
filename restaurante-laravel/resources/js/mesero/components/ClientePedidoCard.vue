@@ -182,7 +182,7 @@
         <button
           v-if="!isBilled"
           class="btn btn-pagar"
-          :disabled="hayRondasSinEntregar || busy"
+          :disabled="hayRondasSinEntregar || busy || ajustePendiente"
           @click="$emit('marcar-pagado', cliente)"
         >
           <i class="ti ti-currency-dollar" aria-hidden="true"></i>
@@ -195,6 +195,18 @@
         </span>
       </div>
     </footer>
+
+    <!-- Banner ajuste pendiente de reconfirmación -->
+    <div v-if="ajustePendiente && !isBilled" class="aviso-ajuste">
+      <div class="aviso-ajuste-texto">
+        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+        <span>El administrador modificó el comprobante. Muéstraselo al cliente y confirma que lo vio.</span>
+      </div>
+      <button class="btn-confirmar-ajuste" :disabled="busy" @click="$emit('confirmar-ajuste', cliente)">
+        <i class="ti ti-circle-check" aria-hidden="true"></i>
+        Cliente confirmó el cambio
+      </button>
+    </div>
 
     <!-- Aviso cuando hay rondas sin entregar -->
     <div v-if="hayRondasSinEntregar && !isBilled" class="aviso-pendiente">
@@ -221,9 +233,11 @@ const props = defineProps({
   editing: { type: Boolean, default: false },
   draftItems: { type: Array, default: () => [] },
   menuOptions: { type: Array, default: () => [] },
+  ajustePendiente: { type: Boolean, default: false },
+  comprobanteToken: { type: String, default: null },
 });
 
-const emit = defineEmits(['deliver-group', 'ver-comprobante', 'marcar-pagado', 'edit', 'save-edit', 'cancel-edit', 'send-to-kitchen']);
+const emit = defineEmits(['deliver-group', 'ver-comprobante', 'marcar-pagado', 'edit', 'save-edit', 'cancel-edit', 'send-to-kitchen', 'confirmar-ajuste']);
 
 const newItemId = ref(null);
 const justificacion = ref('');
@@ -557,6 +571,28 @@ h3 { margin: 0; font-size: 1rem; font-weight: 600; color: #f0f6ff; }
   border-top: 1px solid rgba(148, 163, 184, 0.1);
   font-size: 12px; color: #6b83a8;
 }
+
+/* ── Aviso ajuste pendiente ── */
+.aviso-ajuste {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 18px;
+  background: rgba(251, 191, 36, 0.07);
+  border-top: 1px solid rgba(251, 191, 36, 0.25);
+}
+.aviso-ajuste-texto {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 13px; color: #fbbf24; line-height: 1.4;
+}
+.btn-confirmar-ajuste {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #065f46; border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #6ee7b7; border-radius: 10px;
+  padding: 9px 14px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: filter 140ms;
+  align-self: flex-start;
+}
+.btn-confirmar-ajuste:hover:not(:disabled) { filter: brightness(1.15); }
+.btn-confirmar-ajuste:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── Responsive ── */
 @media (max-width: 560px) {

@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 
 
@@ -187,7 +188,9 @@ class MesaController extends Controller
             'estado',
             'total',
             'created_at',
+            'updated_at',
             'hold_expires_at',
+            'ajuste_pendiente_at',
             'cliente_id',
             'cliente_mesa_id'
         ])
@@ -198,7 +201,8 @@ class MesaController extends Controller
             'modificacion_solicitada',
             'pendiente',
             'preparando',
-            'listo'
+            'listo',
+            'entregado',
         ])
         ->with([
             'detalle' => function ($q) {
@@ -341,6 +345,16 @@ class MesaController extends Controller
             ], 400);
         }
 
+        // Bloquear si hay un ajuste de comprobante pendiente de reconfirmación por el cliente
+        $hayAjustePendiente = $pedidos->whereNotNull('ajuste_pendiente_at')->isNotEmpty();
+        if ($hayAjustePendiente) {
+            return response()->json([
+                'ok'    => false,
+                'code'  => 'ajuste_pendiente',
+                'message' => 'El comprobante fue modificado por el administrador. El cliente debe reconfirmarlo antes de proceder al pago.',
+            ], 400);
+        }
+
         $total = (float) $pedidos->sum('total');
 
         Pedido::query()
@@ -459,8 +473,9 @@ class MesaController extends Controller
             'estado' => $pedido->estado,
             'total' => (float) $pedido->total,
             'created_at' => optional($pedido->created_at)?->toISOString(),
-            'hold_expires_at' => optional($pedido->hold_expires_at)?->toISOString(),
-            'can_be_edited' => $pedido->canBeEditedByWaiter(),
+            'hold_expires_at'     => optional($pedido->hold_expires_at)?->toISOString(),
+            'ajuste_pendiente_at' => optional($pedido->ajuste_pendiente_at)?->toISOString(),
+            'can_be_edited'       => $pedido->canBeEditedByWaiter(),
             'can_send_to_kitchen' => $pedido->canBeEditedByWaiter(),
             'cliente_id' => $pedido->cliente_id,
             'cliente' => [
@@ -571,9 +586,19 @@ class MesaController extends Controller
         $wifiSecurity = $restaurant->wifi_security ?? 'WPA';
 
         if ($wifiSsid) {
+            // Escapar caracteres especiales según el estándar WiFi QR
+            $escape = fn(string $s): string => str_replace(
+                ['\\', ';', ',', '"', ':'],
+                ['\\\\', '\\;', '\\,', '\\"', '\\:'],
+                $s
+            );
+
+            $ssidEscaped = $escape($wifiSsid);
+            $passEscaped = $escape($wifiPassword);
+
             $wifiStr = $wifiSecurity === 'nopass'
-                ? "WIFI:T:nopass;S:{$wifiSsid};;"
-                : "WIFI:T:{$wifiSecurity};S:{$wifiSsid};P:{$wifiPassword};;";
+                ? "WIFI:T:nopass;S:{$ssidEscaped};;"
+                : "WIFI:T:{$wifiSecurity};S:{$ssidEscaped};P:{$passEscaped};;";
         } else {
             $wifiStr = '';
         }
